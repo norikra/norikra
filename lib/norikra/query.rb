@@ -1,15 +1,16 @@
+require 'norikra/typedef'
+
 module Norikra
   class Query
-    def initialize(expression)
-      @expression = expression
-      # dynamic statement parse/analysis?
-      # composite from expression template & tablname attribute?
-    end
+    attr_accessor :tablename, :typedef, :expression
 
-    def tablename
-    end
-
-    def window
+    def initialize(param={})
+      @tablename = param[:tablename]
+      @typedef = param[:typedef] # TODO: typedef validation with Norikra::Typedef ?
+      if @typedef.is_a?(Hash)
+        @typedef = Norikra::Typedef.new(:definition => @typedef)
+      end
+      @expression = param[:expression]
     end
   end
 end
