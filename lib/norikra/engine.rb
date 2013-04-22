@@ -23,15 +23,15 @@ module Norikra
       register_type(query.tablename, query.typedef)
       # epl = @service.getEPAdministrator.createEPL(query.expression)
       # epl.java_send :addListener, [com.espertech.esper.client.UpdateListener], Listener.new(query.tablename, @output_pool)
-      @service.getEPAdministrator.createEPL(query.expression).addListener(Listener.new(query.tablename, @output_pool))
+      @service.getEPAdministrator.createEPL(query.expression).addListener(Listener.new(query.name, @output_pool))
     end
 
     def register_type(tablename, typedef)
       @tables.push(tablename) unless @tables.include?(tablename)
 
       unless @typedefs[tablename]
-        @config.addEventType(tablename, typedef.definition)
         @typedefs[tablename] ||= {}
+        @config.addEventType(tablename, typedef.definition)
       end
 
       unless @typedefs[tablename][typedef.name]
@@ -44,7 +44,7 @@ module Norikra
       end
     end
 
-    def send(tablename, *events)
+    def send(tablename, events)
       return unless @tables.include?(tablename)
       events.each{|e| @runtime.sendEvent(e.to_java, tablename)}
     end
@@ -52,13 +52,13 @@ module Norikra
     class Listener
       include com.espertech.esper.client.UpdateListener
 
-      def initialize(tablename, output_pool)
-        @tablename = tablename
+      def initialize(query_name, output_pool)
+        @query_name = query_name
         @output_pool = output_pool
       end
 
       def update(new_events, old_events)
-        @output_pool.push(@tablename, new_events)
+        @output_pool.push(@query_name, new_events)
       end
     end
     ##### Unmatched events are simply ignored

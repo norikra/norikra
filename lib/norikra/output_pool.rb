@@ -7,7 +7,11 @@ module Norikra
       @mutex = Mutex.new
     end
 
-    def push(tablename, events)
+    def queries
+      @pool.keys
+    end
+
+    def push(query_name, events)
       t = Time.now.to_i
       if events.first.respond_to?(:getUnderlying) # easy to test...
         events = events.map{|e| [t, e.getUnderlying]}
@@ -15,15 +19,15 @@ module Norikra
         events = events.map{|e| [t, e]}
       end
       @mutex.synchronize do
-        @pool[tablename] ||= []
-        @pool[tablename] += events
+        @pool[query_name] ||= []
+        @pool[query_name] += events
       end
     end
 
     # returns [time(int from epoch), event], event: hash
-    def pop(tablename)
+    def pop(query_name)
       @mutex.synchronize do
-        @pool.delete(tablename) || []
+        @pool.delete(query_name) || []
       end
     end
   end

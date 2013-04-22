@@ -2,9 +2,10 @@ require 'norikra/typedef'
 
 module Norikra
   class Query
-    attr_accessor :tablename, :typedef, :expression
+    attr_accessor :name, :tablename, :typedef, :expression
 
     def initialize(param={})
+      @name = param[:name]
       @tablename = param[:tablename]
       @typedef = param[:typedef] # TODO: typedef validation with Norikra::Typedef ?
       if @typedef.is_a?(Hash)

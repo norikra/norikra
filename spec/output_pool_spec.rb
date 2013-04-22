@@ -4,24 +4,24 @@ describe Norikra::OutputPool do
   context 'without any events in pool' do
     describe '#pop' do
       it 'returns blank array' do
-        subject.pop('TestTable').should == []
+        subject.pop('TestTable query1').should == []
       end
     end
 
     describe '#push' do
       context 'with empty array' do
-        subject { p = Norikra::OutputPool.new; p.push('TestTable', []); p }
-        its(:pool){ should == {'TestTable' => []} }
+        subject { p = Norikra::OutputPool.new; p.push('TestTable query1', []); p }
+        its(:pool){ should == {'TestTable query1' => []} }
       end
 
       context 'with event array' do
         it 'has pool with event' do
           pool = Norikra::OutputPool.new
           t = Time.now.to_i
-          pool.push('TestTable', [{'count'=>1},{'count'=>2}])
+          pool.push('TestTable query1', [{'count'=>1},{'count'=>2}])
 
-          pool.pool.keys.should eql(['TestTable'])
-          events = pool.pool['TestTable']
+          pool.pool.keys.should eql(['TestTable query1'])
+          events = pool.pool['TestTable query1']
 
           events.size.should eql(2)
 
@@ -41,13 +41,13 @@ describe Norikra::OutputPool do
       it 'returns all events of specified table in pool' do
         pool = Norikra::OutputPool.new
         t = Time.now.to_i
-        pool.push('TestTable1', [{'count'=>1},{'count'=>2}])
-        pool.push('TestTable2', [{'count'=>3},{'count'=>4}])
+        pool.push('TestTable query1', [{'count'=>1},{'count'=>2}])
+        pool.push('TestTable query2', [{'count'=>3},{'count'=>4}])
 
-        pool.pop('TestTable0').size.should eql(0)
-        pool.pop('TestTable1').size.should eql(2)
+        pool.pop('TestTable query0').size.should eql(0)
+        pool.pop('TestTable query1').size.should eql(2)
         pool.pool.size.should eql(1)
-        pool.pop('TestTable1').size.should eql(0)
+        pool.pop('TestTable query1').size.should eql(0)
       end
     end
   end

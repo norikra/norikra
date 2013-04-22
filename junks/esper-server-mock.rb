@@ -6,6 +6,7 @@ require 'norikra/engine'
 
 pool = Norikra::OutputPool.new
 query = Norikra::Query.new(
+  :name => 'OrderEvent over 150 price counts per 10secs',
   :tablename => 'OrderEvent',
   :typedef => {:name => 'string', :price => 'double'},
   :expression => 'select count(*) AS cnt from OrderEvent.win:time_batch(10 seconds) where cast(price,double) > 150'
@@ -18,7 +19,7 @@ flag = true
 thread = Thread.new do
   while flag
     sleep 1
-    results = pool.pop('OrderEvent')
+    results = pool.pop('OrderEvent over 150 price counts per 10secs')
     pp(results) if results.size > 0
   end
 end
