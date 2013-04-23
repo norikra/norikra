@@ -1,11 +1,12 @@
 require 'norikra/engine'
 
-require 'norikra/type_manager'
+require 'norikra/typedef_manager'
 require 'norikra/output_pool'
+require 'norikra/typedef'
 require 'norikra/query'
 
-require 'norikra/rpc/http'
-require 'norikra/rpc/msgpack'
+# require 'norikra/rpc/http'
+# require 'norikra/rpc/msgpack'
 
 module Norikra
   class Server

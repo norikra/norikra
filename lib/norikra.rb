@@ -4,9 +4,10 @@ end
 
 require 'norikra/version'
 
+require 'norikra/typedef'
 require 'norikra/query'
 
-require 'norikra/type_manager'
+require 'norikra/typedef_manager'
 require 'norikra/output_pool'
 require 'norikra/engine'
 
