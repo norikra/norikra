@@ -1,3 +1,5 @@
+require_relative './spec_helper'
+
 require 'norikra/typedef'
 
 describe Norikra::Typedef do

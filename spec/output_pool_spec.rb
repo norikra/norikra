@@ -1,3 +1,5 @@
+require_relative './spec_helper'
+
 require 'norikra/output_pool'
 
 describe Norikra::OutputPool do

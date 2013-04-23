@@ -1,3 +1,5 @@
+require_relative './spec_helper'
+
 require 'norikra/query'
 
 describe Norikra::Query do
