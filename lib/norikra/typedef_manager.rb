@@ -1,7 +1,7 @@
 require 'norikra/typedef'
 
 module Norikra
-  class TypeManager
+  class TypedefManager
     def initialize(opts)
       @strict_check = opts[:strict] || false
       @dict = {} # tablename => [typedefs]
