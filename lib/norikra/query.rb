@@ -7,10 +7,6 @@ module Norikra
     def initialize(param={})
       @name = param[:name]
       @tablename = param[:tablename]
-      @typedef = param[:typedef] # TODO: typedef validation with Norikra::Typedef ?
-      if @typedef.is_a?(Hash)
-        @typedef = Norikra::Typedef.new(:definition => @typedef)
-      end
       @expression = param[:expression]
     end
   end

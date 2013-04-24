@@ -4,48 +4,62 @@ require 'esper/lib/commons-logging-1.1.1.jar'
 require 'esper/lib/antlr-runtime-3.2.jar'
 require 'esper/lib/cglib-nodep-2.2.jar'
 
+require 'norikra/typedef_manager'
+
 module Norikra
   class Engine
-    def initialize(output_pool)
+    def initialize(output_pool, typedef_manager=nil)
       @output_pool = output_pool
+      @typedef_manager = typedef_manager || Norikra::TypedefManager.new()
 
       @service = com.espertech.esper.client.EPServiceProviderManager.getDefaultProvider
       @config = @service.getEPAdministrator.getConfiguration
 
+      @mutex = Mutex.new
+
+      # if @typedefs[tablename] exists, first data has already arrived.
+      @typedefs = {} # tablename => {typedefname => definition}
+
       @tables = []
-      @typedefs = {}
+      # Queries must be registered with typedef, but when no data reached, no typedef exists in this process.
+      # '#register_query' accepts query, but force to wait actual resigtration after first data.
+      @waiting_queries = {} # tablename => [query]
 
       @runtime = @service.getEPRuntime
     end
 
     def register(query)
-      # query.tablename, query.typedef, query.expression
-      register_type(query.tablename, query.typedef)
-      # epl = @service.getEPAdministrator.createEPL(query.expression)
-      # epl.java_send :addListener, [com.espertech.esper.client.UpdateListener], Listener.new(query.tablename, @output_pool)
-      @service.getEPAdministrator.createEPL(query.expression).addListener(Listener.new(query.name, @output_pool))
-    end
+      # query.tablename, query.expression
+      @mutex.synchronize do
+        if @tables.include?(query.tablename) && (!@waiting_queries.has_key?(query.tablename))
+          # data of specified table has already arrived, and processed (by any other queries)
+          register_query_actual(query)
+          return
+        end
 
-    def register_type(tablename, typedef)
-      @tables.push(tablename) unless @tables.include?(tablename)
+        # no one data has arrived for specified table.
 
-      unless @typedefs[tablename]
-        @typedefs[tablename] ||= {}
-        @config.addEventType(tablename, typedef.definition)
-      end
+        # first access for this tablename (of course, no one data exists)
+        @tables.push(query.tablename) unless @tables.include?(query.tablename)
 
-      unless @typedefs[tablename][typedef.name]
-        @typedefs[tablename][typedef.name] = typedef.definition
-        # Map Supertype (tablename) and Subtype (typedef name, like TABLENAME_TypeDefName)
-        # http://esper.codehaus.org/esper-4.9.0/doc/reference/en-US/html/event_representation.html#eventrep-map-supertype
-        # epService.getEPAdministrator().getConfiguration()
-        #   .addEventType("AccountUpdate", accountUpdateDef, new String[] {"BaseUpdate"});
-        @config.addEventType(typedef.name, typedef.definition, [tablename].to_java(:string))
+        @waiting_queries[query.tablename] ||= []
+        @waiting_queries[query.tablename].push(query)
       end
     end
 
     def send(tablename, events)
       return unless @tables.include?(tablename)
+
+      typedefs = @typedef_manager.refer(events)
+      typedefs.each do |typedef|
+        next if (@typedefs[tablename] || {})[typedef.name]
+        register_type(tablename, typedef)
+      end
+
+      if @waiting_queries[tablename]
+        register_waiting_queries(tablename)
+      end
+
       events.each{|e| @runtime.sendEvent(e.to_java, tablename)}
     end
 
@@ -61,6 +75,7 @@ module Norikra
         @output_pool.push(@query_name, new_events)
       end
     end
+
     ##### Unmatched events are simply ignored
     # class UnmatchedListener
     #   include com.espertech.esper.client.UnmatchedListener
@@ -69,5 +84,51 @@ module Norikra
     #     # ignore
     #   end
     # end
+
+    private
+
+    def register_waiting_queries(tablename)
+      @mutex.synchronize do
+        queries = @waiting_queries.delete(tablename) || []
+        queries.each do |query|
+          register_query_actual(query)
+        end
+      end
+    end
+
+    def register_query_actual(query)
+      # epl = @service.getEPAdministrator.createEPL(query.expression)
+      # epl.java_send :addListener, [com.espertech.esper.client.UpdateListener], Listener.new(query.tablename, @output_pool)
+      @service.getEPAdministrator.createEPL(query.expression).addListener(Listener.new(query.name, @output_pool))
+    end
+
+    def register_type(tablename, typedef)
+      unless @tables.include?(tablename)
+        @mutex.synchronize do
+          next if @tables.include?(tablename)
+          @tables.push(tablename)
+        end
+      end
+
+      unless @typedefs[tablename]
+        @mutex.synchronize do
+          next if @typedefs[tablename]
+          @typedefs[tablename] = {}
+          @config.addEventType(tablename, typedef.definition)
+        end
+      end
+
+      unless @typedefs[tablename][typedef.name]
+        @mutex.synchronize do
+          next if @typedefs[tablename][typedef.name]
+          @typedefs[tablename][typedef.name] = typedef.definition
+          # Map Supertype (tablename) and Subtype (typedef name, like TABLENAME_TypeDefName)
+          # http://esper.codehaus.org/esper-4.9.0/doc/reference/en-US/html/event_representation.html#eventrep-map-supertype
+          # epService.getEPAdministrator().getConfiguration()
+          #   .addEventType("AccountUpdate", accountUpdateDef, new String[] {"BaseUpdate"});
+          @config.addEventType(typedef.name, typedef.definition, [tablename].to_java(:string))
+        end
+      end
+    end
   end
 end

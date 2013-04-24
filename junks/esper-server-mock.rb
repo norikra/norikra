@@ -8,9 +8,9 @@ pool = Norikra::OutputPool.new
 query = Norikra::Query.new(
   :name => 'OrderEvent over 150 price counts per 10secs',
   :tablename => 'OrderEvent',
-  :typedef => {:name => 'string', :price => 'double'},
   :expression => 'select count(*) AS cnt from OrderEvent.win:time_batch(10 seconds) where cast(price,double) > 150'
 )
+
 engine = Norikra::Engine.new(pool)
 engine.register(query)
 

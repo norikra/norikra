@@ -9,6 +9,10 @@ module Norikra
       @name = param[:name] || Digest::MD5.hexdigest(@definition.inspect)
     end
 
+    def ==(other)
+      self.name == other.name
+    end
+
     # string  A single character to an unlimited number of characters.
     # boolean A boolean value.
     # integer An integer value (4 byte).

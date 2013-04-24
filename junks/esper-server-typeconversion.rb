@@ -5,19 +5,19 @@ require 'norikra/output_pool'
 require 'norikra/engine'
 
 pool = Norikra::OutputPool.new
+
 query1 = Norikra::Query.new(
   :name => 'OrderEvent over 150 price counts per 10secs',
   :tablename => 'OrderEvent',
-  :typedef => {:name => 'string', :price => 'double', :count => 'long'},
   :expression => 'select count(*) AS cnt from OrderEvent.win:time_batch(10 seconds) where price > 150'
 )
 query2 = Norikra::Query.new(
   :name => 'OrderEvent events with 2 or more count',
   :tablename => 'OrderEvent',
-  :typedef => {:name => 'string', :price => 'double', :count => 'long'},
   :expression => 'select * from OrderEvent where count > 1'
 )
 engine = Norikra::Engine.new(pool)
+
 engine.register(query1)
 engine.register(query2)
 
