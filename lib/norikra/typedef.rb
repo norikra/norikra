@@ -40,7 +40,7 @@ module Norikra
 
     def self.guess(data)
       definition = {}
-      data.keys.each do |key|
+      data.keys.sort.each do |key|
         val = data[key]
         sval = val.to_s
         case

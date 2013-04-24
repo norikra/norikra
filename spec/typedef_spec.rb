@@ -2,6 +2,8 @@ require_relative './spec_helper'
 
 require 'norikra/typedef'
 
+require 'digest'
+
 describe Norikra::Typedef do
   context 'has class method' do
     describe '.mangle_symbols' do
@@ -51,6 +53,15 @@ describe Norikra::Typedef do
         r['key3'].should eql('string')
         r['key4'].should eql('string')
         r['key5'].should eql('string')
+      end
+
+      it 'guess should returns result with sorted key order (for stability of "#inspect")' do
+        data = {'zone'=>1, 'area'=>2,'path'=>3,'bayside'=>4,'route'=>5}
+        t = Norikra::Typedef.guess(data)
+        expected = {"area"=>"long","bayside"=>"long", "path"=>"long", "route"=>"long", "zone"=>"long"}
+        t.definition.keys.join(',').should eql(expected.keys.join(','))
+        t.definition.inspect.should eql(expected.inspect)
+        t.name.should eql(Digest::MD5.hexdigest(expected.inspect))
       end
     end
   end
