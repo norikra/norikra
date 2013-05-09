@@ -16,6 +16,28 @@ describe Norikra::Typedef do
       end
     end
 
+    describe '.simple_guess' do
+      it 'can guess field definitions with class of values' do
+        t = Norikra::Typedef.simple_guess({'key1' => true, 'key2' => false, 'key3' => 10, 'key4' => 3.1415, 'key5' => 'foobar'})
+        r = t.definition
+        r['key1'].should eql('boolean')
+        r['key2'].should eql('boolean')
+        r['key3'].should eql('long')
+        r['key4'].should eql('double')
+        r['key5'].should eql('string')
+      end
+
+      it 'does not guess with content of string values' do
+        t = Norikra::Typedef.simple_guess({'key1' => 'TRUE', 'key2' => 'false', 'key3' => "10", 'key4' => '3.1415', 'key5' => {:a => 1}})
+        r = t.definition
+        r['key1'].should eql('string')
+        r['key2'].should eql('string')
+        r['key3'].should eql('string')
+        r['key4'].should eql('string')
+        r['key5'].should eql('string')
+      end
+    end
+
     describe '.guess' do
       it 'can guess Boolean values and boolean-like strings as boolean correctly' do
         t = Norikra::Typedef.guess({'key1' => true, 'key2' => false, 'key3' => 'True', 'key4' => 'TRUE', 'key5' => 'false'})

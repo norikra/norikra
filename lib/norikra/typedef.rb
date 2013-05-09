@@ -42,6 +42,20 @@ module Norikra
       true
     end
 
+    def self.simple_guess(data)
+      definition = {}
+      data.keys.sort.each do |key|
+        definition[key] = case data[key]
+                          when TrueClass,FalseClass then 'boolean'
+                          when Integer then 'long'
+                          when Float   then 'double'
+                          else
+                            'string'
+                          end
+      end
+      self.new(:definition => definition)
+    end
+
     def self.guess(data)
       definition = {}
       data.keys.sort.each do |key|
