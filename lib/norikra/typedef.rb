@@ -14,6 +14,21 @@ module Norikra
       self.name == other.name
     end
 
+    def format(data)
+      ret = {}
+      data.keys.each do |key| # key variation between data and @definition are always match
+        ret[key] = case @definition[key]
+                   when 'string'  then data[key].to_s
+                   when 'boolean' then (!!data[key])
+                   when 'long','integer' then data[key].to_i
+                   when 'double','float' then data[key].to_f
+                   else
+                     raise RuntimeError, "unknown field type definition, maybe BUG"
+                   end
+      end
+      ret
+    end
+
     ### esper types
     ### http://esper.codehaus.org/esper-4.9.0/doc/reference/en-US/html/epl_clauses.html#epl-syntax-datatype
     # string  A single character to an unlimited number of characters.
