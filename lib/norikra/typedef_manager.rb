@@ -5,26 +5,18 @@ module Norikra
     attr_reader :strict_check
 
     def initialize(opts={})
-      @strict_check = opts[:strict] || false
+      @def_map = {} # tablename => {[sorted_keys].freeze => typedef}
     end
 
-    def refer(data_batch)
-      target_data_list = [data_batch.first]
+    def store(tablename, typedef)
+      # stores pre-defined definition
+      @def_map[tablename] ||= {}
+      @def_map[tablename][typedef.definition.keys.sort.freeze] = typedef
+    end
 
-      if @strict_check && data_batch.length > 1
-        target_data_list = data_batch
-
-      elsif data_batch.size > 1
-        target_data_list.push(data_batch.last)
-
-      end
-
-      defs = {}
-      target_data_list.map{|d| Norikra::Typedef.guess(d)}.each do |d|
-        next if defs[d.name]
-        defs[d.name] = d
-      end
-      defs.values
+    def refer(tablename, data)
+      @def_map[tablename] ||= {}
+      @def_map[tablename][data.keys.sort] ||= Norikra::Typedef.simple_guess(data)
     end
   end
 end
