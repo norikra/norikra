@@ -2,6 +2,7 @@ require_relative './spec_helper'
 
 require 'norikra/typedef'
 
+require 'json'
 require 'digest'
 
 describe Norikra::Typedef do
@@ -76,15 +77,6 @@ describe Norikra::Typedef do
         r['key4'].should eql('string')
         r['key5'].should eql('string')
       end
-
-      it 'guess should returns result with sorted key order (for stability of "#inspect")' do
-        data = {'zone'=>1, 'area'=>2,'path'=>3,'bayside'=>4,'route'=>5}
-        t = Norikra::Typedef.guess(data)
-        expected = {"area"=>"long","bayside"=>"long", "path"=>"long", "route"=>"long", "zone"=>"long"}
-        t.definition.keys.join(',').should eql(expected.keys.join(','))
-        t.definition.inspect.should eql(expected.inspect)
-        t.name.should eql(Digest::MD5.hexdigest(expected.inspect))
-      end
     end
   end
 
@@ -103,7 +95,8 @@ describe Norikra::Typedef do
       context 'without name parameter' do
         subject { Norikra::Typedef.new(:definition => definition) }
         its(:definition) { should == Norikra::Typedef.mangle_symbols(definition) }
-        its(:name) { should == Digest::MD5.hexdigest(Norikra::Typedef.mangle_symbols(definition).inspect) }
+        key_sorted_definition = Norikra::Typedef.mangle_symbols(definition).sort{|a,b| a.first <=> b.first}
+        its(:name) { should == Digest::MD5.hexdigest(key_sorted_definition.to_json) }
       end
     end
   end

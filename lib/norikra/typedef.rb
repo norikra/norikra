@@ -1,4 +1,5 @@
 require 'digest'
+require 'json'
 
 module Norikra
   class Typedef
@@ -6,13 +7,15 @@ module Norikra
 
     def initialize(param={})
       @definition = self.class.mangle_symbols(param[:definition])
-      @name = param[:name] || Digest::MD5.hexdigest(@definition.inspect)
+      @name = param[:name] || Digest::MD5.hexdigest(@definition.sort{|a,b| a.first <=> b.first}.to_json)
     end
 
     def ==(other)
       self.name == other.name
     end
 
+    ### esper types
+    ### http://esper.codehaus.org/esper-4.9.0/doc/reference/en-US/html/epl_clauses.html#epl-syntax-datatype
     # string  A single character to an unlimited number of characters.
     # boolean A boolean value.
     # integer An integer value (4 byte).
@@ -58,7 +61,7 @@ module Norikra
 
     def self.guess(data)
       definition = {}
-      data.keys.sort.each do |key|
+      data.keys.each do |key|
         val = data[key]
         sval = val.to_s
         case
