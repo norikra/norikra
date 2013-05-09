@@ -6,7 +6,7 @@ describe Norikra::OutputPool do
   context 'without any events in pool' do
     describe '#pop' do
       it 'returns blank array' do
-        subject.pop('TestTable query1').should == []
+        expect(subject.pop('TestTable query1')).to eql([])
       end
     end
 
@@ -25,14 +25,14 @@ describe Norikra::OutputPool do
           pool.pool.keys.should eql(['TestTable query1'])
           events = pool.pool['TestTable query1']
 
-          events.size.should eql(2)
+          expect(events.size).to eq(2)
 
-          (t..(t+1)).should cover(events[0].first) # time
-          events[0].last.should eql({'count'=>1})
+          expect(t..(t+1)).to cover(events[0].first) # time
+          expect(events[0].last).to eql({'count'=>1})
 
-          (t..(t+1)).should cover(events[1].first) # time
-          events[1].first.should eql(events[0].first)
-          events[1].last.should eql({'count'=>2})
+          expect(t..(t+1)).to cover(events[1].first) # time
+          expect(events[1].first).to eql(events[0].first)
+          expect(events[1].last).to eql({'count'=>2})
         end
       end
     end
@@ -46,10 +46,10 @@ describe Norikra::OutputPool do
         pool.push('TestTable query1', [{'count'=>1},{'count'=>2}])
         pool.push('TestTable query2', [{'count'=>3},{'count'=>4}])
 
-        pool.pop('TestTable query0').size.should eql(0)
-        pool.pop('TestTable query1').size.should eql(2)
-        pool.pool.size.should eql(1)
-        pool.pop('TestTable query1').size.should eql(0)
+        expect(pool.pop('TestTable query0').size).to eql(0)
+        expect(pool.pop('TestTable query1').size).to eql(2)
+        expect(pool.pool.size).to eql(1)
+        expect(pool.pop('TestTable query1').size).to eql(0)
       end
     end
   end

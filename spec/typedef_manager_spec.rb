@@ -13,7 +13,7 @@ describe Norikra::TypedefManager do
           r = m.refer('tablename', {
               'name'=>'tagomori satoshi', 'age'=>33, 'sex'=>'male','lang'=>'ja',
             })
-          r.should eq(Norikra::Typedef.simple_guess({'name'=>'tagomori satoshi', 'age'=>33, 'sex'=>'male','lang'=>'ja'}))
+          expect(r).to eq(Norikra::Typedef.simple_guess({'name'=>'tagomori satoshi', 'age'=>33, 'sex'=>'male','lang'=>'ja'}))
         end
       end
 
@@ -23,13 +23,13 @@ describe Norikra::TypedefManager do
           r = m.refer('tablename', {
               'name'=>'tagomori satoshi', 'age'=>'33', 'sex'=>'male', 'lang'=>'ja',
             })
-          r.should eq(Norikra::Typedef.simple_guess({'name'=>'tagomori satoshi', 'age'=>'33', 'sex'=>'male', 'lang'=>'ja'}))
+          expect(r).to eq(Norikra::Typedef.simple_guess({'name'=>'tagomori satoshi', 'age'=>'33', 'sex'=>'male', 'lang'=>'ja'}))
 
           r = m.refer('tablename', {
               'name'=>'tagomori satoshi', 'age'=>33, 'sex'=>'male','lang'=>'ja',
             })
-          r.should_not eq(Norikra::Typedef.simple_guess({'name'=>'tagomori satoshi', 'age'=>33, 'sex'=>'male','lang'=>'ja'}))
-          r.should eq(Norikra::Typedef.simple_guess({'name'=>'tagomori satoshi', 'age'=>'33', 'sex'=>'male', 'lang'=>'ja'}))
+          expect(r).to_not eq(Norikra::Typedef.simple_guess({'name'=>'tagomori satoshi', 'age'=>33, 'sex'=>'male','lang'=>'ja'}))
+          expect(r).to eq(Norikra::Typedef.simple_guess({'name'=>'tagomori satoshi', 'age'=>'33', 'sex'=>'male', 'lang'=>'ja'}))
         end
       end
     end
@@ -45,7 +45,7 @@ describe Norikra::TypedefManager do
           r = m.refer('tablename', {
               'name'=>'tagomori satoshi', 'age'=>33, 'sex'=>'male','lang'=>'ja',
           })
-        r.definition['age'].should eql('string')
+          expect(r.definition['age']).to eql('string')
         end
       end
     end
