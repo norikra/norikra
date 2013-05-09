@@ -16,7 +16,7 @@ module Norikra
 
     def refer(tablename, data)
       @def_map[tablename] ||= {}
-      @def_map[tablename][data.keys.sort] ||= Norikra::Typedef.simple_guess(data)
+      @def_map[tablename][data.keys.sort.freeze] ||= Norikra::Typedef.simple_guess(data)
     end
   end
 end
