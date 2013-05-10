@@ -8,6 +8,8 @@ require 'norikra/typedef_manager'
 
 module Norikra
   class Engine
+    attr_reader :tables, :queries
+
     def initialize(output_pool, typedef_manager=nil)
       @output_pool = output_pool
       @typedef_manager = typedef_manager || Norikra::TypedefManager.new()
@@ -21,6 +23,8 @@ module Norikra
       @typedefs = {} # tablename => {typedefname => definition}
 
       @tables = []
+      @queries = []
+
       # Queries must be registered with typedef, but when no data reached, no typedef exists in this process.
       # '#register_query' accepts query, but force to wait actual resigtration after first data.
       @waiting_queries = {} # tablename => [query]
@@ -31,6 +35,8 @@ module Norikra
     def register(query)
       # query.tablename, query.expression
       @mutex.synchronize do
+        @queries.push(query)
+
         if @tables.include?(query.tablename) && (!@waiting_queries.has_key?(query.tablename))
           # data of specified table has already arrived, and processed (by any other queries)
           register_query_actual(query)
@@ -38,7 +44,6 @@ module Norikra
         end
 
         # no one data has arrived for specified table.
-
         # first access for this tablename (of course, no one data exists)
         @tables.push(query.tablename) unless @tables.include?(query.tablename)
 
@@ -47,20 +52,21 @@ module Norikra
       end
     end
 
-    def send(tablename, events)
-      return unless @tables.include?(tablename)
+    def send(tablename, *events)
+      return unless @tables.include?(tablename) # discard data for table not registered
 
-      typedefs = @typedef_manager.refer(events)
-      typedefs.each do |typedef|
-        next if (@typedefs[tablename] || {})[typedef.name]
-        register_type(tablename, typedef)
+      events.each do |event|
+        typedef = @typedef_manage.refer(tablename, event)
+        unless (@typedefs[tablename] || {}).has_key?(typedef.name)
+          register_type(tablename, typedef)
+        end
+
+        if @waiting_queries[tablename]
+          register_waiting_queries(tablename)
+        end
+
+        @runtime.sendEvent(typedef.format(event).to_java, tablename)
       end
-
-      if @waiting_queries[tablename]
-        register_waiting_queries(tablename)
-      end
-
-      events.each{|e| @runtime.sendEvent(e.to_java, tablename)}
     end
 
     class Listener
