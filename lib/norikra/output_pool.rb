@@ -20,15 +20,16 @@ module Norikra
       end
       @mutex.synchronize do
         @pool[query_name] ||= []
-        @pool[query_name] += events
+        @pool[query_name].push(events) if events.size > 0
       end
     end
 
     # returns [time(int from epoch), event], event: hash
     def pop(query_name)
-      @mutex.synchronize do
+      events = @mutex.synchronize do
         @pool.delete(query_name) || []
       end
+      events.reduce(&:+) || []
     end
   end
 end
