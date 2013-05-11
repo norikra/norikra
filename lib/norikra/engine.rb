@@ -28,8 +28,14 @@ module Norikra
       # Queries must be registered with typedef, but when no data reached, no typedef exists in this process.
       # '#register_query' accepts query, but force to wait actual resigtration after first data.
       @waiting_queries = {} # tablename => [query]
+    end
 
+    def start
       @runtime = @service.getEPRuntime
+    end
+
+    def stop
+      #TODO: stop to @runtime
     end
 
     def register(query)

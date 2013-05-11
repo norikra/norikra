@@ -5,18 +5,26 @@ require 'norikra/output_pool'
 require 'norikra/typedef'
 require 'norikra/query'
 
-# require 'norikra/rpc/http'
-# require 'norikra/rpc/msgpack'
+require 'norikra/rpc/http'
 
 module Norikra
   class Server
     def initialize
-      @type_manager = Norikra::TypeManager.new
+      @typedef_manager = Norikra::TypedefManager.new
       @output_pool = Norikra::OutputPool.new
-      @engine = Norikra::Engine.new
-
-      # instanciate Norikra::RPC::HTTP and Norikra::RPC::MessagePack and its threads
+      @engine = Norikra::Engine.new(@output_pool, @typedef_manager)
       @rpcserver = Norikra::RPC::HTTP.new(:engine => @engine, :port => xxx)
+    end
+
+    def run
+      @engine.start
+      @rpcserver.start
+    end
+
+    def shutdown
+      #TODO: stop order
+      @rpcserver.stop
+      @engine.stop
     end
   end
 end
