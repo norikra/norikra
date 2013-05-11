@@ -16,6 +16,7 @@ module Norikra
       @engine = Norikra::Engine.new
 
       # instanciate Norikra::RPC::HTTP and Norikra::RPC::MessagePack and its threads
+      @rpcserver = Norikra::RPC::HTTP.new(:engine => @engine, :port => xxx)
     end
   end
 end
