@@ -1,9 +1,24 @@
 require 'sinatra/base'
+require 'json'
+require 'msgpack'
 
 class Norikra::RPC::Handler < Sinatra::Base
-  get '/' do
+  get('/') do
     "OK"
   end
+
+  # get('/tables')
+  # get('/queries')
+
+  # post('/add/typedef') #TODO: typedef ? field with type ?
+  # post('/add/query')
+
+  # post('/send/json/:query_name') # send events by json
+  # post('/send/msgpack/:query_name') # send events by msgpack
+
+  # post('/event/:query_name') # get event for query
+  # post('/sweep')  # get all events
+  # post('/listen') # get all events as stream, during connection keepaliving
 end
 
 # get '/foo' do

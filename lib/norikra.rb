@@ -10,6 +10,4 @@ require 'norikra/query'
 require 'norikra/typedef_manager'
 require 'norikra/output_pool'
 require 'norikra/engine'
-
-# require messagepack rpc server thread
-# require http manager server thread
+require 'norikra/rpc'

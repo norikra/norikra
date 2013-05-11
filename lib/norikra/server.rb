@@ -5,7 +5,7 @@ require 'norikra/output_pool'
 require 'norikra/typedef'
 require 'norikra/query'
 
-require 'norikra/rpc/http'
+require 'norikra/rpc'
 
 module Norikra
   class Server
