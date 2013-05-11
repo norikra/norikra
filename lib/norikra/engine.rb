@@ -38,6 +38,8 @@ module Norikra
       #TODO: stop to @runtime
     end
 
+    #TODO: API to add typedef
+
     def register(query)
       # query.tablename, query.expression
       @mutex.synchronize do
@@ -62,7 +64,7 @@ module Norikra
       return unless @tables.include?(tablename) # discard data for table not registered
 
       events.each do |event|
-        typedef = @typedef_manage.refer(tablename, event)
+        typedef = @typedef_manager.refer(tablename, event)
         unless (@typedefs[tablename] || {}).has_key?(typedef.name)
           register_type(tablename, typedef)
         end
