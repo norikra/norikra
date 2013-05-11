@@ -12,7 +12,7 @@ end
 
 Spork.each_run do
   # This code will be run each time you run your specs.
-  Dir.glob('./lib/norikra/*.rb').each do |file|
+  Dir.glob('./lib/norikra/**/*.rb').each do |file|
     load file
   end
 end
