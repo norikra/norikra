@@ -43,7 +43,7 @@ describe Norikra::OutputPool do
 
   context 'with events in pool' do
     describe '#pop' do
-      it 'returns all events of specified table in pool' do
+      it 'returns all events of specified query in pool' do
         pool = Norikra::OutputPool.new
         t = Time.now.to_i
         pool.push('TestTable query1', [{'count'=>1},{'count'=>2}])
@@ -53,6 +53,22 @@ describe Norikra::OutputPool do
         expect(pool.pop('TestTable query1').size).to eql(2)
         expect(pool.pool.size).to eql(1)
         expect(pool.pop('TestTable query1').size).to eql(0)
+      end
+    end
+
+    describe '#sweep' do
+      it 'returns all events for all queries in pool' do
+        pool = Norikra::OutputPool.new
+        t = Time.now.to_i
+        pool.push('TestTable query1', [{'count'=>1},{'count'=>2}])
+        pool.push('TestTable query2', [{'count'=>3},{'count'=>4},{'count'=>5}])
+
+        chunk = pool.sweep
+        expect(chunk.keys.size).to eql(2)
+
+        expect(chunk['TestTable query1'].size).to eql(2)
+        expect(chunk['TestTable query2'].size).to eql(3)
+        expect(chunk['TestTable query2'].last.last['count']).to eql(5)
       end
     end
   end

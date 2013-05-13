@@ -24,12 +24,26 @@ module Norikra
       end
     end
 
-    # returns [time(int from epoch), event], event: hash
+    # returns [[time(int from epoch), event], ...], event: hash
     def pop(query_name)
       events = @mutex.synchronize do
         @pool.delete(query_name) || []
       end
       events.reduce(&:+) || []
+    end
+
+    # returns {query_name => [[time, event], ...]}
+    def sweep
+      ret = {}
+      sweep_pool = @mutex.synchronize do
+        sweeped = @pool
+        @pool = {}
+        sweeped
+      end
+      sweep_pool.keys.each do |k|
+        ret[k] = sweep_pool[k].reduce(&:+) || []
+      end
+      ret
     end
   end
 end
