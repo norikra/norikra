@@ -1,6 +1,7 @@
 require 'mizuno/server'
 require 'rack/builder'
-require 'norikra/rpc/handler'
+
+require_relative 'handler'
 
 module Norikra::RPC
   class HTTP
@@ -11,8 +12,9 @@ module Norikra::RPC
     def initialize(opts={})
       @engine = opts[:engine]
       @port = opts[:port]
+      handler = Norikra::RPC::Handler.new(@engine)
       @app = Rack::Builder.new {
-        run Norikra::RPC::Handler
+        run MessagePack::RPCOverHTTP::Server.app(handler)
       }
     end
 
