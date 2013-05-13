@@ -8,7 +8,7 @@ require 'norikra/typedef_manager'
 
 module Norikra
   class Engine
-    attr_reader :tables, :queries
+    attr_reader :tables, :queries, :output_pool, :typedef_manager
 
     def initialize(output_pool, typedef_manager=nil)
       @output_pool = output_pool
@@ -60,7 +60,7 @@ module Norikra
       end
     end
 
-    def send(tablename, *events)
+    def send(tablename, events)
       return unless @tables.include?(tablename) # discard data for table not registered
 
       events.each do |event|
