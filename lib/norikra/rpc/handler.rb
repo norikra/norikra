@@ -12,14 +12,18 @@ class Norikra::RPC::Handler
   end
 
   def add_query(table_name, query_name, expression)
-    @engine.add_query(Norikra::Query.new(:name => query_name, :tablename => table_name, :expression => expression))
+    @engine.register(Norikra::Query.new(:name => query_name, :tablename => table_name, :expression => expression))
+    true
   end
 
-  # def typedefs; end
+  def typedefs
+    @engine.typedef_manager.dump
+  end
   # def add_typedefs; end #TODO: typedef ? field with type ?
 
-  def sendevents(tablename, events)
+  def send(tablename, events)
     @engine.send(tablename, events)
+    true
   end
 
   def event(query_name)
