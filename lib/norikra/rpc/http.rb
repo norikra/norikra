@@ -1,5 +1,6 @@
 require 'mizuno/server'
 require 'rack/builder'
+require 'msgpack-rpc-over-http-jruby'
 
 require_relative 'handler'
 
@@ -11,6 +12,7 @@ module Norikra::RPC
 
     def initialize(opts={})
       @engine = opts[:engine]
+      @host = opts[:host]
       @port = opts[:port]
       handler = Norikra::RPC::Handler.new(@engine)
       @app = Rack::Builder.new {
@@ -21,7 +23,7 @@ module Norikra::RPC
     def start
       @thread = Thread.new do
         @mizuno = Mizuno::Server.new
-        @mizuno.run(@app, :embedded => true, :threads => 5, :port => 8080, :host => nil)
+        @mizuno.run(@app, :embedded => true, :threads => 5, :port => @port, :host => @host)
       end
     end
 
