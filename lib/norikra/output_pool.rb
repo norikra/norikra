@@ -13,11 +13,7 @@ module Norikra
 
     def push(query_name, events)
       t = Time.now.to_i
-      if events.first.respond_to?(:getUnderlying) # easy to test...
-        events = events.map{|e| [t, e.getUnderlying]}
-      else
-        events = events.map{|e| [t, e]}
-      end
+      events = events.map{|e| [t, e.getUnderlying.to_hash]}
       @mutex.synchronize do
         @pool[query_name] ||= []
         @pool[query_name].push(events) if events.size > 0
