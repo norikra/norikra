@@ -14,6 +14,10 @@ module Norikra
       self.name == other.name
     end
 
+    def to_hash
+      {:name => @name, :definition => @definition}
+    end
+
     def format(data)
       ret = {}
       data.keys.each do |key| # key variation between data and @definition are always match
@@ -23,7 +27,7 @@ module Norikra
                    when 'long','integer' then data[key].to_i
                    when 'double','float' then data[key].to_f
                    else
-                     raise RuntimeError, "unknown field type definition, maybe BUG"
+                     raise RuntimeError, "unknown field type definition (in format), maybe BUG. key:#{key}, def:#{@definition.inspect}"
                    end
       end
       ret
@@ -54,6 +58,8 @@ module Norikra
                 value.is_a?(Integer) || (value.is_a?(String) && value =~ /^-?\d+[lL]?$/)
               when 'double', 'float'
                 value.is_a?(Float) || value.is_a?(Integer) || (value.is_a?(String) && value =~ /^-?\d+(\.\d+)?(?:[eE]-?\d+|[dDfF])?$/)
+              else
+                raise RuntimeError, "unknown field type definition (in match?), maybe BUG. key:#{k}, def:#{@definition.inspect}"
               end
         return false unless ret
       end
