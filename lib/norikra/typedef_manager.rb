@@ -2,21 +2,34 @@ require 'norikra/typedef'
 
 module Norikra
   class TypedefManager
-    attr_reader :strict_check
+    attr_reader :typedefs
 
     def initialize(opts={})
-      @def_map = {} # tablename => {[sorted_keys].freeze => typedef}
+      @typedefs = {} # tablename => {[sorted_keys].freeze => typedef}
+    end
+
+    def dump
+      ret = {}
+      @typedefs.keys.sort.each do |tablename|
+        ret[tablename] ||= {}
+        @typedefs[tablename].keys.each do |key|
+          ret[tablename][key] = @typedefs[tablename][key].to_hash
+        end
+      end
+      ret
     end
 
     def store(tablename, typedef)
       # stores pre-defined definition
-      @def_map[tablename] ||= {}
-      @def_map[tablename][typedef.definition.keys.sort.freeze] = typedef
+      @typedefs[tablename] ||= {}
+      @typedefs[tablename][typedef.definition.keys.sort.join(',').freeze] = typedef
     end
 
     def refer(tablename, data)
-      @def_map[tablename] ||= {}
-      @def_map[tablename][data.keys.sort.freeze] ||= Norikra::Typedef.simple_guess(data)
+      typedef_key = data.keys.sort.join(',').freeze
+      @typedefs[tablename] ||= {}
+      @typedefs[tablename][typedef_key] ||= Norikra::Typedef.simple_guess(data)
+      @typedefs[tablename][typedef_key]
     end
   end
 end
