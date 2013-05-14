@@ -102,18 +102,17 @@ module Norikra
     private
 
     def register_waiting_queries(tablename)
-      @mutex.synchronize do
-        queries = @waiting_queries.delete(tablename) || []
-        queries.each do |query|
-          register_query_actual(query)
-        end
+      queries = @mutex.synchronize do
+        @waiting_queries.delete(tablename) || []
+      end
+      queries.each do |query|
+        register_query_actual(query)
       end
     end
 
     def register_query_actual(query)
-      # epl = @service.getEPAdministrator.createEPL(query.expression)
-      # epl.java_send :addListener, [com.espertech.esper.client.UpdateListener], Listener.new(query.tablename, @output_pool)
-      @service.getEPAdministrator.createEPL(query.expression).addListener(Listener.new(query.name, @output_pool))
+      epl = @service.getEPAdministrator.createEPL(query.expression)
+      epl.java_send :addListener, [com.espertech.esper.client.UpdateListener.java_class], Listener.new(query.name, @output_pool)
     end
 
     def register_type(tablename, typedef)
@@ -128,7 +127,7 @@ module Norikra
         @mutex.synchronize do
           next if @typedefs[tablename]
           @typedefs[tablename] = {}
-          @config.addEventType(tablename, typedef.definition)
+          @config.addEventType(tablename, typedef.definition.dup)
         end
       end
 
@@ -140,7 +139,7 @@ module Norikra
           # http://esper.codehaus.org/esper-4.9.0/doc/reference/en-US/html/event_representation.html#eventrep-map-supertype
           # epService.getEPAdministrator().getConfiguration()
           #   .addEventType("AccountUpdate", accountUpdateDef, new String[] {"BaseUpdate"});
-          @config.addEventType(typedef.name, typedef.definition, [tablename].to_java(:string))
+          @config.addEventType(typedef.name, typedef.definition.dup, [tablename].to_java(:string))
         end
       end
     end
