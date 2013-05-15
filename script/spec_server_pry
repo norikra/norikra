@@ -31,4 +31,13 @@ Example:
 
 DESC
 
+$LOAD_PATH.push './lib'
+$LOAD_PATH.push './esper'
+
+require 'java'
+require 'esper-4.9.0.jar'
+require 'esper/lib/commons-logging-1.1.1.jar'
+require 'esper/lib/antlr-runtime-3.2.jar'
+require 'esper/lib/cglib-nodep-2.2.jar'
+
 Pry.start
