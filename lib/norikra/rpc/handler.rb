@@ -11,8 +11,8 @@ class Norikra::RPC::Handler
     @engine.queries.map(&:to_hash)
   end
 
-  def add_query(table_name, query_name, expression)
-    @engine.register(Norikra::Query.new(:name => query_name, :tablename => table_name, :expression => expression))
+  def add_query(query_name, expression)
+    @engine.register(Norikra::Query.new(:name => query_name, :expression => expression))
     true
   end
 

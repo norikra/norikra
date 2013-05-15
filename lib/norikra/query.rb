@@ -6,20 +6,36 @@ require 'esper/lib/cglib-nodep-2.2.jar'
 
 module Norikra
   class Query
-    attr_accessor :name, :tablename, :expression
+    attr_accessor :name, :expression
 
     def initialize(param={})
       @name = param[:name]
-      @tablename = param[:tablename]
       @expression = param[:expression]
+      @ast = nil
+      @tablename = nil
+      @fields = nil
+    end
+
+    def dup
+      self.class.new(:name => @name, :expression => @expression)
     end
 
     def to_hash
       {'name' => @name, 'tablename' => @tablename, 'expression' => @expression}
     end
 
+    def tablename
+      return @tablename if @tablename
+      #TODO: this code doesn't care JOINs.
+      @tablename = self.ast.find('STREAM_EXPR').find('EVENT_FILTER_EXPR').children.first.name
+      @tablename
+    end
+
     def fields
-      self.ast.find_node('EVENT_PROP_SIMPLE').map{|p| p.children.first.name}.uniq
+      return @fields if @fields
+      #TODO: this code doesn't care JOINs.
+      @fields = self.ast.listup('EVENT_PROP_SIMPLE').map{|p| p.children.first.name}.uniq.sort
+      @fields
     end
 
     class ParseRuleSelectorImpl
@@ -38,17 +54,26 @@ module Norikra
       def to_a
         [@name] + @children.map(&:to_a)
       end
-      def find_node(node_name)
+      def find(node_name) # only one, depth-first search
+        return self if @name == node_name
+        @children.each do |c|
+          r = c.find(node_name)
+          return r if r
+        end
+        nil
+      end
+      def listup(node_name)
         result = []
         result.push(self) if @name == node_name
         @children.each do |c|
-          result.push(*c.find_node(node_name))
+          result.push(*c.listup(node_name))
         end
         result
       end
     end
 
     def ast
+      return @ast if @ast
       rule = ParseRuleSelectorImpl.new
       target = @expression.dup
       forerrmsg = @expression.dup
@@ -57,7 +82,8 @@ module Norikra
       def convSubTree(tree)
         ASTNode.new(tree.text, (tree.children ? tree.children.map{|c| convSubTree(c)} : []))
       end
-      convSubTree(result.getTree)
+      @ast = convSubTree(result.getTree)
+      @ast
     end
 
     ### select max(price) as maxprice from HogeTable.win:time_batch(10 sec) where cast(amount, double) > 2 and price > 50

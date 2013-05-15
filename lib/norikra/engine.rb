@@ -41,7 +41,7 @@ module Norikra
     #TODO: API to add typedef
 
     def register(query)
-      # query.tablename, query.expression
+      # query.name, query.expression and parsed .tablename & .fields
       @mutex.synchronize do
         @queries.push(query)
 
