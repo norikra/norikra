@@ -38,17 +38,22 @@ module Norikra
       #TODO: stop to @runtime
     end
 
+    #TODO: API to add table (and its basic typedef)
     #TODO: API to add typedef
 
-    def register(query)
+    def register(query) # success or not
+      return false if @queries.map(&:name).include?(query.name)
+
       # query.name, query.expression and parsed .tablename & .fields
       @mutex.synchronize do
+        return false if @queries.map(&:name).include?(query.name)
+
         @queries.push(query)
 
         if @tables.include?(query.tablename) && (!@waiting_queries.has_key?(query.tablename))
           # data of specified table has already arrived, and processed (by any other queries)
           register_query_actual(query)
-          return
+          return true
         end
 
         # no one data has arrived for specified table.
@@ -58,6 +63,7 @@ module Norikra
         @waiting_queries[query.tablename] ||= []
         @waiting_queries[query.tablename].push(query)
       end
+      true
     end
 
     def send(tablename, events)

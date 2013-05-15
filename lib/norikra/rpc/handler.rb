@@ -13,7 +13,6 @@ class Norikra::RPC::Handler
 
   def add_query(query_name, expression)
     @engine.register(Norikra::Query.new(:name => query_name, :expression => expression))
-    true
   end
 
   def typedefs
