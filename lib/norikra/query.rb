@@ -20,12 +20,12 @@ module Norikra
       self.class.new(:name => @name, :expression => @expression.dup)
     end
 
-    def dup_with_stream_name(actual_name)
-      tablename = self.tablename
+    def dup_with_stream_name(actual_name) #TODO: add test
+      target = self.target
       query = self.dup
-      query.expression = self.expression.gsub(/(\s[Ff][Rr][Oo][Mm]\s+)#{tablename}(\.|\s)/, '\1' + actual_name + '\2')
-      if query.tablename != actual_name
-        raise RuntimeError, 'failed to replace query tablename into stream name:' + self.expression
+      query.expression = self.expression.gsub(/(\s[Ff][Rr][Oo][Mm]\s+)#{target}(\.|\s)/, '\1' + actual_name + '\2')
+      if query.target != actual_name
+        raise RuntimeError, 'failed to replace query target into stream name:' + self.expression
       end
       query
     end
