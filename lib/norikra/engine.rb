@@ -6,6 +6,8 @@ require 'esper/lib/cglib-nodep-2.2.jar'
 
 require 'norikra/typedef_manager'
 
+####TODO: fix 'table' into 'target', and add 'stream' keyword support
+
 module Norikra
   class Engine
     attr_reader :tables, :queries, :output_pool, :typedef_manager

@@ -12,7 +12,7 @@ module Norikra
       @name = param[:name]
       @expression = param[:expression]
       @ast = nil
-      @tablename = nil
+      @target = nil
       @fields = nil
     end
 
@@ -31,21 +31,64 @@ module Norikra
     end
 
     def to_hash
-      {'name' => @name, 'tablename' => @tablename, 'expression' => @expression}
+      {'name' => @name, 'expression' => @expression, 'target' => self.target}
     end
 
-    def tablename
-      return @tablename if @tablename
+    def target
+      return @target if @target
       #TODO: this code doesn't care JOINs.
-      @tablename = self.ast.find('STREAM_EXPR').find('EVENT_FILTER_EXPR').children.first.name
-      @tablename
+      @target = self.ast.find('STREAM_EXPR').find('EVENT_FILTER_EXPR').children.first.name
+      @target
     end
 
     def fields
       return @fields if @fields
       #TODO: this code doesn't care JOINs.
-      @fields = self.ast.listup('EVENT_PROP_SIMPLE').map{|p| p.children.first.name}.uniq.sort
+
+      # Norikra::Query.new(
+      #   :name => 'hoge',
+      #   :expression => 'select count(*) AS cnt from www.win:time_batch(10 seconds) where path="/" AND search.length() > 0').ast.to_a
+      # ["EPL_EXPR",
+      #  ["SELECTION_EXPR", ["SELECTION_ELEMENT_EXPR", ["count"], ["cnt"]]],
+      #  ["STREAM_EXPR",
+      #   ["EVENT_FILTER_EXPR", ["www"]],
+      #   ["VIEW_EXPR",
+      #    ["win"],
+      #    ["time_batch"],
+      #    ["TIME_PERIOD", ["SECOND_PART", ["10"]]]]],
+      #  ["WHERE_EXPR",
+      #   ["EVAL_AND_EXPR",
+      #    ["EVAL_EQUALS_EXPR",
+      #     ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", ["path"]]],
+      #     ["\"/\""]],
+      #    [">",
+      #     ["LIB_FUNC_CHAIN", ["LIB_FUNCTION", ["search"], ["length"], ["("]]],
+      #     ["0"]]]]]
+
+      ast = self.ast
+      names_simple = ast.listup('EVENT_PROP_SIMPLE').map{|p| p.child.name}
+      names_chain_root = ast.listup('LIB_FUNC_CHAIN').map{|c| c.child.child.name}.select{|n| not self.class.imported_java_class?(n)}
+      @fields = (names_simple + names_chain_root).uniq.sort
       @fields
+    end
+
+    def self.imported_java_class?(name)
+      return false unless name =~ /^[A-Z]/
+      # Esper auto-imports the following Java library packages:
+      # java.lang.* -> Java::JavaLang::*
+      # java.math.* -> Java::JavaMath::*
+      # java.text.* -> Java::JavaText::*
+      # java.util.* -> Java::JavaUtil::*
+      java_class('Java::JavaLang::'+name) || java_class('Java::JavaMath::'+name) ||
+        java_class('Java::JavaText::'+name) || java_class('Java::JavaUtil::'+name) || false
+    end
+    def self.java_class(const_name)
+      begin
+        c = eval(const_name)
+        c.class == Kernel ? nil : c
+      rescue NameError
+        return nil
+      end
     end
 
     class ParseRuleSelectorImpl
@@ -63,6 +106,9 @@ module Norikra
       end
       def to_a
         [@name] + @children.map(&:to_a)
+      end
+      def child
+        @children.first
       end
       def find(node_name) # only one, depth-first search
         return self if @name == node_name
@@ -83,6 +129,8 @@ module Norikra
     end
 
     def ast
+      #TODO: test
+      #TODO: take care for parse error
       return @ast if @ast
       rule = ParseRuleSelectorImpl.new
       target = @expression.dup

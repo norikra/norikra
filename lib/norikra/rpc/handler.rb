@@ -3,8 +3,8 @@ class Norikra::RPC::Handler
     @engine = engine
   end
 
-  def tables
-    @engine.tables
+  def targets
+    @engine.targets
   end
 
   def queries
@@ -20,8 +20,8 @@ class Norikra::RPC::Handler
   end
   # def add_typedefs; end #TODO: typedef ? field with type ?
 
-  def send(tablename, events)
-    @engine.send(tablename, events)
+  def send(target, events)
+    @engine.send(target, events)
     true
   end
 
