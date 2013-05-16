@@ -34,6 +34,8 @@ DESC
 $LOAD_PATH.push './lib'
 $LOAD_PATH.push './esper'
 
+require 'norikra'
+
 require 'java'
 require 'esper-4.9.0.jar'
 require 'esper/lib/commons-logging-1.1.1.jar'
