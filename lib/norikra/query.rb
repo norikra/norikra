@@ -20,7 +20,7 @@ module Norikra
       self.class.new(:name => @name, :expression => @expression.dup)
     end
 
-    def dup_with_stream_name(actual_name) #TODO: add test
+    def dup_with_stream_name(actual_name)
       target = self.target
       query = self.dup
       query.expression = self.expression.gsub(/(\s[Ff][Rr][Oo][Mm]\s+)#{target}(\.|\s)/, '\1' + actual_name + '\2')
