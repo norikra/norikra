@@ -43,6 +43,7 @@ end
 # Prepare the OrderEvent type
 order_event_type = {
   "itemName" => "string",
+  "amount" => "int",
   "price" => "double"
 }
 
@@ -60,9 +61,9 @@ epr_runtime = ep_service.getEPRuntime
 
 t = Time.now + 15
 while Time.now < t
-  epr_runtime.sendEvent({"itemName"=>"test","price"=>100}, "OrderEvent")
-  epr_runtime.sendEvent({"itemName"=>"test","price"=>200}, "OrderEvent")
-  epr_runtime.sendEvent({"itemName"=>"test","price"=>300}, "OrderEvent")
+  epr_runtime.sendEvent({"itemName"=>"test","amount"=>1,"price"=>100}, "OrderEvent")
+  epr_runtime.sendEvent({"itemName"=>"test","amount"=>1,"price"=>200}, "OrderEvent")
+  epr_runtime.sendEvent({"itemName"=>"test","amount"=>2,"price"=>300}, "OrderEvent")
   sleep 3
 end
 
@@ -71,8 +72,8 @@ add_epl(ep_service, ep_config, 'OrderEvent', order_event_type,
 
 t = Time.now + 35
 while Time.now < t
-  epr_runtime.sendEvent({"itemName"=>"test","price"=>100}, "OrderEvent")
-  epr_runtime.sendEvent({"itemName"=>"test","price"=>200}, "OrderEvent")
-  epr_runtime.sendEvent({"itemName"=>"test","price"=>300}, "OrderEvent")
+  epr_runtime.sendEvent({"itemName"=>"test","amount"=>1,"price"=>100}, "OrderEvent")
+  epr_runtime.sendEvent({"itemName"=>"test","amount"=>1,"price"=>200}, "OrderEvent")
+  epr_runtime.sendEvent({"itemName"=>"test","amount"=>1,"price"=>300}, "OrderEvent")
   sleep 3
 end

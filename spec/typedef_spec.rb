@@ -121,7 +121,7 @@ describe Norikra::Typedef do
           set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'long', 'c' => 'double'})
           expect(t.consistent?(set)).to be_true
 
-          set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'integer'})
+          set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int'})
           expect(t.consistent?(set)).to be_false
 
           set = Norikra::FieldSet.new({'a' => 'string'})
@@ -156,7 +156,7 @@ describe Norikra::Typedef do
     describe '#push' do
       it 'does not accepts fieldset which conflicts pre-defined fields' do
         t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
-        expect { t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'integer'})) }.to raise_error(ArgumentError)
+        expect { t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'int'})) }.to raise_error(ArgumentError)
         expect { t.push(:data, Norikra::FieldSet.new({'a'=>'string'})) }.to raise_error(ArgumentError)
       end
 

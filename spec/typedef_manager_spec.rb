@@ -101,7 +101,7 @@ describe Norikra::TypedefManager do
     describe '#subsets' do
       it 'returns list of query fieldset (and base set), subset of specified fieldset, owned by manager for specified target' do
         base = {'a'=>'string','b'=>'string','c'=>'double'}
-        set_d = Norikra::FieldSet.new(base.merge({'d'=>'integer'}))
+        set_d = Norikra::FieldSet.new(base.merge({'d'=>'int'}))
         manager.bind_fieldset('sample', :query, set_d)
         set_e = Norikra::FieldSet.new(base.merge({'e'=>'double'}))
         manager.bind_fieldset('sample', :query, set_e)

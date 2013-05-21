@@ -84,14 +84,14 @@ describe Norikra::FieldSet do
 
         oldsummary = x.summary
 
-        x.fields['x'] = Norikra::Field.new('x', 'integer')
+        x.fields['x'] = Norikra::Field.new('x', 'int')
 
         expect(x.summary).to eql(oldsummary)
 
         x.update_summary
 
         expect(x.summary).not_to eql(oldsummary)
-        expect(x.summary).to eql('a:boolean,x:integer,y:long')
+        expect(x.summary).to eql('a:boolean,x:int,y:long')
       end
     end
 
@@ -104,9 +104,9 @@ describe Norikra::FieldSet do
         expect(x.fields['y'].type).to eql('long')
         expect(x.fields['y'].optional).to be_nil
 
-        x.update([Norikra::Field.new('y', 'integer'), Norikra::Field.new('a','string')], false)
+        x.update([Norikra::Field.new('y', 'int'), Norikra::Field.new('a','string')], false)
 
-        expect(x.fields['y'].type).to eql('integer')
+        expect(x.fields['y'].type).to eql('int')
         expect(x.fields['y'].optional).to eql(false)
 
         expect(x.fields['x'].type).to eql('string')

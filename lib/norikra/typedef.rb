@@ -38,11 +38,17 @@ module Norikra
     # double  A double-precision 64-bit IEEE 754 floating point.              # select 1.67 as field1, 167e-2 as field2, 1.67d as field3
     # float   A single-precision 32-bit IEEE 754 floating point. Use the "f" suffix. # select 1.2f as field1, 1.2F as field2
     # byte    A 8-bit signed two's complement integer.                        # select 0x10 as field1
+    #
+    #### 'integer' in epser document IS WRONG.
+    #### If 'integer' specified, esper raises this exception:
+    ### Exception: Nestable type configuration encountered an unexpected property type name 'integer' for property 'status',
+    ### expected java.lang.Class or java.util.Map or the name of a previously-declared Map or ObjectArray type
+    #### Correct type name is 'int'. see and run 'junks/esper-test.rb'
     def self.valid_type?(type)
       case type.to_s.downcase
       when 'string' then 'string'
       when 'boolean' then 'boolean'
-      when 'integer' then 'integer'
+      when 'int' then 'int'
       when 'long' then 'long'
       when 'float' then 'float'
       when 'double' then 'double'
@@ -55,7 +61,7 @@ module Norikra
       case @type
       when 'string'  then value.to_s
       when 'boolean' then value =~ /^(true|false)$/i ? ($1.downcase == 'true') : (!!value)
-      when 'long','integer' then value.to_i
+      when 'long','int' then value.to_i
       when 'double','float' then value.to_f
       else
         raise RuntimeError, "unknown field type (in format), maybe BUG. name:#{@name},type:#{@type}"
@@ -108,6 +114,7 @@ module Norikra
       self.update_summary
     end
 
+    #TODO: have a bug?
     def ==(other)
       return false unless self.class != other.class
       self.summary == other.summary
@@ -240,7 +247,9 @@ module Norikra
       @mutex.synchronize do
         case level
         when :base
-          raise RuntimeError, "baseset mismatch" unless @baseset == fieldset
+          unless @baseset.object_id == fieldset.object_id
+            raise RuntimeError, "baseset mismatch"
+          end
         when :query
           unless @queryfieldsets.include?(fieldset)
             @queryfieldsets.push(fieldset)

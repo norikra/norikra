@@ -15,7 +15,7 @@ describe Norikra::Field do
 
       expect(Norikra::Field.valid_type?('boolean')).to eql('boolean')
       expect(Norikra::Field.valid_type?('BOOLEAN')).to eql('boolean')
-      expect(Norikra::Field.valid_type?('Integer')).to eql('integer')
+      expect(Norikra::Field.valid_type?('Int')).to eql('int')
       expect(Norikra::Field.valid_type?('lonG')).to eql('long')
       expect(Norikra::Field.valid_type?('FLOAT')).to eql('float')
       expect(Norikra::Field.valid_type?('Double')).to eql('double')
@@ -48,7 +48,7 @@ describe Norikra::Field do
           f = Norikra::Field.new('foo', 'string', false)
           expect(f.dup.optional).to eql(false)
 
-          f = Norikra::Field.new('foo', 'integer', true)
+          f = Norikra::Field.new('foo', 'int', true)
           expect(f.dup.optional).to eql(true)
         end
       end
@@ -97,10 +97,10 @@ describe Norikra::Field do
     end
   end
 
-  context 'defined as numeric value (integer/long/float/double)' do
+  context 'defined as numeric value (int/long/float/double)' do
     describe '#format' do
       it 'convertes specified value as numeric' do
-        f = Norikra::Field.new('x', 'integer')
+        f = Norikra::Field.new('x', 'int')
         expect(f.format('1')).to eql(1)
         expect(f.format('1.0')).to eql(1)
         expect(f.format('0.1')).to eql(0)
