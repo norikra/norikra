@@ -109,6 +109,7 @@ module Norikra
     private
 
     def open_target(target, fields)
+      # from open
       @mutex.synchronize do
         return if @targets.include?(target)
         @typedef_manager.add_target(target, fields)
@@ -116,11 +117,26 @@ module Norikra
 
         unless @typedef_manager.lazy?(target)
           base_fieldset = @typedef_manager.base_fieldset(target)
-          register_fieldset_actually(target, fieldset, :base)
+
+          @typedef_manager.bind_fieldset(target, :base, base_fieldset)
+          register_fieldset_actually(target, base_fieldset, :base)
         end
 
         @targets.push(target)
       end
+    end
+
+    def register_base_fieldset(target, fieldset)
+      # for lazy target, with generated fieldset from sent events.first
+      @mutex.synchronize do
+        return unless @typedef_manager.lazy?(target)
+
+        @typedef_manager.bind_fieldset(target, :base, fieldset)
+        register_fieldset_actually(target, fieldset, :base)
+
+        @typedef_manager.activate(target, fieldset)
+      end
+      nil
     end
 
     def register_query(query)
@@ -167,17 +183,6 @@ module Norikra
 
         register_fieldset_actually(target, fieldset, :data)
       end
-    end
-
-    def register_base_fieldset(target, fieldset)
-      @mutex.synchronize do
-        return unless @typedef_manager.lazy?(target)
-
-        @typedef_manager.bind_fieldset(target, :base, fieldset)
-        register_fieldset_actually(target, fieldset, :base)
-        @typedef_manager.activate(target, fieldset)
-      end
-      nil
     end
 
     # this method should be protected with @mutex lock
