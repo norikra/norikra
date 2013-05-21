@@ -6,8 +6,6 @@ require 'esper/lib/cglib-nodep-2.2.jar'
 
 require 'norikra/typedef_manager'
 
-####TODO: add 'stream' keyword support
-
 module Norikra
   class Engine
     attr_reader :targets, :queries, :output_pool, :typedef_manager
@@ -21,14 +19,12 @@ module Norikra
 
       @mutex = Mutex.new
 
-      # if @typedefs[target] exists, first data has already arrived.
-      @typedefs = {} # target => {typedefname => definition}
+      # fieldsets already registered into @runtime
+      @registered_fieldsets = {} # {target => {fieldset_summary => Fieldset}
 
       @targets = []
       @queries = []
 
-      # Queries must be registered with typedef, but when no data reached, no typedef exists in this process.
-      # '#register_query' accepts query, but force to wait actual resigtration after first data.
       @waiting_queries = {} # target => [query]
     end
 
@@ -40,49 +36,53 @@ module Norikra
       #TODO: stop to @runtime
     end
 
-    #TODO: API to add target (and its basic typedef)
-    #TODO: API to add typedef
+    def open(target, fields=nil)
+      return if @targets.include?(target)
+      open_target(target, fields)
+    end
 
-    def register(query) # success or not
-      return false if @queries.map(&:name).include?(query.name)
+    def close(target)
+      #TODO: write
+      raise NotImplementedError
+    end
 
-      # query.name, query.expression and parsed .target & .fields
-      @mutex.synchronize do
-        return false if @queries.map(&:name).include?(query.name)
+    def reserve(target, field, type)
+      @typedef_manager.reserve(target, field, type)
+    end
 
-        @queries.push(query)
-
-        if @targets.include?(query.target) && (!@waiting_queries.has_key?(query.target))
-          # data of specified target has already arrived, and processed (by any other queries)
-          register_query_actual(query)
-          return true
-        end
-
-        # no one data has arrived for specified target.
-        # first access for this target (of course, no one data exists)
-        @targets.push(query.target) unless @targets.include?(query.target)
-
-        @waiting_queries[query.target] ||= []
-        @waiting_queries[query.target].push(query)
+    def register(query)
+      unless @targets.includes?(query.target)
+        open(target) # open as lazy defined target
       end
-      true
+      register_query(query)
+    end
+
+    def deregister(query_name)
+      #TODO: write
+      raise NotImplementedError
     end
 
     def send(target, events)
-      return unless @targets.include?(target) # discard data for target not registered
+      return unless @targets.includes?(target) # discard events for target not registered
+      return if events.size < 1
+
+      if @typedef_manager.lazy?(target)
+        base_fieldset = @typedef_manager.generate_base_fieldset(target, events.first)
+        register_base_fieldset(target, base_fieldset)
+      end
+
+      registered_data_fieldset = @registered_fieldsets[target][:data]
 
       events.each do |event|
-        typedef = @typedef_manager.refer(target, event)
-        unless (@typedefs[target] || {}).has_key?(typedef.name)
-          register_type(target, typedef)
-        end
+        fieldset = @typedef_manager.refer(target, event)
 
-        if @waiting_queries[target]
-          register_waiting_queries(target)
+        unless registered_data_fieldset[fieldset.summary]
+          # register waiting queries including this fieldset, and this fieldset itself
+          register_fieldset(target, fieldset)
         end
-
-        @runtime.sendEvent(typedef.format(event).to_java, target)
+        @runtime.sendEvent(@typedef_manager.format(target, event).to_java, fieldset.event_type_name)
       end
+      nil
     end
 
     class Listener
@@ -97,7 +97,6 @@ module Norikra
         @output_pool.push(@query_name, new_events)
       end
     end
-
     ##### Unmatched events are simply ignored
     # class UnmatchedListener
     #   include com.espertech.esper.client.UnmatchedListener
@@ -109,47 +108,103 @@ module Norikra
 
     private
 
-    def register_waiting_queries(target)
-      queries = @mutex.synchronize do
-        @waiting_queries.delete(target) || []
-      end
-      queries.each do |query|
-        register_query_actual(query)
+    def open_target(target, fields)
+      @mutex.synchronize do
+        return if @targets.include?(target)
+        @typedef_manager.add_target(target, fields)
+        @registered_fieldsets[target] = {:base => {}, :query => {}, :data => {}}
+
+        unless @typedef_manager.lazy?(target)
+          base_fieldset = @typedef_manager.base_fieldset(target)
+          register_fieldset_actually(target, fieldset, :base)
+        end
+
+        @targets.push(target)
       end
     end
 
-    def register_query_actual(query)
+    def register_query(query)
+      target = query.target
+      @mutex.synchronize do
+        if @typedef_manager.lazy?(target) || @typedef_manager.fields_defined?(target, query.fields)
+          @waiting_queries[target] ||= []
+          @waiting_queries[target].push(query)
+        else
+          query_fieldset = @typedef_manager.generate_query_fieldset(target, query.fields)
+          @typedef_manager.bind_fieldset(target, :query, query_fieldset)
+          register_fieldset_actually(target, query_fieldset, :query)
+          register_query_actually(target, query)
+        end
+        @queries.push(query)
+      end
+    end
+
+    def register_waiting_queries(target)
+      waitings = @waiting_queries.delete(target) || []
+      not_registered = []
+
+      waitings.each do |query|
+        if @typedef_manager.fields_defined?(target, query.fields)
+          query_fieldset = @typedef_manager.generate_query_fieldset(target, query.fields)
+          @typedef_manager.bind_fieldset(target, :query, query_fieldset)
+          register_fieldset_actually(target, query_fieldset, :query)
+          register_query_actually(target, query)
+        else
+          not_registered.push(query)
+        end
+      end
+
+      @waiting_queries[target] = not_registered if not_registered.size > 0
+    end
+
+    def register_fieldset(target, fieldset)
+      @mutex.synchronize do
+        @typedef_manager.bind_fieldset(target, :data, fieldset)
+
+        if @waiting_queries[target]
+          register_waiting_queries(target)
+        end
+
+        register_fieldset_actually(target, fieldset, :data)
+      end
+    end
+
+    def register_base_fieldset(target, fieldset)
+      @mutex.synchronize do
+        return unless @typedef_manager.lazy?(target)
+
+        @typedef_manager.bind_fieldset(target, :base, fieldset)
+        register_fieldset_actually(target, fieldset, :base)
+        @typedef_manager.activate(target, fieldset)
+      end
+      nil
+    end
+
+    # this method should be protected with @mutex lock
+    def register_query_actually(target, query)
       epl = @service.getEPAdministrator.createEPL(query.expression)
       epl.java_send :addListener, [com.espertech.esper.client.UpdateListener.java_class], Listener.new(query.name, @output_pool)
     end
 
-    def register_type(target, typedef)
-      unless @target.include?(target)
-        @mutex.synchronize do
-          next if @targets.include?(target)
-          @targets.push(target)
-        end
-      end
+    # this method should be protected with @mutex lock
+    def register_fieldset_actually(target, fieldset, level)
+      return if @registered_fieldsets[target][level][fieldset.summary]
 
-      unless @typedefs[target]
-        @mutex.synchronize do
-          next if @typedefs[target]
-          @typedefs[target] = {}
-          @config.addEventType(target, typedef.definition.dup)
-        end
+      # Map Supertype (target) and Subtype (typedef name, like TARGET_TypeDefName)
+      # http://esper.codehaus.org/esper-4.9.0/doc/reference/en-US/html/event_representation.html#eventrep-map-supertype
+      # epService.getEPAdministrator().getConfiguration()
+      #   .addEventType("AccountUpdate", accountUpdateDef, new String[] {"BaseUpdate"});
+      case level
+      when :base
+        @config.addEventType(fieldset.event_type_name, fieldset.definition)
+      when :query
+        base_name = @typedef_manager.base_fieldset.event_type_name
+        @config.addEventType(fieldset.event_type_name, fieldset.definition, [base_name].to_java(:string))
+      else
+        subset_names = @typedef_manager.subsets(target, fieldset).map(&:event_type_name)
+        @config.addEventType(fieldset.event_type_name, fieldset.definition, subset_names.to_java(:string))
       end
-
-      unless @typedefs[target][typedef.name]
-        @mutex.synchronize do
-          next if @typedefs[target][typedef.name]
-          @typedefs[target][typedef.name] = typedef.definition
-          # Map Supertype (target) and Subtype (typedef name, like TARGET_TypeDefName)
-          # http://esper.codehaus.org/esper-4.9.0/doc/reference/en-US/html/event_representation.html#eventrep-map-supertype
-          # epService.getEPAdministrator().getConfiguration()
-          #   .addEventType("AccountUpdate", accountUpdateDef, new String[] {"BaseUpdate"});
-          @config.addEventType(typedef.name, typedef.definition.dup, [target].to_java(:string))
-        end
-      end
+      nil
     end
   end
 end

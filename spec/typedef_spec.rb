@@ -6,163 +6,242 @@ require 'json'
 require 'digest'
 
 describe Norikra::Typedef do
-  context 'has class method' do
-    describe '.mangle_symbols' do
-      it 'mangle symbol keys of parameter hash' do
-        Norikra::Typedef.mangle_symbols({:a => 1, :b => 2}).should == {'a' => 1, 'b' => 2}
-      end
+  context 'instanciated as lazy typedef' do
+    it 'has no fields' do
+      t = Norikra::Typedef.new
+      expect(t.fields.size).to eql(0)
+      expect(t.baseset).to be_nil
+    end
 
-      it 'reserve string keys as-is' do
-        Norikra::Typedef.mangle_symbols({'a' => 1, :b => 2}).should == {'a' => 1, 'b' => 2}
+    it 'has no query/data fieldsets' do
+      t = Norikra::Typedef.new
+      expect(t.queryfieldsets.size).to eql(0)
+      expect(t.datafieldsets.size).to eql(0)
+    end
+
+    describe '#lazy?' do
+      it 'returns true' do
+        t = Norikra::Typedef.new
+        expect(t.lazy?).to be_true
       end
     end
 
-    describe '.simple_guess' do
-      it 'can guess field definitions with class of values' do
-        t = Norikra::Typedef.simple_guess({'key1' => true, 'key2' => false, 'key3' => 10, 'key4' => 3.1415, 'key5' => 'foobar'})
-        r = t.definition
-        expect(r['key1']).to eql('boolean')
-        expect(r['key2']).to eql('boolean')
-        expect(r['key3']).to eql('long')
-        expect(r['key4']).to eql('double')
-        expect(r['key5']).to eql('string')
-      end
+    describe '#reserve' do
+      it 'add field definition without any baseset' do
+        t = Norikra::Typedef.new
 
-      it 'does not guess with content of string values' do
-        t = Norikra::Typedef.simple_guess({'key1' => 'TRUE', 'key2' => 'false', 'key3' => "10", 'key4' => '3.1415', 'key5' => {:a => 1}})
-        r = t.definition
-        expect(r['key1']).to eql('string')
-        expect(r['key2']).to eql('string')
-        expect(r['key3']).to eql('string')
-        expect(r['key4']).to eql('string')
-        expect(r['key5']).to eql('string')
+        t.reserve('k', 'string')
+        expect(t.fields['k'].type).to eql('string')
+        expect(t.fields['k'].optional?).to be_true
+
+        t.reserve('l', 'long', false)
+        expect(t.fields['l'].type).to eql('long')
+        expect(t.fields['l'].optional?).to be_false
       end
     end
 
-    describe '.guess' do
-      it 'can guess Boolean values and boolean-like strings as boolean correctly' do
-        t = Norikra::Typedef.guess({'key1' => true, 'key2' => false, 'key3' => 'True', 'key4' => 'TRUE', 'key5' => 'false'})
-        r = t.definition
-        expect(r['key1']).to eql('boolean')
-        expect(r['key2']).to eql('boolean')
-        expect(r['key3']).to eql('boolean')
-        expect(r['key4']).to eql('boolean')
-        expect(r['key5']).to eql('boolean')
-      end
-
-      it 'can guess Float values and floating point number like strings as double correctly' do
-        t = Norikra::Typedef.guess({'key1' => 0.1, 'key2' => 1.571, 'key3' => '1.571', 'key4' => '1.571e10', 'key5' => '-1.57e-5'})
-        r = t.definition
-        expect(r['key1']).to eql('double')
-        expect(r['key2']).to eql('double')
-        expect(r['key3']).to eql('double')
-        expect(r['key4']).to eql('double')
-        expect(r['key5']).to eql('double')
-      end
-      it 'can guess Integer values and int number like strings as long correctly' do
-        t = Norikra::Typedef.guess({'key1' => 1, 'key2' => (2**32 + 1), 'key3' => '1024', 'key4' => '4294967297', 'key5' => '-3017'})
-        r = t.definition
-        expect(r['key1']).to eql('long')
-        expect(r['key2']).to eql('long')
-        expect(r['key3']).to eql('long')
-        expect(r['key4']).to eql('long')
-        expect(r['key5']).to eql('long')
-      end
-      it 'guess all non-boolean-float-integer values as string' do
-        t = Norikra::Typedef.guess({'key1' => 'foo bar', 'key2' => '', 'key3' => nil, 'key4' => 'NULL', 'key5' => [1,2,3]})
-        r = t.definition
-        expect(r['key1']).to eql('string')
-        expect(r['key2']).to eql('string')
-        expect(r['key3']).to eql('string')
-        expect(r['key4']).to eql('string')
-        expect(r['key5']).to eql('string')
+    describe '#activate' do
+      context 'without any fields reserved' do
+        it 'stores all fields in specified fieldset' do
+          t = Norikra::Typedef.new
+          set = Norikra::FieldSet.new({'a'=>'string','b'=>'long','c'=>'double'})
+          t.activate(set)
+          expect(t.fields.size).to eql(3)
+          expect(t.fields['a'].optional?).to be_false
+          expect(t.fields.object_id).not_to eql(set.fields.object_id)
+          expect(t.baseset.object_id).not_to eql(set.object_id)
+        end
       end
     end
   end
 
-  context 'when init' do
-    describe '#initialize' do
-      definition = {:service => 'string', :path => 'string', :duration => 'long'}
+  context 'instanciated as non-lazy typedef' do
+    it 'has no query/data fieldsets' do
+      t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+      expect(t.queryfieldsets.size).to eql(0)
+      expect(t.datafieldsets.size).to eql(0)
+    end
 
-      context 'with name parameter' do
-        subject { Norikra::Typedef.new(
-            :name => 'test query 1', :definition => definition
-        ) }
-        its(:name) { should == 'test query 1' }
-        its(:definition) { should == Norikra::Typedef.mangle_symbols(definition) }
-      end
+    it 'has all fields as required' do
+      t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
 
-      context 'without name parameter' do
-        subject { Norikra::Typedef.new(:definition => definition) }
-        its(:definition) { should == Norikra::Typedef.mangle_symbols(definition) }
-        key_sorted_definition = Norikra::Typedef.mangle_symbols(definition).sort{|a,b| a.first <=> b.first}
-        its(:name) { should == Digest::MD5.hexdigest(key_sorted_definition.to_json) }
+      expect(t.fields['a'].type).to eql('string')
+      expect(t.fields['a'].optional?).to be_false
+
+      expect(t.fields['b'].type).to eql('long')
+      expect(t.fields['b'].optional?).to be_false
+    end
+
+    describe '#lazy?' do
+      it 'returns false' do
+        t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+        expect(t.lazy?).to be_false
       end
     end
-  end
 
-  context 'when instanciated' do
-    definition = {:service => 'string', :path => 'string', :duration => 'long', :rate => 'double'}
-    typedef = Norikra::Typedef.new(:definition => definition)
+    describe '#field_defined?' do
+      it 'returns boolean to indicate all fields specified exists or not' do
+        t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+        expect(t.field_defined?(['a','b'])).to be_true
+        expect(t.field_defined?(['a'])).to be_true
+        expect(t.field_defined?(['b'])).to be_true
+        expect(t.field_defined?([])).to be_true
+        expect(t.field_defined?(['a','b','c'])).to be_false
+        expect(t.field_defined?(['a','c'])).to be_false
+        expect(t.field_defined?(['c'])).to be_false
+      end
+    end
+
+    describe '#reserve' do
+      it 'adds field definitions as required or optional' do
+        t = Norikra::Typedef.new({'a' => 'string'})
+
+        expect(t.fields.size).to eql(1)
+
+        t.reserve('b', 'boolean', false)
+        expect(t.fields.size).to eql(2)
+        expect(t.fields['b'].type).to eql('boolean')
+        expect(t.fields['b'].optional?).to be_false
+
+        t.reserve('c', 'double', true)
+        expect(t.fields.size).to eql(3)
+        expect(t.fields['c'].type).to eql('double')
+        expect(t.fields['c'].optional?).to be_true
+      end
+    end
+
+    describe '#consistent?' do
+      context 'without any additional reserved fields' do
+        it 'checks all fields of specified fieldset are super-set of baseset or not' do
+          t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+
+          set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'long'})
+          expect(t.consistent?(set)).to be_true
+
+          set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'long', 'c' => 'double'})
+          expect(t.consistent?(set)).to be_true
+
+          set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'integer'})
+          expect(t.consistent?(set)).to be_false
+
+          set = Norikra::FieldSet.new({'a' => 'string'})
+          expect(t.consistent?(set)).to be_false
+        end
+      end
+
+      context 'with some additional reserved fields' do
+        it 'checks all fields of specified fieldset with baseset and additional reserved fields' do
+          t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+          t.reserve('c', 'double', false) # required
+          t.reserve('d', 'boolean', true) # optional
+
+          set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'long'})
+          expect(t.consistent?(set)).to be_false
+
+          set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'long', 'c' => 'double'})
+          expect(t.consistent?(set)).to be_true
+
+          set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'long', 'c' => 'double', 'd' => 'boolean'})
+          expect(t.consistent?(set)).to be_true
+
+          set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'long', 'c' => 'double', 'd' => 'string'})
+          expect(t.consistent?(set)).to be_false
+
+          set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'long', 'c' => 'double', 'd' => 'boolean', 'e' => 'string'})
+          expect(t.consistent?(set)).to be_true
+        end
+      end
+    end
+
+    describe '#push' do
+      it 'does not accepts fieldset which conflicts pre-defined fields' do
+        t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+        expect { t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'integer'})) }.to raise_error(ArgumentError)
+        expect { t.push(:data, Norikra::FieldSet.new({'a'=>'string'})) }.to raise_error(ArgumentError)
+      end
+
+      it 'accepts fieldsets which is consistent with self' do
+        t = Norikra::Typedef.new({'a'=>'string','b'=>'long'})
+        expect(t.fields.size).to eql(2)
+
+        expect { t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long'})) }.not_to raise_error(ArgumentError)
+        expect { t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long'})) }.not_to raise_error(ArgumentError)
+
+        expect(t.fields.size).to eql(2)
+
+        set_a = Norikra::FieldSet.new({'a'=>'string','b'=>'long','c'=>'double'})
+        t.push(:data, set_a)
+        expect(t.fields.size).to eql(3)
+        expect(t.fields['c'].type).to eql('double')
+        expect(t.fields['c'].optional?).to be_true
+
+        t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long','d'=>'string'}))
+        expect(t.fields.size).to eql(4)
+        expect(t.fields['d'].type).to eql('string')
+        expect(t.fields['d'].optional?).to be_true
+      end
+    end
+
+    describe '#refer' do
+      context 'for event defined by data-fieldset already known' do
+        it 'returns fieldset that already known itself' do
+          t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+
+          set1 = Norikra::FieldSet.new({'a'=>'string','b'=>'long'})
+          t.push(:data, set1)
+
+          r = t.refer({'a'=>'foobar','b'=>200000000})
+          expect(r).to be_instance_of(Norikra::FieldSet)
+          expect(r.object_id).to eql(set1.object_id)
+        end
+      end
+
+      context 'for event with known fields only' do
+        it 'returns fieldset that is overwritten with known field definitions' do
+          t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+          t.reserve('c','boolean',true)
+          t.reserve('d','double',true)
+
+          r = t.refer({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14'})
+          expect(t.datafieldsets.include?(r)).to be_false
+
+          expect(r.fields['a'].type).to eql('string')
+          expect(r.fields['b'].type).to eql('long')
+          expect(r.fields['c'].type).to eql('boolean')
+          expect(r.fields['d'].type).to eql('double')
+        end
+      end
+
+      context 'for event with some unknown fields' do
+        it 'returns fieldset that contains fields as string for unknowns' do
+          t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+
+          r = t.refer({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14'})
+          expect(t.datafieldsets.include?(r)).to be_false
+
+          expect(r.fields['a'].type).to eql('string')
+          expect(r.fields['b'].type).to eql('long')
+          expect(r.fields['c'].type).to eql('string')
+          expect(r.fields['d'].type).to eql('string')
+        end
+      end
+    end
 
     describe '#format' do
-      context 'with data with valid content' do
-        target1 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => 103200, 'rate' => 33.0}
-        target2 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => '103200', 'rate' => '33.0'}
-        target3 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => '103200', 'rate' => 33}
+      it 'returns hash value with formatted fields as defined' do
+        t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+        t.reserve('c','boolean',true)
+        t.reserve('d','double',true)
 
-        expected = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => 103200, 'rate' => 33.0}
-        not_expected = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => 103200, 'rate' => 33}
-        it 'returns converted data defined by typedef object' do
-          expect(typedef.format(target1)).to eql(expected)
-          expect(typedef.format(target1)['duration']).to be_kind_of(Integer)
-          expect(typedef.format(target1)['rate']).to be_an_instance_of(Float)
-
-          expect(typedef.format(target2)).to eql(expected)
-          expect(typedef.format(target3)).to eql(expected)
-
-          expect(typedef.format(target3)).to_not eql(not_expected)
-        end
-      end
-    end
-
-    describe '#match' do
-      context 'with objects looks matches' do
-        target1 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => 103200, 'rate' => 0.33}
-        target2 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => '103200', 'rate' => '0.33'}
-        target3 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => '103200', 'rate' => 33}
-        it 'returns true' do
-          expect(typedef.match?(target1)).to be_true
-          expect(typedef.match?(target2)).to be_true
-          expect(typedef.match?(target3)).to be_true
-        end
-      end
-
-      context 'with objects looks doesn\'t matches' do
-        target1 = {'service' => 1.03, 'path' => '/path/to/data', 'duration' => 103200, 'rate' => '0.33'}
-        target2 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => 0.11, 'rate' => '0.33'}
-        target3 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => 103200, 'rate' => '3handreds'}
-        target4 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => 103200, 'rate' => 'NULL'}
-        it 'returns false' do
-          expect(typedef.match?(target1)).to be_false
-          expect(typedef.match?(target2)).to be_false
-          expect(typedef.match?(target3)).to be_false
-          expect(typedef.match?(target4)).to be_false
-        end
-      end
-    end
-  end
-
-  context 'when instanciated through .guess' do
-    describe '#match' do
-      target1 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => 103200, 'rate' => 0.33}
-      target2 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => '103200', 'rate' => '0.33'}
-      target3 = {'service' => 'foobar', 'path' => '/path/to/data', 'duration' => '103200', 'rate' => 33}
-
-      it 'returns true with self definition' do
-        expect(Norikra::Typedef.guess(target1).match?(target1)).to be_true
-        expect(Norikra::Typedef.guess(target2).match?(target2)).to be_true
-        expect(Norikra::Typedef.guess(target3).match?(target3)).to be_true
+        d = t.format({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14'})
+        expect(d['a']).to be_instance_of(String)
+        expect(d['a']).to eql('hoge')
+        expect(d['b']).to be_instance_of(Fixnum)
+        expect(d['b']).to eql(2000)
+        expect(d['c']).to be_instance_of(TrueClass)
+        expect(d['c']).to eql(true)
+        expect(d['d']).to be_instance_of(Float)
+        expect(d['d']).to eql(3.14)
       end
     end
   end

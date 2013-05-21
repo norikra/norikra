@@ -7,22 +7,42 @@ class Norikra::RPC::Handler
     @engine.targets
   end
 
+  def open(target, fields)
+    r = @engine.open(target, fields)
+    !!r
+  end
+
+  def close(target)
+    r = @engine.close(target)
+    !!r
+  end
+
   def queries
     @engine.queries.map(&:to_hash)
   end
 
-  def add_query(query_name, expression)
-    @engine.register(Norikra::Query.new(:name => query_name, :expression => expression))
+  def register(query_name, expression)
+    r = @engine.register(Norikra::Query.new(:name => query_name, :expression => expression))
+    !!r
   end
 
-  def typedefs
-    @engine.typedef_manager.dump
+  def deregister(query_name)
+    #TODO: write!
+    raise NotImplementedError
   end
-  # def add_typedefs; end #TODO: typedef ? field with type ?
+
+  def fields(target)
+    @engine.typedef_manager.field_list(target)
+  end
+
+  def reserve(target, fieldname, type)
+    r = @engine.reserve(target, fieldname, type)
+    !!r
+  end
 
   def send(target, events)
-    @engine.send(target, events)
-    true
+    r = @engine.send(target, events)
+    !!r
   end
 
   def event(query_name)
