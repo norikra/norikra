@@ -51,8 +51,8 @@ module Norikra
     end
 
     def register(query)
-      unless @targets.includes?(query.target)
-        open(target) # open as lazy defined target
+      unless @targets.include?(query.target)
+        open(query.target) # open as lazy defined target
       end
       register_query(query)
     end
@@ -63,7 +63,9 @@ module Norikra
     end
 
     def send(target, events)
-      return unless @targets.includes?(target) # discard events for target not registered
+      #TODO: trace log
+      #p events
+      return unless @targets.include?(target) # discard events for target not registered
       return if events.size < 1
 
       if @typedef_manager.lazy?(target)
@@ -80,6 +82,8 @@ module Norikra
           # register waiting queries including this fieldset, and this fieldset itself
           register_fieldset(target, fieldset)
         end
+        #TODO: trace log
+        #p "sendEvent eventType:#{fieldset.event_type_name}, event:#{event.inspect}"
         @runtime.sendEvent(@typedef_manager.format(target, event).to_java, fieldset.event_type_name)
       end
       nil
@@ -94,6 +98,8 @@ module Norikra
       end
 
       def update(new_events, old_events)
+        #TODO: trace log
+        #p "updated event query:#{@query_name}, event:#{new_events.inspect}"
         @output_pool.push(@query_name, new_events)
       end
     end
@@ -149,7 +155,7 @@ module Norikra
           query_fieldset = @typedef_manager.generate_query_fieldset(target, query.fields)
           @typedef_manager.bind_fieldset(target, :query, query_fieldset)
           register_fieldset_actually(target, query_fieldset, :query)
-          register_query_actually(target, query)
+          register_query_actually(target, query_fieldset.event_type_name, query)
         end
         @queries.push(query)
       end
@@ -164,7 +170,7 @@ module Norikra
           query_fieldset = @typedef_manager.generate_query_fieldset(target, query.fields)
           @typedef_manager.bind_fieldset(target, :query, query_fieldset)
           register_fieldset_actually(target, query_fieldset, :query)
-          register_query_actually(target, query)
+          register_query_actually(target, query_fieldset.event_type_name, query)
         else
           not_registered.push(query)
         end
@@ -186,9 +192,12 @@ module Norikra
     end
 
     # this method should be protected with @mutex lock
-    def register_query_actually(target, query)
+    def register_query_actually(target, stream_name, query)
+      query = query.dup_with_stream_name(stream_name)
       epl = @service.getEPAdministrator.createEPL(query.expression)
       epl.java_send :addListener, [com.espertech.esper.client.UpdateListener.java_class], Listener.new(query.name, @output_pool)
+      #TODO: debug log
+      #p "addListener target:#{target}, query_name:#{query.name}, query:#{query.expression}"
     end
 
     # this method should be protected with @mutex lock
@@ -202,13 +211,20 @@ module Norikra
       case level
       when :base
         @config.addEventType(fieldset.event_type_name, fieldset.definition)
+        #TODO: debug log
+        #p "addEventType target:#{target}, level:base, eventType:#{fieldset.event_type_name}"
       when :query
-        base_name = @typedef_manager.base_fieldset.event_type_name
+        base_name = @typedef_manager.base_fieldset(target).event_type_name
         @config.addEventType(fieldset.event_type_name, fieldset.definition, [base_name].to_java(:string))
+        #TODO: debug log
+        #p "addEventType target:#{target}, level:query, eventType:#{fieldset.event_type_name}, base:#{base_name}"
       else
         subset_names = @typedef_manager.subsets(target, fieldset).map(&:event_type_name)
         @config.addEventType(fieldset.event_type_name, fieldset.definition, subset_names.to_java(:string))
+        #TODO: debug log
+        #p "addEventType target:#{target}, level:data, eventType:#{fieldset.event_type_name}, inherit:#{subset_names.join(',')}"
       end
+      @registered_fieldsets[target][level][fieldset.summary] = fieldset
       nil
     end
   end

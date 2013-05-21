@@ -12,7 +12,7 @@ module Norikra
     end
 
     def field_list(target)
-      @typedefs[target].fields.values.sort(&:name).map(&:to_hash)
+      @typedefs[target].fields.values.sort{|a,b| a.name <=> b.name}.map(&:to_hash)
     end
 
     def add_target(target, fields)

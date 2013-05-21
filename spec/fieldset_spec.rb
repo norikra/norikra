@@ -155,7 +155,7 @@ describe Norikra::FieldSet do
         expect(x.bind('TargetExample', :query)).to eql(x)
 
         expect(x.instance_eval{ @event_type_name }).not_to be_nil
-        expect(x.instance_eval{ @event_type_name }).to eql(Digest::MD5.hexdigest("TargetExample\tquery\t" + x.summary))
+        expect(x.instance_eval{ @event_type_name }).to eql('q_' + Digest::MD5.hexdigest("TargetExample\tquery\t" + x.summary))
       end
     end
 

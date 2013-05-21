@@ -139,7 +139,12 @@ module Norikra
     def bind(target, level)
       @target = target
       @level = level
-      @event_type_name = Digest::MD5.hexdigest(target + "\t" + level.to_s + "\t" + @summary)
+      prefix = case level
+               when :base then 'b_'
+               when :query then 'q_'
+               else 'e_'
+               end
+      @event_type_name = prefix + Digest::MD5.hexdigest(target + "\t" + level.to_s + "\t" + @summary)
       self
     end
 
