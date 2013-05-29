@@ -12,7 +12,7 @@ describe Norikra::Query do
         ) }
         its(:name){ should == 'TestTable query1' }
         its(:expression){ should == expression }
-        its(:target){ should == 'TestTable' }
+        its(:targets){ should == ['TestTable'] }
         its(:fields){ should == ['param', 'path', 'size'] }
       end
       context 'with query including Static lib call'
@@ -22,7 +22,7 @@ describe Norikra::Query do
         ) }
         its(:name){ should == 'TestTable query1' }
         its(:expression){ should == expression }
-        its(:target){ should == 'TestTable' }
+        its(:targets){ should == ['TestTable'] }
         its(:fields){ should == ['path', 'size'] }
     end
     describe '#dup_with_stream_name' do

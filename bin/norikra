@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
 
 require 'pathname'
-lib = Pathname.new(__FILE__).dirname.join('..', 'lib').expand_path
-$LOAD_PATH.unshift lib.to_s
+libs = ['lib', 'esper'].map{|p| Pathname.new(__FILE__).dirname.join('..', p).expand_path}
+$LOAD_PATH.unshift(*libs.map(&:to_s))
 
 require 'norikra/cli'
 Norikra::CLI.start

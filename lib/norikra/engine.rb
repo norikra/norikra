@@ -51,8 +51,8 @@ module Norikra
     end
 
     def register(query)
-      unless @targets.include?(query.target)
-        open(query.target) # open as lazy defined target
+      unless @targets.include?(query.targets.first)
+        open(query.targets.first) # open as lazy defined target
       end
       register_query(query)
     end
@@ -146,7 +146,8 @@ module Norikra
     end
 
     def register_query(query)
-      target = query.target
+      #TODO: support JOINs
+      target = query.targets.first
       @mutex.synchronize do
         if @typedef_manager.lazy?(target) || @typedef_manager.fields_defined?(target, query.fields)
           @waiting_queries[target] ||= []

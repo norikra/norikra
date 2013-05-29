@@ -12,7 +12,7 @@ module Norikra
       @name = param[:name]
       @expression = param[:expression]
       @ast = nil
-      @target = nil
+      @targets = nil
       @fields = nil
     end
 
@@ -21,29 +21,30 @@ module Norikra
     end
 
     def dup_with_stream_name(actual_name)
-      target = self.target
+      first_target = self.targets.first
       query = self.dup
-      query.expression = self.expression.gsub(/(\s[Ff][Rr][Oo][Mm]\s+)#{target}(\.|\s)/, '\1' + actual_name + '\2')
-      if query.target != actual_name
+      query.expression = self.expression.gsub(/(\s[Ff][Rr][Oo][Mm]\s+)#{first_target}(\.|\s)/, '\1' + actual_name + '\2')
+      if query.targets.first != actual_name
         raise RuntimeError, 'failed to replace query target into stream name:' + self.expression
       end
       query
     end
 
     def to_hash
-      {'name' => @name, 'expression' => @expression, 'target' => self.target}
+      {'name' => @name, 'expression' => @expression, 'targets' => self.targets}
     end
 
-    def target
-      return @target if @target
-      #TODO: this code doesn't care JOINs.
-      @target = self.ast.find('STREAM_EXPR').find('EVENT_FILTER_EXPR').children.first.name
-      @target
+    def targets
+      return @targets if @targets
+      #TODO: test with JOINs.
+      @targets = self.ast.find('STREAM_EXPR').find('EVENT_FILTER_EXPR').children.map(&:name)
+      @targets
     end
 
     def fields
       return @fields if @fields
       #TODO: this code doesn't care JOINs.
+      ### fields -> {'target_name' => fields} ?
 
       # Norikra::Query.new(
       #   :name => 'hoge',
