@@ -155,7 +155,23 @@ describe Norikra::FieldSet do
         expect(x.bind('TargetExample', :query)).to eql(x)
 
         expect(x.instance_eval{ @event_type_name }).not_to be_nil
-        expect(x.instance_eval{ @event_type_name }).to eql('q_' + Digest::MD5.hexdigest("TargetExample\tquery\t" + x.summary))
+        expect(x.instance_eval{ @event_type_name }).to match(/q_[0-9a-f]{32}/) # MD5 hexdump
+      end
+    end
+
+    describe '#rebind' do
+      it 'returns duplicated object, but these event_type_name are same' do
+        x = set.dup
+        x.bind('TargetExample', :data)
+
+        y = x.rebind
+        expect(y.summary).to eql(x.summary)
+        expect(y.fields.values.map(&:to_hash)).to eql(x.fields.values.map(&:to_hash))
+        expect(y.target).to eql(x.target)
+        expect(y.level).to eql(x.level)
+        expect(y.field_names_key).to eql(x.field_names_key)
+
+        expect(y.event_type_name).not_to eql(x.event_type_name)
       end
     end
 

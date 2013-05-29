@@ -144,8 +144,12 @@ module Norikra
                when :query then 'q_'
                else 'e_'
                end
-      @event_type_name = prefix + Digest::MD5.hexdigest(target + "\t" + level.to_s + "\t" + @summary)
+      @event_type_name = prefix + Digest::MD5.hexdigest([target, level.to_s, self.object_id.to_s, @summary].join("\t"))
       self
+    end
+
+    def rebind
+      self.dup.bind(@target, @level)
     end
 
     def self.simple_guess(data, optional=true)
@@ -275,6 +279,24 @@ module Norikra
         else
           raise ArgumentError, "unknown level #{level}"
         end
+      end
+      true
+    end
+
+    def replace(level, old_fieldset, fieldset)
+      unless self.consistent?(fieldset)
+        raise ArgumentError, "inconsistent field set for this typedef"
+      end
+      if level != :data
+        raise ArgumentError, "invalid argument, fieldset replace should be called for :data"
+      end
+      if old_fieldset.field_names_key != fieldset.field_names_key
+        raise ArgumentError, "try to replace different field name sets"
+      end
+      @mutex.synchronize do
+        @datafieldsets.push(fieldset)
+        @set_map[fieldset.field_names_key] = fieldset
+        @datafieldsets.delete(old_fieldset)
       end
       true
     end

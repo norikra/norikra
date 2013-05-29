@@ -149,7 +149,7 @@ module Norikra
       #TODO: support JOINs
       target = query.targets.first
       @mutex.synchronize do
-        if @typedef_manager.lazy?(target) || @typedef_manager.fields_defined?(target, query.fields)
+        if @typedef_manager.lazy?(target) || !@typedef_manager.fields_defined?(target, query.fields)
           @waiting_queries[target] ||= []
           @waiting_queries[target].push(query)
         else
@@ -157,6 +157,14 @@ module Norikra
           @typedef_manager.bind_fieldset(target, :query, query_fieldset)
           register_fieldset_actually(target, query_fieldset, :query)
           register_query_actually(target, query_fieldset.event_type_name, query)
+
+          # replace registered data fieldsets with new fieldset inherits this query fieldset
+          @typedef_manager.supersets(target, query_fieldset).each do |set|
+            rebound = set.rebind
+            register_fieldset_actually(target, rebound, :data, true) # replacing
+            @typedef_manager.replace_fieldset(target, set, rebound)
+            remove_fieldset_actually(target, set, :data)
+          end
         end
         @queries.push(query)
       end
@@ -202,8 +210,8 @@ module Norikra
     end
 
     # this method should be protected with @mutex lock
-    def register_fieldset_actually(target, fieldset, level)
-      return if @registered_fieldsets[target][level][fieldset.summary]
+    def register_fieldset_actually(target, fieldset, level, replace=false)
+      return if level == :data && @registered_fieldsets[target][level][fieldset.summary] && !replace
 
       # Map Supertype (target) and Subtype (typedef name, like TARGET_TypeDefName)
       # http://esper.codehaus.org/esper-4.9.0/doc/reference/en-US/html/event_representation.html#eventrep-map-supertype
@@ -224,9 +232,20 @@ module Norikra
         @config.addEventType(fieldset.event_type_name, fieldset.definition, subset_names.to_java(:string))
         #TODO: debug log
         #p "addEventType target:#{target}, level:data, eventType:#{fieldset.event_type_name}, inherit:#{subset_names.join(',')}"
+
+        @registered_fieldsets[target][level][fieldset.summary] = fieldset
       end
-      @registered_fieldsets[target][level][fieldset.summary] = fieldset
       nil
+    end
+
+    # this method should be protected with @mutex lock as same as register
+    def remove_fieldset_actually(target, fieldset, level)
+      return if level == :base || level == :query
+
+      # DON'T check @registered_fieldsets[target][level][fieldset.summary]
+      # removed fieldset should be already replaced with register_fieldset_actually w/ replace flag
+      #TODO: debug log
+      @config.removeEventType(fieldset.event_type_name, true)
     end
   end
 end

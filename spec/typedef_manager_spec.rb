@@ -117,6 +117,24 @@ describe Norikra::TypedefManager do
       end
     end
 
+    describe '#supersets' do
+      it 'returns list of data fieldset, superset of specified fieldset, owned by manager for specified target' do
+        base = {'a'=>'string','b'=>'string','c'=>'double'}
+        set_x = Norikra::FieldSet.new(base.merge({'one'=>'int','two'=>'string','three'=>'double'}))
+        manager.bind_fieldset('sample', :data, set_x)
+        set_y = Norikra::FieldSet.new(base.merge({'one'=>'int','two'=>'string'}))
+        manager.bind_fieldset('sample', :data, set_y)
+        set_z = Norikra::FieldSet.new(base.merge({'one'=>'int','two'=>'string','three'=>'double','four'=>'boolean'}))
+        manager.bind_fieldset('sample', :data, set_z)
+
+        list = manager.supersets('sample', Norikra::FieldSet.new({'one'=>'int','three'=>'double'}))
+        expect(list.size).to eql(2) # set_x, set_z
+        expect(list.include?(set_x)).to be_true
+        expect(list.include?(set_y)).to be_false
+        expect(list.include?(set_z)).to be_true
+      end
+    end
+
     describe '#generate_query_fieldset' do
       it 'returns fieldset instance with all required(non-optional) fields of target, and fields of query requires' do
         r = manager.generate_query_fieldset('sample', ['a', 'b','f'])

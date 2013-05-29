@@ -45,6 +45,10 @@ module Norikra
       @typedefs[target].push(level, fieldset)
     end
 
+    def replace_fieldset(target, old_fieldset, new_fieldset)
+      @typedefs[target].replace(:data, old_fieldset, new_fieldset)
+    end
+
     def generate_base_fieldset(target, event)
       guessed = Norikra::FieldSet.simple_guess(event, false) # all fields are non-optional
       guessed.update(@typedefs[target].fields, false)
@@ -76,6 +80,16 @@ module Norikra
           sets.push(set) if set.subset?(fieldset)
         end
         sets.push(@typedefs[target].baseset)
+      end
+      sets
+    end
+
+    def supersets(target, fieldset) # for query fieldset
+      sets = []
+      @mutex.synchronize do
+        @typedefs[target].datafieldsets.each do |set|
+          sets.push(set) if fieldset.subset?(set)
+        end
       end
       sets
     end

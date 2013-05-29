@@ -182,6 +182,30 @@ describe Norikra::Typedef do
       end
     end
 
+    describe '#replace' do
+      it 'raises error for different field name sets' do
+        t = Norikra::Typedef.new({'a'=>'string'})
+        set1 = Norikra::FieldSet.new({'a'=>'string','b'=>'int'})
+        set2 = Norikra::FieldSet.new({'a'=>'string','c'=>'int'})
+        t.push(:data, set1)
+        expect { t.replace(:data, set1, set2) }.to raise_error(ArgumentError)
+      end
+
+      it 'replaces typedef internal fieldset object for specified field_names_key' do
+        t = Norikra::Typedef.new({'a'=>'string'})
+        set1 = Norikra::FieldSet.new({'a'=>'string','b'=>'int'}).bind('x', :data)
+        t.push(:data, set1)
+        expect(t.instance_eval{ @set_map['a,b'].event_type_name }).to eql(set1.event_type_name)
+        expect(t.instance_eval{ @datafieldsets.size }).to eql(1)
+
+        set2 = set1.rebind
+        t.replace(:data, set1, set2)
+        expect(t.instance_eval{ @datafieldsets.size }).to eql(1)
+        expect(t.instance_eval{ @set_map['a,b'].event_type_name }).not_to eql(set1.event_type_name)
+        expect(t.instance_eval{ @set_map['a,b'].event_type_name }).to eql(set2.event_type_name)
+      end
+    end
+
     describe '#refer' do
       context 'for event defined by data-fieldset already known' do
         it 'returns fieldset that already known itself' do
