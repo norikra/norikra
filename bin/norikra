@@ -1,17 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env ruby
 
-binpath=$(dirname $0)/norikra-server
+binpath = File.expand_path(File.join(File.dirname(__FILE__), 'norikra-server'))
+jruby_options = ['-J-server', '-J-XX:-UseGCOverheadLimit']
 
-options="-J-server -J-XX:-UseGCOverheadLimit"
-
-while getopts "X:" opts
-do
-    case $opts in
-	X)
-	    options=$options" -J-X"$OPTARG
-	    ;;
-    esac
-done
-shift `expr $OPTIND - 1`
-
-exec jruby $options $binpath $@
+while ARGV.first && ARGV.first =~ /^-X(.+)$/
+  jruby_options.push('-J-X' + $1)
+  ARGV.shift
+end
+args = jruby_options + [binpath] + ARGV
+exec('jruby', *args)
