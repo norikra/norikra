@@ -36,6 +36,10 @@ To start norikra server:
 
     norikra start
 
+JVM options like `-Xmx` are available before norikra subcommand:
+
+    norikra -Xmx500m start
+
 TBD (you can use `norikra -h`)
 
 ## Clients
