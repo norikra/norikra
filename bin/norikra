@@ -1,8 +1,17 @@
-#!/usr/bin/env ruby
+#!/bin/bash
 
-require 'pathname'
-libs = ['lib', 'esper'].map{|p| Pathname.new(__FILE__).dirname.join('..', p).expand_path}
-$LOAD_PATH.unshift(*libs.map(&:to_s))
+binpath=$(dirname $0)/norikra-server
 
-require 'norikra/cli'
-Norikra::CLI.start
+options="-J-server -J-XX:-UseGCOverheadLimit"
+
+while getopts "X:" opts
+do
+    case $opts in
+	X)
+	    options=$options" -J-X"$OPTARG
+	    ;;
+    esac
+done
+shift `expr $OPTIND - 1`
+
+exec jruby $options $binpath $@
