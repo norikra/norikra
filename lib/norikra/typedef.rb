@@ -116,7 +116,7 @@ module Norikra
 
     #TODO: have a bug?
     def ==(other)
-      return false unless self.class != other.class
+      return false if self.class != other.class
       self.summary == other.summary
     end
 
@@ -197,7 +197,7 @@ module Norikra
     attr_accessor :fields, :baseset, :queryfieldsets, :datafieldsets
 
     def initialize(fields=nil)
-      if fields
+      if fields && !fields.empty?
         @baseset = FieldSet.new(fields, false) # all fields are required
         @fields = @baseset.fields.dup
       else
@@ -223,7 +223,7 @@ module Norikra
 
     def activate(fieldset)
       @mutex.synchronize do
-        set = fieldset.dup
+        set = fieldset.rebind
         fieldset.fields.dup.each do |fieldname, field|
           set.fields[fieldname] = field.dup(false)
         end
@@ -294,9 +294,9 @@ module Norikra
         raise ArgumentError, "try to replace different field name sets"
       end
       @mutex.synchronize do
-        @datafieldsets.push(fieldset)
-        @set_map[fieldset.field_names_key] = fieldset
         @datafieldsets.delete(old_fieldset)
+        @set_map[fieldset.field_names_key] = fieldset
+        @datafieldsets.push(fieldset)
       end
       true
     end

@@ -16,7 +16,7 @@ module Norikra
     end
 
     def add_target(target, fields)
-      # fields nil => lazy
+      # fields nil || [] => lazy
       # fields {'fieldname' => 'type'}
       @mutex.synchronize do
         raise RuntimeError, "target #{target} already exists" if @typedefs[target]
@@ -29,6 +29,7 @@ module Norikra
     end
 
     def activate(target, fieldset)
+      fieldset.bind(target, :base)
       @typedefs[target].activate(fieldset)
     end
 

@@ -1,4 +1,8 @@
 require 'java'
+
+require 'norikra/logger'
+include Norikra::Log
+
 require 'esper-4.9.0.jar'
 require 'esper/lib/commons-logging-1.1.1.jar'
 require 'esper/lib/antlr-runtime-3.2.jar'
@@ -37,11 +41,13 @@ module Norikra
     end
 
     def open(target, fields=nil)
-      return if @targets.include?(target)
+      debug "opening target", :target => target, :fields => fields
+      return false if @targets.include?(target)
       open_target(target, fields)
     end
 
     def close(target)
+      debug "closing target", :target => target
       #TODO: write
       raise NotImplementedError
     end
@@ -63,14 +69,20 @@ module Norikra
     end
 
     def send(target, events)
-      #TODO: trace log
-      #p events
-      return unless @targets.include?(target) # discard events for target not registered
+      trace "send messages", :target => target, :events => events
+      unless @targets.include?(target) # discard events for target not registered
+        trace "messages skipped for non-opened target", :target => target
+        return
+      end
       return if events.size < 1
 
       if @typedef_manager.lazy?(target)
+        debug "opening lazy target", :target => target
+        trace "generating base fieldset from event", :target => target, :event => events.first
         base_fieldset = @typedef_manager.generate_base_fieldset(target, events.first)
+        trace "registering base fieldset", :target => target, :base => base_fieldset
         register_base_fieldset(target, base_fieldset)
+        debug "target successfully opened with fieldset", :target => target, :base => base_fieldset
       end
 
       registered_data_fieldset = @registered_fieldsets[target][:data]
@@ -117,7 +129,7 @@ module Norikra
     def open_target(target, fields)
       # from open
       @mutex.synchronize do
-        return if @targets.include?(target)
+        return false if @targets.include?(target)
         @typedef_manager.add_target(target, fields)
         @registered_fieldsets[target] = {:base => {}, :query => {}, :data => {}}
 
@@ -130,17 +142,17 @@ module Norikra
 
         @targets.push(target)
       end
+      true
     end
 
     def register_base_fieldset(target, fieldset)
       # for lazy target, with generated fieldset from sent events.first
       @mutex.synchronize do
-        return unless @typedef_manager.lazy?(target)
-
-        @typedef_manager.bind_fieldset(target, :base, fieldset)
-        register_fieldset_actually(target, fieldset, :base)
+        return false unless @typedef_manager.lazy?(target)
 
         @typedef_manager.activate(target, fieldset)
+        # @typedef_manager.bind_fieldset(target, :base, fieldset)
+        register_fieldset_actually(target, fieldset, :base)
       end
       nil
     end

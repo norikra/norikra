@@ -1,5 +1,8 @@
 require 'norikra/engine'
 
+require 'norikra/logger'
+include Norikra::Log
+
 require 'norikra/typedef_manager'
 require 'norikra/output_pool'
 require 'norikra/typedef'
@@ -13,11 +16,14 @@ module Norikra
     RPC_DEFAULT_PORT = 26571
     # 26571 = 3026 + 3014 + 2968 + 2950 + 2891 + 2896 + 2975 + 2979 + 2872
 
-    def initialize(host=RPC_DEFAULT_HOST, port=RPC_DEFAULT_PORT, configuration={})
-      #TODO: initial configuration
-      @typedef_manager = Norikra::TypedefManager.new
+    attr_accessor :running
 
+    def initialize(host=RPC_DEFAULT_HOST, port=RPC_DEFAULT_PORT, conf={})
+      #TODO: initial configuration (targets/queries)
+      @typedef_manager = Norikra::TypedefManager.new
       @output_pool = Norikra::OutputPool.new
+
+      Norikra::Log.init(conf[:loglevel], conf[:logdir], {:filesize => conf[:logfilesize], :backups => conf[:logbackups]})
 
       @engine = Norikra::Engine.new(@output_pool, @typedef_manager)
       @rpcserver = Norikra::RPC::HTTP.new(:engine => @engine, :port => port)
@@ -26,16 +32,22 @@ module Norikra
     def run
       @engine.start
       @rpcserver.start
-      p "Norikra server started."
-      #TODO: main loop and signal traps
-      #TODO: loggings
-      sleep 50
+      info "Norikra server started."
+      @running = true
+
+      Signal.trap(:INT){ @running = false }
+      #TODO: more signal traps (dumps of query/fields? or other handler?)
+
+      while @running
+        sleep 1
+      end
     end
 
     def shutdown
-      #TODO: stop order
+      info "Norikra server shutting down."
       @rpcserver.stop
       @engine.stop
+      info "Norikra server shutdown complete."
     end
   end
 end
