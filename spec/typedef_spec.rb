@@ -45,6 +45,8 @@ describe Norikra::Typedef do
         it 'stores all fields in specified fieldset' do
           t = Norikra::Typedef.new
           set = Norikra::FieldSet.new({'a'=>'string','b'=>'long','c'=>'double'})
+          set.target = 'testing'
+          set.level = :base
           t.activate(set)
           expect(t.fields.size).to eql(3)
           expect(t.fields['a'].optional?).to be_false
@@ -198,7 +200,7 @@ describe Norikra::Typedef do
         expect(t.instance_eval{ @set_map['a,b'].event_type_name }).to eql(set1.event_type_name)
         expect(t.instance_eval{ @datafieldsets.size }).to eql(1)
 
-        set2 = set1.rebind
+        set2 = set1.rebind(true) # replacing needs updated event_type_name
         t.replace(:data, set1, set2)
         expect(t.instance_eval{ @datafieldsets.size }).to eql(1)
         expect(t.instance_eval{ @set_map['a,b'].event_type_name }).not_to eql(set1.event_type_name)

@@ -180,7 +180,8 @@ module Norikra
 
           # replace registered data fieldsets with new fieldset inherits this query fieldset
           @typedef_manager.supersets(target, query_fieldset).each do |set|
-            rebound = set.rebind
+            rebound = set.rebind(true) # update event_type_name with new inheritations
+
             register_fieldset_actually(target, rebound, :data, true) # replacing
             @typedef_manager.replace_fieldset(target, set, rebound)
             remove_fieldset_actually(target, set, :data)

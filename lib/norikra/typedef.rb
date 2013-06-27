@@ -73,7 +73,7 @@ module Norikra
     attr_accessor :summary, :fields
     attr_accessor :target, :level
 
-    def initialize(fields, default_optional=nil)
+    def initialize(fields, default_optional=nil, rebounds=0)
       @fields = {}
       fields.keys.each do |key|
         data = fields[key]
@@ -90,16 +90,21 @@ module Norikra
 
       @target = nil
       @level = nil
+      @rebounds = rebounds
       @event_type_name = nil
     end
 
     def dup
       fields = Hash[@fields.map{|key,field| [key, {:type => field.type, :optional => field.optional}]}]
-      self.class.new(fields)
+      self.class.new(fields, nil, @rebounds)
+    end
+
+    def self.field_names_key(data)
+      data.keys.sort.join(',')
     end
 
     def field_names_key
-      @fields.keys.sort.join(',')
+      self.class.field_names_key(@fields)
     end
 
     def update_summary
@@ -136,20 +141,24 @@ module Norikra
       @event_type_name.dup
     end
 
-    def bind(target, level)
+    def bind(target, level, update_type_name=false)
       @target = target
       @level = level
       prefix = case level
                when :base then 'b_'
                when :query then 'q_'
-               else 'e_'
+               when :data then 'e_' # event
+               else
+                 raise ArgumentError, "unknown fieldset bind level: #{level}, for target #{target}"
                end
-      @event_type_name = prefix + Digest::MD5.hexdigest([target, level.to_s, self.object_id.to_s, @summary].join("\t"))
+      @rebounds += 1 if update_type_name
+
+      @event_type_name = prefix + Digest::MD5.hexdigest([target, level.to_s, @rebounds.to_s, @summary].join("\t"))
       self
     end
 
-    def rebind
-      self.dup.bind(@target, @level)
+    def rebind(update_type_name)
+      self.dup.bind(@target, @level, update_type_name)
     end
 
     def self.simple_guess(data, optional=true)
@@ -208,7 +217,7 @@ module Norikra
       @queryfieldsets = []
       @datafieldsets = []
 
-      @set_map = {} # fieldname.sort.join(',') => data_fieldset
+      @set_map = {} # FieldSet.field_names_key(data_fieldset) => data_fieldset
 
       @mutex = Mutex.new
     end
@@ -223,7 +232,7 @@ module Norikra
 
     def activate(fieldset)
       @mutex.synchronize do
-        set = fieldset.rebind
+        set = fieldset.rebind(false) # base fieldset rebinding must not update event_type_name
         fieldset.fields.dup.each do |fieldname, field|
           set.fields[fieldname] = field.dup(false)
         end
@@ -302,7 +311,7 @@ module Norikra
     end
 
     def refer(data)
-      field_names_key = data.keys.sort.join(',')
+      field_names_key = FieldSet.field_names_key(data)
       return @set_map[field_names_key] if @set_map.has_key?(field_names_key)
 
       guessed = FieldSet.simple_guess(data)

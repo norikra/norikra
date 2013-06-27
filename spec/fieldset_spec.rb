@@ -71,8 +71,14 @@ describe Norikra::FieldSet do
       end
     end
 
+    describe '.field_names_key' do
+      it 'returns comma-separated sorted field names of argument hash' do
+        expect(Norikra::FieldSet.field_names_key({'x1'=>1,'y3'=>2,'xx'=>3,'xx1'=>4,'a'=>5})).to eql('a,x1,xx,xx1,y3')
+      end
+    end
+
     describe '#field_names_key' do
-      it 'returns comman-separeted sorted field names' do
+      it 'returns comma-separeted sorted field names' do
         expect(set.field_names_key).to eql('a,x,y')
       end
     end
@@ -160,11 +166,25 @@ describe Norikra::FieldSet do
     end
 
     describe '#rebind' do
-      it 'returns duplicated object, but these event_type_name are same' do
+      it 'returns duplicated object, but these event_type_name are same with false argument' do
         x = set.dup
         x.bind('TargetExample', :data)
 
-        y = x.rebind
+        y = x.rebind(false)
+        expect(y.summary).to eql(x.summary)
+        expect(y.fields.values.map(&:to_hash)).to eql(x.fields.values.map(&:to_hash))
+        expect(y.target).to eql(x.target)
+        expect(y.level).to eql(x.level)
+        expect(y.field_names_key).to eql(x.field_names_key)
+
+        expect(y.event_type_name).to eql(x.event_type_name)
+      end
+
+      it 'returns duplicated object, and these event_type_name should be updated with true argument' do
+        x = set.dup
+        x.bind('TargetExample', :data)
+
+        y = x.rebind(true)
         expect(y.summary).to eql(x.summary)
         expect(y.fields.values.map(&:to_hash)).to eql(x.fields.values.map(&:to_hash))
         expect(y.target).to eql(x.target)
