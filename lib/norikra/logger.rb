@@ -176,12 +176,11 @@ module Norikra
     def format_data(data=nil)
       return '' if data.nil?
 
-      #, status:'404', message:'content not found'
-      case data
-      when String
-        ', ' + data
-      when Hash
-        ', ' + data.map{|k,v| "#{k}:'#{v}'"}.join(', ')
+      #, status:404, message:'content not found'
+      if data.is_a?(Proc)
+        ', ' + format_data(data.call)
+      elsif data.is_a?(Hash)
+        ', ' + data.map{|k,v| "#{k}:#{v.inspect}"}.join(', ')
       else
         ', ' + data.inspect
       end

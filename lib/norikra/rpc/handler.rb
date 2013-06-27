@@ -1,56 +1,99 @@
+require 'norikra/logger'
+include Norikra::Log
+
 class Norikra::RPC::Handler
   def initialize(engine)
     @engine = engine
   end
 
+  def logging(type, handler, *args)
+    if type == :manage
+      info "RPC", :handler => handler.to_s, :args => args
+    else
+      trace "RPC", :handler => handler.to_s, :args => args
+    end
+
+    begin
+      yield
+    rescue => e
+      error "Exception #{e.class}: #{e.message}"
+      e.backtrace.each do |t|
+        error "  " + t
+      end
+      nil
+    end
+  end
+
   def targets
-    @engine.targets
+    logging(:show, :handler){
+      @engine.targets
+    }
   end
 
   def open(target, fields)
-    r = @engine.open(target, fields)
-    !!r
+    logging(:manage, :open, target, fields){
+      r = @engine.open(target, fields)
+      !!r
+    }
   end
 
   def close(target)
-    r = @engine.close(target)
-    !!r
+    logging(:manage, :close, target){
+      r = @engine.close(target)
+      !!r
+    }
   end
 
   def queries
-    @engine.queries.map(&:to_hash)
+    logging(:show, :queries){
+      @engine.queries.map(&:to_hash)
+    }
   end
 
   def register(query_name, expression)
-    r = @engine.register(Norikra::Query.new(:name => query_name, :expression => expression))
-    !!r
+    logging(:manage, :register, query_name, expression){
+      r = @engine.register(Norikra::Query.new(:name => query_name, :expression => expression))
+      !!r
+    }
   end
 
   def deregister(query_name)
-    #TODO: write!
-    raise NotImplementedError
+    logging(:manage, :deregister, query_name){
+      #TODO: write!
+      raise NotImplementedError
+    }
   end
 
   def fields(target)
-    @engine.typedef_manager.field_list(target)
+    logging(:show, :fields, target){
+      @engine.typedef_manager.field_list(target)
+    }
   end
 
   def reserve(target, fieldname, type)
-    r = @engine.reserve(target, fieldname, type)
-    !!r
+    logging(:manage, :reserve, target, fieldname, type){
+      r = @engine.reserve(target, fieldname, type)
+      !!r
+    }
   end
 
   def send(target, events)
-    r = @engine.send(target, events)
-    !!r
+    logging(:data, :send, target, events){
+      r = @engine.send(target, events)
+      !!r
+    }
   end
 
   def event(query_name)
-    @engine.output_pool.pop(query_name)
+    logging(:show, :event, query_name){
+      @engine.output_pool.pop(query_name)
+    }
   end
 
   def sweep
-    @engine.output_pool.sweep
+    logging(:show, :sweep){
+      @engine.output_pool.sweep
+    }
   end
 
   # post('/listen') # get all events as stream, during connection keepaliving

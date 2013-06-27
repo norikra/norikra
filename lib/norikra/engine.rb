@@ -78,10 +78,14 @@ module Norikra
 
       if @typedef_manager.lazy?(target)
         debug "opening lazy target", :target => target
-        trace "generating base fieldset from event", :target => target, :event => events.first
+        debug "generating base fieldset from event", :target => target, :event => events.first
+
         base_fieldset = @typedef_manager.generate_base_fieldset(target, events.first)
-        trace "registering base fieldset", :target => target, :base => base_fieldset
+
+        debug "registering base fieldset", :target => target, :base => base_fieldset
+
         register_base_fieldset(target, base_fieldset)
+
         debug "target successfully opened with fieldset", :target => target, :base => base_fieldset
       end
 
@@ -92,10 +96,14 @@ module Norikra
 
         unless registered_data_fieldset[fieldset.summary]
           # register waiting queries including this fieldset, and this fieldset itself
+          debug "registering unknown fieldset", :target => target, :fieldset => fieldset
+
           register_fieldset(target, fieldset)
+
+          debug "successfully registered"
         end
-        #TODO: trace log
-        #p "sendEvent eventType:#{fieldset.event_type_name}, event:#{event.inspect}"
+
+        trace "calling sendEvent", :target => target, :fieldset => fieldset, :event_type_name => fieldset.event_type_name, :event => event
         @runtime.sendEvent(@typedef_manager.format(target, event).to_java, fieldset.event_type_name)
       end
       nil
