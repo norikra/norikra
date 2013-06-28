@@ -52,12 +52,8 @@ https://github.com/tagomoris/norikra-client
 
 For example, think about event streams related with one web service (ex: 'www'). At first, define `target` with mandantory fields (in other words, minimal fields set for variations of 'www' events).
 
-    norikra-client table add www path:string status:integer referer:string agent:string userid:integer
-    norikra-client table list
-
-Fields not defined in 'table add' are automatically defined when events arrived at Norikra. You should not worry about it, but optional fields are defined as 'string' field. If you want to define as 'long' or 'double' or 'boolean', define field for each.
-
-    norikra-client field define www age:integer
+    norikra-client target add www path:string status:integer referer:string agent:string userid:integer
+    norikra-client target list
 
 You can register queries when you want.
 
@@ -96,7 +92,6 @@ TBD
 
 ## TODO
 
-* logging
 * daemonize
 * performance parameters
 * query unregister
