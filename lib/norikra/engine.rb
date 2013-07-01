@@ -41,13 +41,13 @@ module Norikra
     end
 
     def open(target, fields=nil)
-      debug "opening target", :target => target, :fields => fields
+      info "opening target", :target => target, :fields => fields
       return false if @targets.include?(target)
       open_target(target, fields)
     end
 
     def close(target)
-      debug "closing target", :target => target
+      info "closing target", :target => target
       #TODO: write
       raise NotImplementedError
     end
@@ -57,6 +57,7 @@ module Norikra
     end
 
     def register(query)
+      info "registering query", :name => query.name, :targets => query.targets, :expression => query.expression
       unless @targets.include?(query.targets.first)
         open(query.targets.first) # open as lazy defined target
       end
@@ -64,6 +65,7 @@ module Norikra
     end
 
     def deregister(query_name)
+      info "de-registering query", :name => query_name
       #TODO: write
       raise NotImplementedError
     end
@@ -77,7 +79,7 @@ module Norikra
       return if events.size < 1
 
       if @typedef_manager.lazy?(target)
-        debug "opening lazy target", :target => target
+        info "opening lazy target", :target => target
         debug "generating base fieldset from event", :target => target, :event => events.first
 
         base_fieldset = @typedef_manager.generate_base_fieldset(target, events.first)
@@ -86,7 +88,7 @@ module Norikra
 
         register_base_fieldset(target, base_fieldset)
 
-        debug "target successfully opened with fieldset", :target => target, :base => base_fieldset
+        info "target successfully opened with fieldset", :target => target, :base => base_fieldset
       end
 
       registered_data_fieldset = @registered_fieldsets[target][:data]
