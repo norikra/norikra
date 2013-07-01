@@ -25,7 +25,7 @@ class Norikra::RPC::Handler
   end
 
   def targets
-    logging(:show, :handler){
+    logging(:show, :targets){
       @engine.targets
     }
   end
