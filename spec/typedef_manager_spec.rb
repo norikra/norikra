@@ -41,6 +41,8 @@ describe Norikra::TypedefManager do
   context 'when instanciated with a target with fields definition' do
     manager = Norikra::TypedefManager.new
     manager.add_target('sample', {'a'=>'string','b'=>'string','c'=>'double'})
+    manager.reserve('sample', 'z', 'boolean')
+    manager.add_target('sample_next', {'a'=>'string','b'=>'string','c'=>'double','d'=>'double'})
 
     set_query_base = Norikra::FieldSet.new({'a'=>'string','b'=>'string','c'=>'double'})
 
@@ -68,9 +70,63 @@ describe Norikra::TypedefManager do
     describe '#fields_defined?' do
       it 'does not fail' do
         expect(manager.fields_defined?('sample', ['a','b','x'])).to be_true
-        expect(manager.fields_defined?('sample', ['a','b','z'])).to be_false
+        expect(manager.fields_defined?('sample', ['a','b','y'])).to be_false
       end
     end
+
+    describe '#ready?' do
+      context 'with query with single target' do
+        it 'returns boolean which matches target or not' do
+          q1 = Norikra::Query.new(:name => 'test', :expression => 'select a from sample.win:time(5 sec) where c > 1.0 and z')
+          expect(manager.ready?(q1)).to be_true
+          q2 = Norikra::Query.new(:name => 'test', :expression => 'select a from sample.win:time(5 sec) where c > 1.0 and d > 2.0')
+          expect(manager.ready?(q2)).to be_false
+          q3 = Norikra::Query.new(:name => 'test', :expression => 'select a from sample2.win:time(5 sec) where c > 1.0 and d > 2.0')
+          expect(manager.ready?(q3)).to be_false
+        end
+      end
+
+      context 'with query with multi targets, including unexisting target' do
+        it 'returns false' do
+          q = Norikra::Query.new(:name => 'test', :expression => 'select x.a,y.a from sample.win:time(5 sec) as x, sample2.win:time(5 sec) as y where x.c > 1.0 and y.d > 1.0')
+          expect(manager.ready?(q)).to be_false
+        end
+      end
+
+      context 'with query with multi targets, all of them are exisitng' do
+        it 'returns true' do
+          q = Norikra::Query.new(:name => 'test', :expression => 'select x.a,d from sample.win:time(5 sec) as x, sample_next.win:time(5 sec) as y where x.c > 1.0 and y.d > 1.0')
+          expect(manager.ready?(q)).to be_true
+        end
+      end
+    end
+
+    describe '#generate_fieldset_mapping' do
+      it 'retuns collect mapping for fieldsets' do
+        q1 = Norikra::Query.new(:name => 'test', :expression => 'select a from sample.win:time(5 sec) where c > 1.0 and z')
+        map1 = manager.generate_fieldset_mapping(q1)
+        expect(map1.keys).to eql(['sample'])
+        expect(map1.values.size).to eql(1)
+        expect(map1.values.first).to be_a(Norikra::FieldSet)
+        expect(map1.values.first.fields.size).to eql(4)
+        expect(map1.values.first.fields.keys).to eql(['a','b','c','z']) # a,b,c is non-optional fields
+
+        q2 = Norikra::Query.new(:name => 'test', :expression => 'select a from sample.win:time(5 sec) where c > 1.0')
+        map2 = manager.generate_fieldset_mapping(q2)
+        expect(map2.keys).to eql(['sample'])
+        expect(map2.values.size).to eql(1)
+        expect(map2.values.first).to be_a(Norikra::FieldSet)
+        expect(map2.values.first.fields.size).to eql(3)
+        expect(map2.values.first.fields.keys).to eql(['a','b','c']) # a,b,c is non-optional fields
+
+        q3 = Norikra::Query.new(:name => 'test', :expression => 'select x.a, z from sample.win:time(5 sec) as x, sample_next.win:time(5 sec) as y where x.c > 1.0 and y.d > 1.0')
+        map3 = manager.generate_fieldset_mapping(q3)
+        expect(map3.keys).to eql(['sample', 'sample_next'])
+        expect(map3['sample'].fields.keys).to eql(['a','b','c','z'])
+        expect(map3['sample_next'].fields.keys).to eql(['a','b','c','d'])
+      end
+    end
+
     describe '#bind_fieldset' do
       it 'does not fail' do
         manager.bind_fieldset('sample', :query, set_query_base)

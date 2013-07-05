@@ -4,6 +4,8 @@ require 'esper/lib/commons-logging-1.1.1.jar'
 require 'esper/lib/antlr-runtime-3.2.jar'
 require 'esper/lib/cglib-nodep-2.2.jar'
 
+require 'norikra/query/ast'
+
 module Norikra
   class Query
     attr_accessor :name, :expression
@@ -13,6 +15,7 @@ module Norikra
       @expression = param[:expression]
       @ast = nil
       @targets = nil
+      @subqueries = nil
       @fields = nil
     end
 
@@ -36,60 +39,82 @@ module Norikra
 
     def targets
       return @targets if @targets
-      #TODO: test with JOINs.
-      @targets = self.ast.find('STREAM_EXPR').find('EVENT_FILTER_EXPR').children.map(&:name)
+      @targets = (self.ast.listup(:stream).map(&:target) + self.subqueries.map(&:targets).flatten).sort.uniq
       @targets
     end
 
-    def fields
-      return @fields if @fields
-      #TODO: this code doesn't care JOINs.
-      ### fields -> {'target_name' => fields} ?
-
-      # Norikra::Query.new(
-      #   :name => 'hoge',
-      #   :expression => 'select count(*) AS cnt from www.win:time_batch(10 seconds) where path="/" AND search.length() > 0').ast.to_a
-      # ["EPL_EXPR",
-      #  ["SELECTION_EXPR", ["SELECTION_ELEMENT_EXPR", ["count"], ["cnt"]]],
-      #  ["STREAM_EXPR",
-      #   ["EVENT_FILTER_EXPR", ["www"]],
-      #   ["VIEW_EXPR",
-      #    ["win"],
-      #    ["time_batch"],
-      #    ["TIME_PERIOD", ["SECOND_PART", ["10"]]]]],
-      #  ["WHERE_EXPR",
-      #   ["EVAL_AND_EXPR",
-      #    ["EVAL_EQUALS_EXPR",
-      #     ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", ["path"]]],
-      #     ["\"/\""]],
-      #    [">",
-      #     ["LIB_FUNC_CHAIN", ["LIB_FUNCTION", ["search"], ["length"], ["("]]],
-      #     ["0"]]]]]
-
-      ast = self.ast
-      names_simple = ast.listup('EVENT_PROP_SIMPLE').map{|p| p.child.name}
-      names_chain_root = ast.listup('LIB_FUNC_CHAIN').map{|c| c.child.child.name}.select{|n| not self.class.imported_java_class?(n)}
-      @fields = (names_simple + names_chain_root).uniq.sort
-      @fields
+    def subqueries
+      return @subqueries if @subqueries
+      @subqueries = self.ast.listup(:subquery).map{|n| Norikra::SubQuery.new(n)}
+      @subqueries
     end
 
-    def self.imported_java_class?(name)
-      return false unless name =~ /^[A-Z]/
-      # Esper auto-imports the following Java library packages:
-      # java.lang.* -> Java::JavaLang::*
-      # java.math.* -> Java::JavaMath::*
-      # java.text.* -> Java::JavaText::*
-      # java.util.* -> Java::JavaUtil::*
-      java_class('Java::JavaLang::'+name) || java_class('Java::JavaMath::'+name) ||
-        java_class('Java::JavaText::'+name) || java_class('Java::JavaUtil::'+name) || false
-    end
-    def self.java_class(const_name)
-      begin
-        c = eval(const_name)
-        c.class == Kernel ? nil : c
-      rescue NameError
-        return nil
+    def explore(outer_targets=[], alias_overridden={})
+      fields = {}
+      alias_map = {}.merge(alias_overridden)
+
+      all = []
+      unknowns = []
+      self.ast.listup(:stream).each do |node|
+        #TODO: raise error for same name of target/alias
+        if node.alias
+          alias_map[node.alias] = node.target
+        end
+        fields[node.target] = []
       end
+
+      default_target = fields.keys.size == 1 ? fields.keys.first : nil
+
+      outer_targets.each do |t|
+        fields[t] ||= []
+      end
+
+      field_bag = []
+      self.subqueries.each do |subquery|
+        field_bag.push(subquery.explore(fields.keys, alias_map))
+      end
+
+      self.ast.fields(default_target).each do |field_def|
+        f = field_def[:f]
+        all.push(f)
+
+        if field_def[:t]
+          t = alias_map[field_def[:t]] || field_def[:t]
+          unless fields[t]
+            raise "unknown target alias name for: #{field_def[:t]}.#{field_def[:f]}"
+          end
+          fields[t].push(f)
+
+        else
+          unknowns.push(f)
+        end
+      end
+
+      field_bag.each do |bag|
+        all += bag['']
+        unknowns += bag[nil]
+        bag.keys.each do |t|
+          fields[t] ||= []
+          fields[t] += bag[t]
+        end
+      end
+
+      fields.keys.each do |target|
+        fields[target] = fields[target].sort.uniq
+      end
+      fields[''] = all.sort.uniq
+      fields[nil] = unknowns.sort.uniq
+
+      fields
+    end
+
+    def fields(target='')
+      # target '': fields for all targets (without target name)
+      # target nil: fields for unknown targets
+      return @fields[target] if @fields
+
+      @fields = explore()
+      @fields[target]
     end
 
     class ParseRuleSelectorImpl
@@ -99,76 +124,83 @@ module Norikra
       end
     end
 
-    class ASTNode
-      attr_accessor :name, :children
-      def initialize(name, children)
-        @name = name
-        @children = children
-      end
-      def to_a
-        [@name] + @children.map(&:to_a)
-      end
-      def child
-        @children.first
-      end
-      def find(node_name) # only one, depth-first search
-        return self if @name == node_name
-        @children.each do |c|
-          r = c.find(node_name)
-          return r if r
-        end
-        nil
-      end
-      def listup(node_name)
-        result = []
-        result.push(self) if @name == node_name
-        @children.each do |c|
-          result.push(*c.listup(node_name))
-        end
-        result
-      end
-    end
-
     def ast
-      #TODO: test
-      #TODO: take care for parse error
+      #TODO: take care for parse error(com.espertech.esper.client.EPStatementSyntaxException)
       return @ast if @ast
       rule = ParseRuleSelectorImpl.new
       target = @expression.dup
       forerrmsg = @expression.dup
       result = com.espertech.esper.epl.parse.ParseHelper.parse(target, forerrmsg, true, rule, false)
 
-      def convSubTree(tree)
-        ASTNode.new(tree.text, (tree.children ? tree.children.map{|c| convSubTree(c)} : []))
-      end
-      @ast = convSubTree(result.getTree)
+      @ast = astnode(result.getTree)
       @ast
     end
 
-    ### select max(price) as maxprice from HogeTable.win:time_batch(10 sec) where cast(amount, double) > 2 and price > 50
-    # query.ast.to_a
-    # ["EPL_EXPR",
-    #  ["SELECTION_EXPR",
-    #   ["SELECTION_ELEMENT_EXPR",
-    #    ["LIB_FUNC_CHAIN",
-    #     ["LIB_FUNCTION",
-    #      ["max"],
-    #      ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", ["price"]]],
-    #      ["("]]],
-    #    ["maxprice"]]],
-    #  ["STREAM_EXPR",
-    #   ["EVENT_FILTER_EXPR", ["HogeTable"]],
-    #   ["VIEW_EXPR",
-    #    ["win"],
-    #    ["time_batch"],
-    #    ["TIME_PERIOD", ["SECOND_PART", ["10"]]]]],
-    #  ["WHERE_EXPR",
-    #   ["EVAL_AND_EXPR",
-    #    [">",
-    #     ["cast",
-    #      ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", ["amount"]]],
-    #      ["double"]],
-    #     ["2"]],
-    #    [">", ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", ["price"]]], ["50"]]]]]
+    def self.rewrite_event_type_name(statement_model, mapping)
+      # mapping: {target_name => query_event_type_name}
+
+      ### esper-4.9.0/esper/doc/reference/html/epl_clauses.html#epl-subqueries
+      # Subqueries can only consist of a select clause, a from clause and a where clause.
+      # The group by and having clauses, as well as joins, outer-joins and output rate limiting are not permitted within subqueries.
+
+      # model.getFromClause.getStreams[0].getFilter.setEventTypeName("hoge")
+
+      # model.getSelectClause.getSelectList[1].getExpression => #<Java::ComEspertechEsperClientSoda::SubqueryExpression:0x3344c133>
+      # model.getSelectClause.getSelectList[1].getExpression.getModel.getFromClause.getStreams[0].getFilter.getEventTypeName
+      # model.getWhereClause.getChildren[1]                 .getModel.getFromClause.getStreams[0].getFilter.getEventTypeName
+
+      statement_model.getFromClause.getStreams.each do |stream|
+        target_name = stream.getFilter.getEventTypeName
+        unless mapping[target_name]
+          raise RuntimeError, "target missing in mapping, maybe BUG"
+        end
+        stream.getFilter.setEventTypeName(mapping[target_name])
+      end
+
+      dig = lambda {|node|
+        if node.is_a?(Java::ComEspertechEsperClientSoda::SubqueryExpression)
+          Norikra::Query.rewrite_event_type_name(node.getModel, mapping)
+        elsif node.getChildren.size > 0
+          node.getChildren.each do |c|
+            dig.call(c)
+          end
+        end
+      }
+
+      if statement_model.getSelectClause
+        statement_model.getSelectClause.getSelectList.each do |item|
+          dig.call(item.getExpression)
+        end
+      end
+
+      if statement_model.getWhereClause
+        statement_model.getWhereClause.getChildren.each do |child|
+          dig.call(child)
+        end
+      end
+
+      statement_model
+    end
+  end
+
+  class SubQuery < Query
+    def initialize(ast_nodetree)
+      @ast = ast_nodetree
+      @targets = nil
+      @subqueries = nil
+    end
+
+    def ast; @ast; end
+
+    def subqueries
+      return @subqueries if @subqueries
+      @subqueries = @ast.children.map{|c| c.listup(:subquery)}.reduce(&:+).map{|n| Norikra::SubQuery.new(n)}
+      @subqueries
+    end
+
+    def name; ''; end
+    def expression; ''; end
+    def dup; self; end
+    def dup_with_stream_name(actual_name); self; end
   end
 end

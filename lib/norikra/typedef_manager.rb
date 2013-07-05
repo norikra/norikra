@@ -41,6 +41,33 @@ module Norikra
       @typedefs[target].field_defined?(field_name_list)
     end
 
+    def ready?(query)
+      query.targets.all?{|t| @typedefs[t] && ! @typedefs[t].lazy? && @typedefs[t].field_defined?(query.fields(t))} &&
+        query.fields(nil).all?{|f| query.targets.any?{|t| @typedefs[t].field_defined?([f])}}
+    end
+
+    def generate_fieldset_mapping(query)
+      fields_set = {}
+      query.targets.each do |target|
+        fields_set[target] = query.fields(target)
+      end
+      query.fields(nil).each do |field|
+        assumed = query.targets.select{|t| @typedefs[t].field_defined?([field])}
+        if assumed.size != 1
+          #TODO exception class
+          raise "cannot determine target for field #{field}"
+        end
+        fields_set[assumed.first].push(field)
+      end
+
+      mapping = {}
+      fields_set.each do |target,fields|
+        mapping[target] = generate_query_fieldset(target, fields.sort.uniq)
+      end
+
+      mapping
+    end
+
     def bind_fieldset(target, level, fieldset)
       fieldset.bind(target, level)
       @typedefs[target].push(level, fieldset)
