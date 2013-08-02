@@ -35,11 +35,15 @@ module Norikra
       info "Norikra server started."
       @running = true
 
-      Signal.trap(:INT){ @running = false }
-      #TODO: more signal traps (dumps of query/fields? or other handler?)
+      shutdown_proc = ->{ @running = false }
+      # JVM uses SIGQUIT for thread/heap state dumping
+      [:INT, :TERM].each do |s|
+        Signal.trap(s, shutdown_proc)
+      end
+      #TODO: SIGHUP? SIGUSR1? SIGUSR2? (dumps of query/fields? or other handler?)
 
       while @running
-        sleep 1
+        sleep 0.3
       end
     end
 

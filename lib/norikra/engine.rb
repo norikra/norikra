@@ -33,11 +33,15 @@ module Norikra
     end
 
     def start
+      debug "norikra engine starting: creating esper runtime"
       @runtime = @service.getEPRuntime
+      debug "norikra engine started"
     end
 
     def stop
-      #TODO: stop to @runtime
+      debug "stopping norikra engine: stop all statements on esper"
+      @service.getEPAdministrator.stopAllStatements
+      debug "norikra engine stopped"
     end
 
     def open(target, fields=nil)
