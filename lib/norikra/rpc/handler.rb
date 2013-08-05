@@ -59,8 +59,8 @@ class Norikra::RPC::Handler
 
   def deregister(query_name)
     logging(:manage, :deregister, query_name){
-      #TODO: write!
-      raise NotImplementedError
+      r = @engine.deregister(query_name)
+      !!r
     }
   end
 
