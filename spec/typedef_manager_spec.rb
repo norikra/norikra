@@ -127,12 +127,15 @@ describe Norikra::TypedefManager do
       end
     end
 
-    describe '#bind_fieldset' do
+    describe '#bind_fieldset and #unbind_fieldset' do
       it 'does not fail' do
         manager.bind_fieldset('sample', :query, set_query_base)
         expect(set_query_base.target).to eql('sample')
         expect(set_query_base.level).to eql(:query)
         expect(manager.typedefs['sample'].queryfieldsets.include?(set_query_base)).to be_true
+
+        manager.unbind_fieldset('sample', :query, set_query_base)
+        expect(manager.typedefs['sample'].queryfieldsets.include?(set_query_base)).to be_false
       end
     end
 
@@ -165,8 +168,7 @@ describe Norikra::TypedefManager do
         manager.bind_fieldset('sample', :query, set_f)
 
         list = manager.subsets('sample', Norikra::FieldSet.new(base.merge({'d'=>'string','e'=>'string','g'=>'string'})))
-        expect(list.size).to eql(4) # set_query_base, set_d, set_e, baseset
-        expect(list.include?(set_query_base)).to be_true
+        expect(list.size).to eql(3) # set_d, set_e, baseset
         expect(list.include?(set_d)).to be_true
         expect(list.include?(set_e)).to be_true
         expect(list.include?(set_f)).to be_false

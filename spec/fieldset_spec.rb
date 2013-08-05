@@ -75,6 +75,10 @@ describe Norikra::FieldSet do
       it 'returns comma-separated sorted field names of argument hash' do
         expect(Norikra::FieldSet.field_names_key({'x1'=>1,'y3'=>2,'xx'=>3,'xx1'=>4,'a'=>5})).to eql('a,x1,xx,xx1,y3')
       end
+
+      it 'returns comma-separated sorted field names of argument hash AND non-optional fields of 2nd argument fieldset instance' do
+        expect(Norikra::FieldSet.field_names_key({'x1'=>1,'y3'=>2,'xx'=>3,'xx1'=>4}, set)).to eql('a,x,x1,xx,xx1,y,y3')
+      end
     end
 
     describe '#field_names_key' do

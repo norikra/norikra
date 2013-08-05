@@ -24,6 +24,13 @@ module Norikra
       end
     end
 
+    def remove_target(target)
+      @mutex.synchronize do
+        raise RuntimeError, "target #{target} doesn't exists" unless @typedefs[target]
+        @typedefs.delete(target)
+      end
+    end
+
     def lazy?(target)
       @typedefs[target].lazy?
     end
@@ -48,14 +55,14 @@ module Norikra
 
     def generate_fieldset_mapping(query)
       fields_set = {}
+
       query.targets.each do |target|
         fields_set[target] = query.fields(target)
       end
       query.fields(nil).each do |field|
         assumed = query.targets.select{|t| @typedefs[t].field_defined?([field])}
         if assumed.size != 1
-          #TODO exception class
-          raise "cannot determine target for field #{field}"
+          raise "cannot determine target for field #{field}" #TODO exception class
         end
         fields_set[assumed.first].push(field)
       end
@@ -64,13 +71,16 @@ module Norikra
       fields_set.each do |target,fields|
         mapping[target] = generate_query_fieldset(target, fields.sort.uniq)
       end
-
       mapping
     end
 
     def bind_fieldset(target, level, fieldset)
       fieldset.bind(target, level)
       @typedefs[target].push(level, fieldset)
+    end
+
+    def unbind_fieldset(target, level, fieldset)
+      @typedefs[target].pop(level, fieldset)
     end
 
     def replace_fieldset(target, old_fieldset, new_fieldset)

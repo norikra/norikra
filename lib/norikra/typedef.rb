@@ -99,8 +99,21 @@ module Norikra
       self.class.new(fields, nil, @rebounds)
     end
 
-    def self.field_names_key(data)
-      data.keys.sort.join(',')
+    def self.field_names_key(data, fieldset=nil)
+      if fieldset
+        keys = []
+        fieldset.fields.each do |key,field|
+          unless field.optional?
+            keys.push(key)
+          end
+        end
+        data.keys.each do |key|
+          keys.push(key) unless keys.include?(key)
+        end
+        keys.sort.join(',')
+      else
+        data.keys.sort.join(',')
+      end
     end
 
     def field_names_key
@@ -217,7 +230,7 @@ module Norikra
       @queryfieldsets = []
       @datafieldsets = []
 
-      @set_map = {} # FieldSet.field_names_key(data_fieldset) => data_fieldset
+      @set_map = {} # FieldSet.field_names_key(data_fieldset, fieldset) => data_fieldset
 
       @mutex = Mutex.new
     end
@@ -292,6 +305,22 @@ module Norikra
       true
     end
 
+    def pop(level, fieldset)
+      @mutex.synchronize do
+        case level
+        when :base
+          raise RuntimeError, "BUG: pop of base fieldset is nonsense (typedef deletion?)"
+        when :query
+          @queryfieldsets.delete(fieldset) if @queryfieldsets.include?(fieldset)
+        when :data
+          raise RuntimeError, "BUG: pop of data fieldset is nonsense"
+        else
+          raise ArgumentError, "unknown level #{level}"
+        end
+      end
+      true
+    end
+
     def replace(level, old_fieldset, fieldset)
       unless self.consistent?(fieldset)
         raise ArgumentError, "inconsistent field set for this typedef"
@@ -311,7 +340,7 @@ module Norikra
     end
 
     def refer(data)
-      field_names_key = FieldSet.field_names_key(data)
+      field_names_key = FieldSet.field_names_key(data, self)
       return @set_map[field_names_key] if @set_map.has_key?(field_names_key)
 
       guessed = FieldSet.simple_guess(data)
@@ -319,11 +348,12 @@ module Norikra
       @fields.each do |key,field|
         if guessed_fields.has_key?(key)
           guessed_fields[key].type = field.type if guessed_fields[key].type != field.type
+          guessed_fields[key].optional = field.optional if guessed_fields[key].optional != field.optional
         else
           guessed_fields[key] = field unless field.optional?
         end
       end
-      guessed
+      guessed.update_summary
     end
 
     def format(data)

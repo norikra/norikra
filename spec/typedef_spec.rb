@@ -184,6 +184,29 @@ describe Norikra::Typedef do
       end
     end
 
+    describe '#pop' do
+      it 'does not accepts base/data fieldsets' do
+        t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+        expect { t.pop(:base, Norikra::FieldSet.new({'a'=>'string','b'=>'int'})) }.to raise_error(RuntimeError)
+        expect { t.pop(:data, Norikra::FieldSet.new({'a'=>'string'})) }.to raise_error(RuntimeError)
+      end
+
+      it 'removes specified query fieldset from queryfieldsets' do
+        t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+        set1 = Norikra::FieldSet.new({'a'=>'string','b' => 'long','c'=>'int'})
+        set2 = Norikra::FieldSet.new({'a'=>'string','b' => 'long'})
+        t.push(:query, set1)
+        t.push(:query, set2)
+
+        expect(t.queryfieldsets.size).to eql(2)
+
+        expect { t.pop(:query, set1) }.not_to raise_error(RuntimeError)
+        expect(t.queryfieldsets.size).to eql(1)
+        expect { t.pop(:query, set2) }.not_to raise_error(RuntimeError)
+        expect(t.queryfieldsets.size).to eql(0)
+      end
+    end
+
     describe '#replace' do
       it 'raises error for different field name sets' do
         t = Norikra::Typedef.new({'a'=>'string'})
@@ -235,6 +258,7 @@ describe Norikra::Typedef do
           expect(r.fields['b'].type).to eql('long')
           expect(r.fields['c'].type).to eql('boolean')
           expect(r.fields['d'].type).to eql('double')
+          expect(r.summary).to eql('a:string,b:long,c:boolean,d:double')
         end
       end
 
@@ -249,6 +273,7 @@ describe Norikra::Typedef do
           expect(r.fields['b'].type).to eql('long')
           expect(r.fields['c'].type).to eql('string')
           expect(r.fields['d'].type).to eql('string')
+          expect(r.summary).to eql('a:string,b:long,c:string,d:string')
         end
       end
     end

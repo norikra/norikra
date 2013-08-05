@@ -8,11 +8,13 @@ require 'norikra/query/ast'
 
 module Norikra
   class Query
-    attr_accessor :name, :expression
+    attr_accessor :name, :expression, :statement_name, :fieldsets
 
     def initialize(param={})
       @name = param[:name]
       @expression = param[:expression]
+      @statement_name = nil
+      @fieldsets = {} # { target => fieldset }
       @ast = nil
       @targets = nil
       @subqueries = nil
