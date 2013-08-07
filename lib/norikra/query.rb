@@ -4,6 +4,7 @@ require 'esper/lib/commons-logging-1.1.1.jar'
 require 'esper/lib/antlr-runtime-3.2.jar'
 require 'esper/lib/cglib-nodep-2.2.jar'
 
+require 'norikra/error'
 require 'norikra/query/ast'
 
 module Norikra
@@ -58,11 +59,15 @@ module Norikra
       all = []
       unknowns = []
       self.ast.listup(:stream).each do |node|
-        #TODO: raise error for same name of target/alias
         if node.alias
           alias_map[node.alias] = node.target
         end
         fields[node.target] = []
+      end
+
+      dup_aliases = (alias_map.keys & fields.keys)
+      unless dup_aliases.empty?
+        raise Norikra::ClientError, "Invalid alias '#{dup_aliases.join(',')}', same with target name"
       end
 
       default_target = fields.keys.size == 1 ? fields.keys.first : nil
@@ -83,7 +88,7 @@ module Norikra
         if field_def[:t]
           t = alias_map[field_def[:t]] || field_def[:t]
           unless fields[t]
-            raise "unknown target alias name for: #{field_def[:t]}.#{field_def[:f]}"
+            raise Norikra::ClientError, "unknown target alias name for: #{field_def[:t]}.#{field_def[:f]}"
           end
           fields[t].push(f)
 
@@ -127,7 +132,6 @@ module Norikra
     end
 
     def ast
-      #TODO: take care for parse error(com.espertech.esper.client.EPStatementSyntaxException)
       return @ast if @ast
       rule = ParseRuleSelectorImpl.new
       target = @expression.dup
@@ -136,6 +140,8 @@ module Norikra
 
       @ast = astnode(result.getTree)
       @ast
+    rescue Java::ComEspertechEsperClient::EPStatementSyntaxException => e
+      raise Norikra::QueryError, e.message
     end
 
     def self.rewrite_event_type_name(statement_model, mapping)

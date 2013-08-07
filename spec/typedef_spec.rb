@@ -1,6 +1,7 @@
 require_relative './spec_helper'
 
 require 'norikra/typedef'
+# require 'norikra/error'
 
 require 'json'
 require 'digest'
@@ -158,16 +159,16 @@ describe Norikra::Typedef do
     describe '#push' do
       it 'does not accepts fieldset which conflicts pre-defined fields' do
         t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
-        expect { t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'int'})) }.to raise_error(ArgumentError)
-        expect { t.push(:data, Norikra::FieldSet.new({'a'=>'string'})) }.to raise_error(ArgumentError)
+        expect { t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'int'})) }.to raise_error(Norikra::ArgumentError)
+        expect { t.push(:data, Norikra::FieldSet.new({'a'=>'string'})) }.to raise_error(Norikra::ArgumentError)
       end
 
       it 'accepts fieldsets which is consistent with self' do
         t = Norikra::Typedef.new({'a'=>'string','b'=>'long'})
         expect(t.fields.size).to eql(2)
 
-        expect { t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long'})) }.not_to raise_error(ArgumentError)
-        expect { t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long'})) }.not_to raise_error(ArgumentError)
+        t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long'}))
+        t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long'}))
 
         expect(t.fields.size).to eql(2)
 
@@ -200,9 +201,9 @@ describe Norikra::Typedef do
 
         expect(t.queryfieldsets.size).to eql(2)
 
-        expect { t.pop(:query, set1) }.not_to raise_error(RuntimeError)
+        t.pop(:query, set1)
         expect(t.queryfieldsets.size).to eql(1)
-        expect { t.pop(:query, set2) }.not_to raise_error(RuntimeError)
+        t.pop(:query, set2)
         expect(t.queryfieldsets.size).to eql(0)
       end
     end
@@ -213,7 +214,7 @@ describe Norikra::Typedef do
         set1 = Norikra::FieldSet.new({'a'=>'string','b'=>'int'})
         set2 = Norikra::FieldSet.new({'a'=>'string','c'=>'int'})
         t.push(:data, set1)
-        expect { t.replace(:data, set1, set2) }.to raise_error(ArgumentError)
+        expect { t.replace(:data, set1, set2) }.to raise_error(Norikra::ArgumentError)
       end
 
       it 'replaces typedef internal fieldset object for specified field_names_key' do

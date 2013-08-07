@@ -1,5 +1,8 @@
+require 'norikra/error'
 require 'norikra/logger'
 include Norikra::Log
+
+require 'norikra/rpc'
 
 class Norikra::RPC::Handler
   def initialize(engine)
@@ -15,12 +18,15 @@ class Norikra::RPC::Handler
 
     begin
       yield
+    rescue Norikra::ClientError => e
+      info "ClientError #{e.class}: #{e.message}"
+      raise Norikra::RPC::ClientError, e.message
     rescue => e
       error "Exception #{e.class}: #{e.message}"
       e.backtrace.each do |t|
         error "  " + t
       end
-      nil
+      raise Norikra::RPC::ServerError, "#{e.class}, #{e.message}"
     end
   end
 

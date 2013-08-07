@@ -1,5 +1,7 @@
 require 'java'
 
+require 'norikra/error'
+
 require 'norikra/logger'
 include Norikra::Log
 
@@ -65,7 +67,7 @@ module Norikra
 
     def register(query)
       info "registering query", :name => query.name, :targets => query.targets, :expression => query.expression
-      raise "query name #{query.name} already exists" if @queries.select{|q| q.name == query.name }.size > 0
+      raise Norikra::ClientError, "query name '#{query.name}' already exists" if @queries.select{|q| q.name == query.name }.size > 0
 
       query.targets.each do |target|
         open(target) unless @targets.include?(target)
@@ -200,7 +202,7 @@ module Norikra
 
     def register_query(query)
       @mutex.synchronize do
-        raise "query #{query.name} already exists" unless @queries.select{|q| q.name == query.name }.empty? #TODO: error type
+        raise Norikra::ClientError, "query '#{query.name}' already exists" unless @queries.select{|q| q.name == query.name }.empty?
 
         unless @typedef_manager.ready?(query)
           @waiting_queries.push(query)

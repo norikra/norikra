@@ -1,6 +1,7 @@
 require_relative './spec_helper'
 
 require 'norikra/typedef'
+# require 'norikra/error'
 
 require 'json'
 require 'digest'
@@ -22,7 +23,7 @@ describe Norikra::Field do
     end
 
     it 'raises ArgumentError for unknown type string' do
-      expect { Norikra::Field.valid_type?('foo') }.to raise_error(ArgumentError)
+      expect { Norikra::Field.valid_type?('foo') }.to raise_error()
     end
   end
 

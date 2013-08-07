@@ -1,6 +1,7 @@
 require 'digest'
 
 require 'norikra/typedef'
+require 'norikra/error'
 
 module Norikra
   class TypedefManager
@@ -19,14 +20,14 @@ module Norikra
       # fields nil || [] => lazy
       # fields {'fieldname' => 'type'}
       @mutex.synchronize do
-        raise RuntimeError, "target #{target} already exists" if @typedefs[target]
+        raise Norikra::ArgumentError, "target '#{target}' already exists" if @typedefs[target]
         @typedefs[target] = Typedef.new(fields)
       end
     end
 
     def remove_target(target)
       @mutex.synchronize do
-        raise RuntimeError, "target #{target} doesn't exists" unless @typedefs[target]
+        raise Norikra::ArgumentError, "target '#{target}' doesn't exists" unless @typedefs[target]
         @typedefs.delete(target)
       end
     end
@@ -62,7 +63,7 @@ module Norikra
       query.fields(nil).each do |field|
         assumed = query.targets.select{|t| @typedefs[t].field_defined?([field])}
         if assumed.size != 1
-          raise "cannot determine target for field #{field}" #TODO exception class
+          raise Norikra::ClientError, "cannot determine target for field '#{field}' in this query"
         end
         fields_set[assumed.first].push(field)
       end

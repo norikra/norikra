@@ -1,6 +1,8 @@
 require 'digest'
 require 'json'
 
+require 'norikra/error'
+
 # Norikra::Field, Norikra::FieldSet, Norikra::Typedef
 
 module Norikra
@@ -53,7 +55,7 @@ module Norikra
       when 'float' then 'float'
       when 'double' then 'double'
       else
-        raise ArgumentError, "invalid field type #{type}"
+        raise Norikra::ArgumentError, "invalid field type #{type}"
       end
     end
 
@@ -272,7 +274,7 @@ module Norikra
 
     def push(level, fieldset)
       unless self.consistent?(fieldset)
-        raise ArgumentError, "inconsistent field set for this typedef"
+        raise Norikra::ArgumentError, "field definition mismatch with already defined fields"
       end
 
       @mutex.synchronize do
@@ -323,7 +325,7 @@ module Norikra
 
     def replace(level, old_fieldset, fieldset)
       unless self.consistent?(fieldset)
-        raise ArgumentError, "inconsistent field set for this typedef"
+        raise Norikra::ArgumentError, "field definition mismatch with already defined fields"
       end
       if level != :data
         raise ArgumentError, "invalid argument, fieldset replace should be called for :data"
