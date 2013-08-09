@@ -9,6 +9,7 @@ require 'norikra/typedef'
 require 'norikra/query'
 
 require 'norikra/rpc'
+require 'norikra/udf'
 
 module Norikra
   class Server
@@ -32,8 +33,11 @@ module Norikra
     def run
       @engine.start
       @rpcserver.start
-      info "Norikra server started."
+
+      load_plugins
+
       @running = true
+      info "Norikra server started."
 
       shutdown_proc = ->{ @running = false }
       # JVM uses SIGQUIT for thread/heap state dumping
@@ -42,15 +46,26 @@ module Norikra
       end
       #TODO: SIGHUP? SIGUSR1? SIGUSR2? (dumps of query/fields? or other handler?)
 
-      load_plugins
-
       while @running
         sleep 0.3
       end
     end
 
+    ############## ugokanai....
     def load_plugins
-      #TODO: implement!
+      info "Loading UDF plugins"
+      Norikra::UDF.listup.each do |mojule|
+        if mojule.is_a?(Class)
+          name = @engine.load_udf(mojule)
+          info "UDF loaded", :name => name
+        elsif mojule.is_a?(Module) && mojule.respond_to?(:plugins)
+          mojule.init if mojule.respond_to?(:init)
+          mojule.plugins.each do |klass|
+            name = @engine.load_udf(klass)
+            info "UDF loaded", :name => name
+          end
+        end
+      end
     end
 
     def shutdown

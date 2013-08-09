@@ -287,7 +287,10 @@ module Norikra
     end
 
     def load_udf(udf_klass)
-      load_udf_actually(udf_klass)
+      udf_klass.init if udf_klass.respond_to?(:init)
+
+      udf = udf_klass.new
+      load_udf_actually(udf)
     end
 
     # this method should be protected with @mutex lock
@@ -359,20 +362,18 @@ module Norikra
     VALUE_CACHE_ENUM = com.espertech.esper.client.ConfigurationPlugInSingleRowFunction::ValueCache
     FILTER_OPTIMIZABLE_ENUM = com.espertech.esper.client.ConfigurationPlugInSingleRowFunction::FilterOptimizable
 
-    def load_udf_actually(udf_klass)
-      debug "importing class into config object", :class => udf_klass.to_s
-      udf_klass.init
+    def load_udf_actually(udf)
+      debug "importing class into config object", :name => udf.class.to_s
 
-      className = udf_klass.class_name.to_java(:string)
-      functionName = udf_klass.function_name.to_java(:string)
-      methodName = udf_klass.method_name.to_java(:string)
+      functionName, className, methodName = udf.definition
 
-      valueCache = udf_klass.value_cache ? VALUE_CACHE_ENUM::ENABLED : VALUE_CACHE_ENUM::DISABLED
-      filterOptimizable = udf_klass.filter_optimizable ? FILTER_OPTIMIZABLE_ENUM::ENABLED : FILTER_OPTIMIZABLE_ENUM::DISABLED
-      rethrowExceptions = udf_klass.rethrow_exceptions
+      valueCache = udf.value_cache ? VALUE_CACHE_ENUM::ENABLED : VALUE_CACHE_ENUM::DISABLED
+      filterOptimizable = udf.filter_optimizable ? FILTER_OPTIMIZABLE_ENUM::ENABLED : FILTER_OPTIMIZABLE_ENUM::DISABLED
+      rethrowExceptions = udf.rethrow_exceptions
 
-      debug "adding SingleRowFunction", :class => udf_klass.to_s, :javaClass => udf_klass.class_name
+      debug "adding SingleRowFunction", :function => functionName, :javaClass => className, :javaMethod => methodName
       @config.addPlugInSingleRowFunction(functionName, className, methodName, valueCache, filterOptimizable, rethrowExceptions)
+      functionName
     end
   end
 end
