@@ -2,11 +2,10 @@ module Norikra::UDFSpecHelper
   @@plugins = {}
 
   class UDFInstance
-    def initialize(name, classname, methodname, signature)
-      @name = name
-      @classname = classname
+    def initialize(classname, methodname)
       @methodname = methodname
-      parts = @classname.split('.')
+
+      parts = classname.split('.')
       clazzname = parts.pop
       @clazz = eval("Java::" + parts.map(&:capitalize).join + "::" + clazzname)
     end
@@ -19,7 +18,9 @@ module Norikra::UDFSpecHelper
     @@plugins[name].call(*args)
   end
 
-  def udf_function(name, classname, methodname, signature)
-    @@plugins[name] = UDFInstance.new(name, classname, methodname)
+  def udf_function(klass)
+    klass.init
+    name, classname, methodname = klass.new.definition
+    @@plugins[name] = UDFInstance.new(classname, methodname)
   end
 end
