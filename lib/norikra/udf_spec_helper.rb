@@ -18,9 +18,17 @@ module Norikra::UDFSpecHelper
     @@plugins[name].call(*args)
   end
 
-  def udf_function(klass)
-    klass.init
-    name, classname, methodname = klass.new.definition
-    @@plugins[name] = UDFInstance.new(classname, methodname)
+  def udf_function(mojule)
+    if mojule.is_a?(Class)
+      klass = mojule
+      klass.init if klass.respond_to?(:init)
+      name, classname, methodname = klass.new.definition
+      @@plugins[name] = UDFInstance.new(classname, methodname)
+    else
+      mojule.init if mojule.respond_to?(:init)
+      ps = []
+      mojule.plugins.each{|p| ps.push(udf_function(p))} if mojule.respond_to?(:plugins)
+      ps
+    end
   end
 end
