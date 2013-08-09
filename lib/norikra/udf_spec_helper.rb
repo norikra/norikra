@@ -15,7 +15,7 @@ module Norikra::UDFSpecHelper
   end
 
   def call(name, *args)
-    @@plugins[name].call(*args)
+    @@plugins[name.to_s].call(*args)
   end
 
   def udf_function(mojule)
