@@ -123,6 +123,10 @@ module Norikra
       nil
     end
 
+    def load(plugin_klass) #TODO: fix api
+      load_udf(plugin_klass)
+    end
+
     class Listener
       include com.espertech.esper.client.UpdateListener
 
@@ -282,6 +286,10 @@ module Norikra
       end
     end
 
+    def load_udf(udf_klass)
+      load_udf_actually(udf_klass)
+    end
+
     # this method should be protected with @mutex lock
     def register_query_actually(query, mapping)
       # 'mapping' argument is {target => fieldset}
@@ -346,6 +354,25 @@ module Norikra
       # removed fieldset should be already replaced with register_fieldset_actually w/ replace flag
       debug "remove event type", :target => target, :event_type => event_type_name
       @config.removeEventType(event_type_name, true)
+    end
+
+    VALUE_CACHE_ENUM = com.espertech.esper.client.ConfigurationPlugInSingleRowFunction::ValueCache
+    FILTER_OPTIMIZABLE_ENUM = com.espertech.esper.client.ConfigurationPlugInSingleRowFunction::FilterOptimizable
+
+    def load_udf_actually(udf_klass)
+      debug "importing class into config object", :class => udf_klass.to_s
+      udf_klass.init
+
+      className = udf_klass.class_name.to_java(:string)
+      functionName = udf_klass.function_name.to_java(:string)
+      methodName = udf_klass.method_name.to_java(:string)
+
+      valueCache = udf_klass.value_cache ? VALUE_CACHE_ENUM::ENABLED : VALUE_CACHE_ENUM::DISABLED
+      filterOptimizable = udf_klass.filter_optimizable ? FILTER_OPTIMIZABLE_ENUM::ENABLED : FILTER_OPTIMIZABLE_ENUM::DISABLED
+      rethrowExceptions = udf_klass.rethrow_exceptions
+
+      debug "adding SingleRowFunction", :class => udf_klass.to_s, :javaClass => udf_klass.class_name
+      @config.addPlugInSingleRowFunction(functionName, className, methodName, valueCache, filterOptimizable, rethrowExceptions)
     end
   end
 end

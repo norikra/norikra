@@ -42,9 +42,15 @@ module Norikra
       end
       #TODO: SIGHUP? SIGUSR1? SIGUSR2? (dumps of query/fields? or other handler?)
 
+      load_plugins
+
       while @running
         sleep 0.3
       end
+    end
+
+    def load_plugins
+      #TODO: implement!
     end
 
     def shutdown
