@@ -16,7 +16,7 @@ module Norikra
       end
 
       def definition
-        self.function_name, self.class_name, self.method_name
+        [self.function_name, self.class_name, self.method_name]
       end
 
       # UDF function name in queries
