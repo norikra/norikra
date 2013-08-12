@@ -75,9 +75,10 @@ module Norikra
     def self.listup
       return unless defined? Gem
 
-      plugins = Gem.find_files('lib/norikra/udf/*.rb')
+      plugins = Gem.find_files('norikra/udf/*.rb')
       plugins.each do |plugin|
         begin
+          debug "plugin file found!", :file => plugin
           load plugin
         rescue => e
           warn "Failed to load norikra UDF plugin", :plugin => plugin.to_s, :error_class => e.class, :error => e.message
@@ -89,10 +90,11 @@ module Norikra
       self.constants.each do |c|
         next if known_consts.include?(c)
 
-        if c.is_a?(Class) && c.is_a?(Norikra::UDF::Base)
-          udfs.push(c)
-        elsif c.is_a?(Module) && c.respond_to?(:plugins)
-          udfs.push(c)
+        klass = Norikra::UDF.const_get(c)
+        if klass.is_a?(Class) && klass.is_a?(Norikra::UDF::Base)
+          udfs.push(klass)
+        elsif klass.is_a?(Module) && klass.respond_to?(:plugins)
+          udfs.push(klass)
         end
       end
       udfs

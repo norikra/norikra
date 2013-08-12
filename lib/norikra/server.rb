@@ -51,17 +51,16 @@ module Norikra
       end
     end
 
-    ############## ugokanai....
     def load_plugins
       info "Loading UDF plugins"
       Norikra::UDF.listup.each do |mojule|
         if mojule.is_a?(Class)
-          name = @engine.load_udf(mojule)
+          name = @engine.load(mojule)
           info "UDF loaded", :name => name
         elsif mojule.is_a?(Module) && mojule.respond_to?(:plugins)
           mojule.init if mojule.respond_to?(:init)
           mojule.plugins.each do |klass|
-            name = @engine.load_udf(klass)
+            name = @engine.load(klass)
             info "UDF loaded", :name => name
           end
         end
