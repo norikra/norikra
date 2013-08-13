@@ -11,7 +11,7 @@ module Norikra
     #     filter-optimizable="disabled"
     #     rethrow-exceptions="disabled" />
     # </esper-configuration>
-    class Base
+    class SingleRow
       def self.init
         true
       end
@@ -72,6 +72,43 @@ module Norikra
       end
     end
 
+    class AggregationSingle
+      def self.init
+        true
+      end
+
+      ###############
+      def definition
+        [self.function_name, self.class_name, self.method_name]
+      end
+
+      # UDF function name in queries
+      def function_name
+        raise NotImplementedError
+      end
+
+      def class_name
+        raise NotImplementedError
+      end
+
+      def method_name
+        function_name
+      end
+
+      ######### options
+      def value_cache
+        false
+      end
+
+      def filter_optimizable
+        true
+      end
+
+      def rethrow_exceptions
+        false
+      end
+    end
+
     def self.listup
       return unless defined? Gem
 
@@ -85,13 +122,13 @@ module Norikra
         end
       end
 
-      known_consts = [:Base]
+      known_consts = [:SingleRow]
       udfs = []
       self.constants.each do |c|
         next if known_consts.include?(c)
 
         klass = Norikra::UDF.const_get(c)
-        if klass.is_a?(Class) && klass.is_a?(Norikra::UDF::Base)
+        if klass.is_a?(Class) && klass.is_a?(Norikra::UDF::SingleRow)
           udfs.push(klass)
         elsif klass.is_a?(Module) && klass.respond_to?(:plugins)
           udfs.push(klass)
