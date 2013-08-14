@@ -86,7 +86,7 @@ module Norikra
       def check(func_name, value_type, parameters, distinct, windowed)
         @factory.setFunctionName(func_name)
         unless @factory.getValueType == value_type
-          raise "Aggregation UDF value type mismatch, expected '#{value_type}', actually '#{factory.getValueType}'"
+          raise "Aggregation UDF value type mismatch, expected '#{value_type}', actually '#{@factory.getValueType}'"
         end
 
         parameterTypes = parameters.map{|t,bc,c| t }
