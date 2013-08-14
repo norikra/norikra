@@ -86,6 +86,12 @@ And send more events:
 
 Query 'www.search' matches the last event automatically.
 
+## User Defined Functions
+
+UDF as plugins over rubygems are available. For example, see 'norikra-udf-mock' repository.
+
+TBD
+
 ## Versions
 
 TBD
@@ -94,7 +100,6 @@ TBD
 
 * daemonize
 * performance parameters
-* query unregister
 
 ## Copyright
 
