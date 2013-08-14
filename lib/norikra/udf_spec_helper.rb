@@ -2,6 +2,42 @@ module Norikra
   module UDFSpecHelper
     @@plugins = {}
 
+    def call(name, *args)
+      udf = @@plugins[name.to_s]
+      udf.call(*args)
+    end
+
+    # params: for AggregationSingle only
+    #         required keys: :valueType, :windowed, :distinct, :parameters
+    #           :parameters => [[parameterType, constant?, contantValue], ... ]
+    def udf_function(mojule, params={})
+      require 'esper-4.9.0.jar'
+      # require 'esper/lib/commons-logging-1.1.1.jar'
+      # require 'esper/lib/antlr-runtime-3.2.jar'
+      # require 'esper/lib/cglib-nodep-2.2.jar'
+
+      unless mojule.is_a?(Class)
+        mojule.init if mojule.respond_to?(:init)
+        ps = []
+        mojule.plugins.each{|p| ps.push(udf_function(p))} if mojule.respond_to?(:plugins)
+        return ps
+      end
+
+      klass = mojule
+      klass.init if klass.respond_to?(:init)
+
+      if klass.superclass == Norikra::UDF::SingleRow
+        name, classname, methodname = klass.new.definition
+        @@plugins[name] = UDFInstance.new(classname, methodname)
+
+      elsif klass.superclass == Norikra::UDF::AggregationSingle
+        name, factoryclassname = klass.new.definition
+        factory = UDFAggregationFactoryInstance.new(factoryclassname)
+        factory.check(name, params[:valueType], params[:parameters], params.fetch(:distinct, false), params.fetch(:windowed, true))
+        @@plugins[name] = factory.create
+      end
+    end
+
     module UDFHelper
       def classObject(classname)
         parts = classname.split('.')
@@ -71,37 +107,6 @@ module Norikra
 
       def create
         UDFAggregationInstance.new(@factory.newAggregator)
-      end
-    end
-
-    def call(name, *args)
-      udf = @@plugins[name.to_s]
-      udf.call(*args)
-    end
-
-    # params: for AggregationSingle only
-    #         required keys: :valueType, :windowed, :distinct, :parameters
-    #           :parameters => [[parameterType, constant?, contantValue], ... ]
-    def udf_function(mojule, params={})
-      unless mojule.is_a?(Class)
-        mojule.init if mojule.respond_to?(:init)
-        ps = []
-        mojule.plugins.each{|p| ps.push(udf_function(p))} if mojule.respond_to?(:plugins)
-        return ps
-      end
-
-      klass = mojule
-      klass.init if klass.respond_to?(:init)
-
-      if klass.superclass == Norikra::UDF::SingleRow
-        name, classname, methodname = klass.new.definition
-        @@plugins[name] = UDFInstance.new(classname, methodname)
-
-      elsif klass.superclass == Norikra::UDF::AggregationSingle
-        name, factoryclassname = klass.new.definition
-        factory = UDFAggregationFactoryInstance.new(factoryclassname)
-        factory.check(name, params[:valueType], params[:parameters], params.fetch(:distinct, false), params.fetch(:windowed, true))
-        @@plugins[name] = factory.create
       end
     end
   end
