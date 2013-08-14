@@ -385,8 +385,8 @@ module Norikra
 
       functionName, factoryClassName = udf.definition
 
-      debug "adding AggregationSingleFactory", :function => functionName, :javaClass => className
-      @config.addPlugInAggregationFunctionFactory(functionName, className)
+      debug "adding AggregationSingleFactory", :function => functionName, :javaClass => factoryClassName
+      @config.addPlugInAggregationFunctionFactory(functionName, factoryClassName)
       functionName
     end
   end
