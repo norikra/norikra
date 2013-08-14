@@ -123,7 +123,7 @@ module Norikra
       nil
     end
 
-    def load(plugin_klass) #TODO: fix api
+    def load(plugin_klass)
       load_udf(plugin_klass)
     end
 
@@ -290,7 +290,11 @@ module Norikra
       udf_klass.init if udf_klass.respond_to?(:init)
 
       udf = udf_klass.new
-      load_udf_actually(udf)
+      if udf.is_a? Norikra::UDF::SingleRow
+        load_udf_actually(udf)
+      elsif udf.is_a? Norikra::UDF::AggregationSingle
+        load_udf_aggregation_actually(udf)
+      end
     end
 
     # this method should be protected with @mutex lock
@@ -373,6 +377,16 @@ module Norikra
 
       debug "adding SingleRowFunction", :function => functionName, :javaClass => className, :javaMethod => methodName
       @config.addPlugInSingleRowFunction(functionName, className, methodName, valueCache, filterOptimizable, rethrowExceptions)
+      functionName
+    end
+
+    def load_udf_aggregation_actually(udf)
+      debug "importing class into config object", :name => udf.class.to_s
+
+      functionName, factoryClassName = udf.definition
+
+      debug "adding AggregationSingleFactory", :function => functionName, :javaClass => className
+      @config.addPlugInAggregationFunctionFactory(functionName, className)
       functionName
     end
   end

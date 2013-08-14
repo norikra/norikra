@@ -77,41 +77,24 @@ module Norikra
         true
       end
 
-      ###############
       def definition
-        [self.function_name, self.class_name, self.method_name]
+        [self.function_name, self.factory_class_name]
       end
 
-      # UDF function name in queries
+      # UDF aggregation function name in queries
       def function_name
         raise NotImplementedError
       end
 
-      def class_name
+      def factory_class_name
         raise NotImplementedError
-      end
-
-      def method_name
-        function_name
-      end
-
-      ######### options
-      def value_cache
-        false
-      end
-
-      def filter_optimizable
-        true
-      end
-
-      def rethrow_exceptions
-        false
       end
     end
 
     def self.listup
       return unless defined? Gem
 
+      #TODO: CHECK: same name files of different versions?
       plugins = Gem.find_files('norikra/udf/*.rb')
       plugins.each do |plugin|
         begin
@@ -122,13 +105,14 @@ module Norikra
         end
       end
 
-      known_consts = [:SingleRow]
+      known_consts = [:SingleRow, :AggregateSingle]
+      udf_bases = [Norikra::UDF::SingleRow, Norikra::UDF::AggregationSingle]
       udfs = []
       self.constants.each do |c|
         next if known_consts.include?(c)
 
         klass = Norikra::UDF.const_get(c)
-        if klass.is_a?(Class) && klass.is_a?(Norikra::UDF::SingleRow)
+        if klass.is_a?(Class) && udf_bases.include?(klass.superclass)
           udfs.push(klass)
         elsif klass.is_a?(Module) && klass.respond_to?(:plugins)
           udfs.push(klass)
