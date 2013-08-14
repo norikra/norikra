@@ -6,9 +6,8 @@ module Norikra
       @@plugins[name.to_s]
     end
 
-    def call(name, *args)
-      udf = @@plugins[name.to_s]
-      udf.call(*args)
+    def fcall(name, *args)
+      @@plugins[name.to_s]._call(*args)
     end
 
     # params: for AggregationSingle only
@@ -55,7 +54,7 @@ module Norikra
         @clazz = classObject(classname)
       end
 
-      def call(*args)
+      def _call(*args)
         @clazz.send(@methodname.to_sym, *args)
       end
     end
@@ -65,7 +64,7 @@ module Norikra
         @func = instance
       end
 
-      def call(type, *args)
+      def _call(type, *args)
         self.send(type, *args)
       end
 
