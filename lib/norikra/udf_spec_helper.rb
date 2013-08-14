@@ -66,7 +66,7 @@ module Norikra
       end
 
       def call(type, *args)
-        @func.send(type, *args)
+        self.send(type, *args)
       end
 
       def getValueType; @func.getValueType; end # public Class getValueType()
