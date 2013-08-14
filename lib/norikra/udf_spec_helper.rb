@@ -2,6 +2,10 @@ module Norikra
   module UDFSpecHelper
     @@plugins = {}
 
+    def function(name)
+      @@plugins[name.to_s]
+    end
+
     def call(name, *args)
       udf = @@plugins[name.to_s]
       udf.call(*args)
@@ -12,9 +16,6 @@ module Norikra
     #           :parameters => [[parameterType, constant?, contantValue], ... ]
     def udf_function(mojule, params={})
       require 'esper-4.9.0.jar'
-      # require 'esper/lib/commons-logging-1.1.1.jar'
-      # require 'esper/lib/antlr-runtime-3.2.jar'
-      # require 'esper/lib/cglib-nodep-2.2.jar'
 
       unless mojule.is_a?(Class)
         mojule.init if mojule.respond_to?(:init)
@@ -85,11 +86,11 @@ module Norikra
       # parameters => [[parameterType, constant?, contantValue], ... ]
       def check(func_name, value_type, parameters, distinct, windowed)
         @factory.setFunctionName(func_name)
-        unless @factory.getValueType == value_type
+        unless @factory.getValueType == value_type.java_class
           raise "Aggregation UDF value type mismatch, expected '#{value_type}', actually '#{@factory.getValueType}'"
         end
 
-        parameterTypes = parameters.map{|t,bc,c| t }
+        parameterTypes = parameters.map{|t,bc,c| t.java_class }
         constantValue  = parameters.map{|t,bc,c| bc.nil? ? false : bc }
         constantValues = parameters.map{|t,bc,c| c }
 
