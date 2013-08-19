@@ -135,9 +135,24 @@ module Norikra
         @output_pool = output_pool
       end
 
+      def type_convert(event)
+        event = (event.respond_to?(:getUnderlying) ? event.getUnderlying : event).to_hash
+        event.keys.each do |key|
+          trace "event content key:#{key}, value:#{event[key]}, value class:#{event[key].class}"
+          if event[key].respond_to?(:to_a)
+            event[key] = event[key].to_a
+          elsif event[key].respond_to?(:to_hash)
+            event[key] = event[key].to_hash
+          end
+        end
+        event
+      end
+
       def update(new_events, old_events)
-        trace "updated event", :query => @query_name, :event => new_events
-        @output_pool.push(@query_name, new_events)
+        t = Time.now.to_i
+        events = new_events.map{|e| [t, type_convert(e)]}
+        trace "updated event", :query => @query_name, :event => events
+        @output_pool.push(@query_name, events)
       end
     end
     ##### Unmatched events are simply ignored
