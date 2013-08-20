@@ -16,11 +16,12 @@ module Norikra
   class Engine
     attr_reader :targets, :queries, :output_pool, :typedef_manager
 
-    def initialize(output_pool, typedef_manager=nil)
+    def initialize(output_pool, typedef_manager, opts={})
       @output_pool = output_pool
-      @typedef_manager = typedef_manager || Norikra::TypedefManager.new()
+      @typedef_manager = typedef_manager
 
-      @service = com.espertech.esper.client.EPServiceProviderManager.getDefaultProvider
+      conf = configuration(opts)
+      @service = com.espertech.esper.client.EPServiceProviderManager.getDefaultProvider(conf)
       @config = @service.getEPAdministrator.getConfiguration
 
       @mutex = Mutex.new
@@ -32,6 +33,36 @@ module Norikra
       @queries = []
 
       @waiting_queries = []
+    end
+
+    def camelize(sym)
+      sym.to_s.split(/_/).map(&:capitalize).join
+    end
+
+    def configuration(opts)
+      conf = com.espertech.esper.client.Configuration.new
+      defaults = conf.getEngineDefaults
+
+      if opts[:thread]
+        t = opts[:thread]
+        threading = defaults.getThreading
+        [:inbound, :outbound, :route_exec, :timer_exec].each do |sym|
+          next unless t[sym] && t[sym][:threads] && t[sym][:threads] > 0
+
+          threads = t[sym][:threads].to_i
+          capacity = t[sym][:capacity].to_i
+          info "Engine #{sym} thread pool enabling", :threads => threads, :capacity => (capacity == 0 ? 'default' : capacity)
+
+          cam = camelize(sym)
+          threading.send("setThreadPool#{cam}".to_sym, true)
+          threading.send("setThreadPool#{cam}NumThreads".to_sym, threads)
+          if t[sym][:capacity] && t[sym][:capacity] > 0
+            threading.send("setThreadPool#{cam}Capacity".to_sym, capacity)
+          end
+        end
+      end
+
+      conf
     end
 
     def start

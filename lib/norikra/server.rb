@@ -26,7 +26,7 @@ module Norikra
 
       Norikra::Log.init(conf[:loglevel], conf[:logdir], {:filesize => conf[:logfilesize], :backups => conf[:logbackups]})
 
-      @engine = Norikra::Engine.new(@output_pool, @typedef_manager)
+      @engine = Norikra::Engine.new(@output_pool, @typedef_manager, {thread: conf[:thread]})
       @rpcserver = Norikra::RPC::HTTP.new(:engine => @engine, :port => port)
     end
 
