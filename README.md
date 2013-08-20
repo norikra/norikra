@@ -92,6 +92,12 @@ UDF as plugins over rubygems are available. For example, see 'norikra-udf-mock' 
 
 TBD
 
+## Performance
+
+Threads option available with command line options.
+
+TBD
+
 ## Versions
 
 TBD
