@@ -74,10 +74,10 @@ module Norikra
 
       def getValue # public Object getValue()
         v = @func.getValue
-        if v.respond_to?(:to_a)
-          v.to_a
-        elsif v.respond_to?(:to_hash)
+        if v.respond_to?(:to_hash)
           v.to_hash
+        elsif v.respond_to?(:to_a)
+          v.to_a
         else
           v
         end

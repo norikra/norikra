@@ -170,10 +170,10 @@ module Norikra
         event = (event.respond_to?(:getUnderlying) ? event.getUnderlying : event).to_hash
         event.keys.each do |key|
           trace "event content key:#{key}, value:#{event[key]}, value class:#{event[key].class}"
-          if event[key].respond_to?(:to_a)
-            event[key] = event[key].to_a
-          elsif event[key].respond_to?(:to_hash)
+          if event[key].respond_to?(:to_hash)
             event[key] = event[key].to_hash
+          elsif event[key].respond_to?(:to_a)
+            event[key] = event[key].to_a
           end
         end
         event
