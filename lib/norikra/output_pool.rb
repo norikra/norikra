@@ -11,7 +11,7 @@ module Norikra
       @pool.keys
     end
 
-    def push(query_name, events)
+    def push(query_name, events) # events must be [time(int), event_record]
       @mutex.synchronize do
         @pool[query_name] ||= []
         @pool[query_name].push(events) if events.size > 0

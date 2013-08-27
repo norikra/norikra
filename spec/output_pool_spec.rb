@@ -20,7 +20,7 @@ describe Norikra::OutputPool do
         it 'has pool with event' do
           pool = Norikra::OutputPool.new
           t = Time.now.to_i
-          pool.push('TestTable query1', [{'count'=>1},{'count'=>2}])
+          pool.push('TestTable query1',[[t, {'count'=>1}],[t ,{'count'=>2}]])
 
           pool.pool.keys.should eql(['TestTable query1'])
           events = pool.pool['TestTable query1']
@@ -46,8 +46,8 @@ describe Norikra::OutputPool do
       it 'returns all events of specified query in pool' do
         pool = Norikra::OutputPool.new
         t = Time.now.to_i
-        pool.push('TestTable query1', [{'count'=>1},{'count'=>2}])
-        pool.push('TestTable query2', [{'count'=>3},{'count'=>4}])
+        pool.push('TestTable query1', [[t,{'count'=>1}],[t,{'count'=>2}]])
+        pool.push('TestTable query2', [[t,{'count'=>3}],[t,{'count'=>4}]])
 
         expect(pool.pop('TestTable query0').size).to eql(0)
         expect(pool.pop('TestTable query1').size).to eql(2)
@@ -60,8 +60,8 @@ describe Norikra::OutputPool do
       it 'returns all events for all queries in pool' do
         pool = Norikra::OutputPool.new
         t = Time.now.to_i
-        pool.push('TestTable query1', [{'count'=>1},{'count'=>2}])
-        pool.push('TestTable query2', [{'count'=>3},{'count'=>4},{'count'=>5}])
+        pool.push('TestTable query1', [[t,{'count'=>1}],[t,{'count'=>2}]])
+        pool.push('TestTable query2', [[t,{'count'=>3}],[t,{'count'=>4}],[t,{'count'=>5}]])
 
         chunk = pool.sweep
         expect(chunk.keys.size).to eql(2)
