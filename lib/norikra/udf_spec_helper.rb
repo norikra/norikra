@@ -71,7 +71,18 @@ module Norikra
       def getValueType; @func.getValueType; end # public Class getValueType()
       def enter(*args); @func.enter(*args); end # public void enter(Object value)
       def leave(*args); @func.leave(*args); end # public void leave(Object value)
-      def getValue; @func.getValue; end # public Object getValue()
+
+      def getValue # public Object getValue()
+        v = @func.getValue
+        if v.respond_to?(:to_a)
+          v.to_a
+        elsif v.respond_to?(:to_hash)
+          v.to_hash
+        else
+          v
+        end
+      end
+
       def clear; @func.clear; end # public void clear()
     end
 
