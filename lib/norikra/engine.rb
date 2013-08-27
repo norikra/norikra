@@ -1,6 +1,7 @@
 require 'java'
 
 require 'norikra/error'
+require 'norikra/target'
 
 require 'norikra/logger'
 include Norikra::Log
@@ -80,6 +81,7 @@ module Norikra
     def open(target, fields=nil)
       info "opening target", :target => target, :fields => fields
       return false if @targets.include?(target)
+      raise Norikra::ArgumentError, "invalid target name" unless Norikra::Target.valid?(target)
       open_target(target, fields)
     end
 
