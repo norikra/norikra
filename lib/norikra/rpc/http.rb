@@ -6,7 +6,8 @@ require_relative 'handler'
 
 module Norikra::RPC
   class HTTP
-    #TODO Xmx of mizuno/jetty
+    DEFAULT_THREADS = 2
+
     attr_accessor :host, :port, :threads
     attr_accessor :engine, :mizuno, :thread
 
@@ -14,6 +15,7 @@ module Norikra::RPC
       @engine = opts[:engine]
       @host = opts[:host]
       @port = opts[:port]
+      @threads = opts[:threads] || DEFAULT_THREADS
       handler = Norikra::RPC::Handler.new(@engine)
       @app = Rack::Builder.new {
         run MessagePack::RPCOverHTTP::Server.app(handler)
@@ -23,7 +25,7 @@ module Norikra::RPC
     def start
       @thread = Thread.new do
         @mizuno = Mizuno::Server.new
-        @mizuno.run(@app, :embedded => true, :threads => 5, :port => @port, :host => @host)
+        @mizuno.run(@app, :embedded => true, :threads => @threads, :port => @port, :host => @host)
       end
     end
 

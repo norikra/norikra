@@ -19,15 +19,68 @@ module Norikra
 
     attr_accessor :running
 
+    MICRO_PREDEFINED = {
+      :engine => { inbound:    { threads: 0, capacity: 0 }, outbound:   { threads: 0, capacity: 0 },
+                   route_exec: { threads: 0, capacity: 0 }, timer_exec: { threads: 0, capacity: 0 }, },
+      :rpc => { threads: 2 },
+    }
+    SMALL_PREDEFINED = {
+      :engine => { inbound:    { threads: 1, capacity: 0 }, outbound:   { threads: 1, capacity: 0 },
+                   route_exec: { threads: 1, capacity: 0 }, timer_exec: { threads: 1, capacity: 0 }, },
+      :rpc => { threads: 2 },
+    }
+    MIDDLE_PREDEFINED = {
+      :engine => { inbound:    { threads: 4, capacity: 0 }, outbound:   { threads: 2, capacity: 0 },
+                   route_exec: { threads: 2, capacity: 0 }, timer_exec: { threads: 2, capacity: 0 }, },
+      :rpc => { threads: 4 },
+    }
+    LARGE_PREDEFINED = {
+      :engine => { inbound:    { threads: 6, capacity: 0 }, outbound:   { threads: 6, capacity: 0 },
+                   route_exec: { threads: 4, capacity: 0 }, timer_exec: { threads: 4, capacity: 0 }, },
+      :rpc => { threads: 8 },
+    }
+
+    #TODO: basic configuration from stat file
+    def self.threading_configuration(conf)
+      # t_original = stat file
+      # t overwrites t_original
+
+      t = case conf[:predefined]
+          when :micro then MICRO_PREDEFINED
+          when :small then SMALL_PREDEFINED
+          when :middle then MIDDLE_PREDEFINED
+          when :large then LARGE_PREDEFINED
+          else MICRO_PREDEFINED # default
+          end
+      [:inbound, :outbound, :route_exec, :timer_exec].each do |type|
+        [:threads, :capacity].each do |item|
+          t[:engine][type][item] = conf[:engine][type][item] if conf[:engine][type][item]
+        end
+      end
+      t[:rpc][:threads] = conf[:rpc][:threads] if conf[:rpc][:threads]
+      t
+    end
+
+    #TODO: basic configuration from stat file
+    def self.log_configuration(conf)
+      conf
+    end
+
     def initialize(host=RPC_DEFAULT_HOST, port=RPC_DEFAULT_PORT, conf={})
       #TODO: initial configuration (targets/queries)
+      @thread_conf = self.class.threading_configuration(conf[:thread])
+      @log_conf = self.class.log_configuration(conf[:log])
+
+      Norikra::Log.init(@log_conf[:level], @log_conf[:dir], {:filesize => @log_conf[:filesize], :backups => @log_conf[:backups]})
+
+      info "thread configurations", @thread_conf
+      info "logging configurations", @log_conf
+
       @typedef_manager = Norikra::TypedefManager.new
       @output_pool = Norikra::OutputPool.new
 
-      Norikra::Log.init(conf[:loglevel], conf[:logdir], {:filesize => conf[:logfilesize], :backups => conf[:logbackups]})
-
-      @engine = Norikra::Engine.new(@output_pool, @typedef_manager, {thread: conf[:thread]})
-      @rpcserver = Norikra::RPC::HTTP.new(:engine => @engine, :port => port)
+      @engine = Norikra::Engine.new(@output_pool, @typedef_manager, {thread: @thread_conf[:engine]})
+      @rpcserver = Norikra::RPC::HTTP.new(:engine => @engine, :port => port, :threads => @thread_conf[:rpc][:threads])
     end
 
     def run
