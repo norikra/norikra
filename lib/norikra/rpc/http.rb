@@ -6,6 +6,10 @@ require_relative 'handler'
 
 module Norikra::RPC
   class HTTP
+    DEFAULT_LISTEN_HOST = '0.0.0.0'
+    DEFAULT_LISTEN_PORT = 26571
+    # 26571 = 3026 + 3014 + 2968 + 2950 + 2891 + 2896 + 2975 + 2979 + 2872
+
     DEFAULT_THREADS = 2
 
     attr_accessor :host, :port, :threads
@@ -13,8 +17,8 @@ module Norikra::RPC
 
     def initialize(opts={})
       @engine = opts[:engine]
-      @host = opts[:host]
-      @port = opts[:port]
+      @host = opts[:host] || DEFAULT_LISTEN_HOST
+      @port = opts[:port] || DEFAULT_LISTEN_PORT
       @threads = opts[:threads] || DEFAULT_THREADS
       handler = Norikra::RPC::Handler.new(@engine)
       @app = Rack::Builder.new {

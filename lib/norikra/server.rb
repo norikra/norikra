@@ -1,5 +1,6 @@
 require 'norikra/engine'
 
+require 'norikra/stats'
 require 'norikra/logger'
 include Norikra::Log
 
@@ -13,10 +14,6 @@ require 'norikra/udf'
 
 module Norikra
   class Server
-    RPC_DEFAULT_HOST = '0.0.0.0'
-    RPC_DEFAULT_PORT = 26571
-    # 26571 = 3026 + 3014 + 2968 + 2950 + 2891 + 2896 + 2975 + 2979 + 2872
-
     attr_accessor :running
 
     MICRO_PREDEFINED = {
@@ -40,36 +37,45 @@ module Norikra
       :rpc => { threads: 8 },
     }
 
-    #TODO: basic configuration from stat file
-    def self.threading_configuration(conf)
-      # t_original = stat file
-      # t overwrites t_original
-
-      t = case conf[:predefined]
-          when :micro then MICRO_PREDEFINED
-          when :small then SMALL_PREDEFINED
-          when :middle then MIDDLE_PREDEFINED
-          when :large then LARGE_PREDEFINED
-          else MICRO_PREDEFINED # default
-          end
+    def self.threading_configuration(conf, stats)
+      threads = case conf[:predefined]
+                when :micro then MICRO_PREDEFINED
+                when :small then SMALL_PREDEFINED
+                when :middle then MIDDLE_PREDEFINED
+                when :large then LARGE_PREDEFINED
+                else (stats ? stats.threads : MICRO_PREDEFINED)
+                end
       [:inbound, :outbound, :route_exec, :timer_exec].each do |type|
         [:threads, :capacity].each do |item|
-          t[:engine][type][item] = conf[:engine][type][item] if conf[:engine][type][item]
+          threads[:engine][type][item] = conf[:engine][type][item] if conf[:engine][type][item]
         end
       end
-      t[:rpc][:threads] = conf[:rpc][:threads] if conf[:rpc][:threads]
-      t
+      threads[:rpc][:threads] = conf[:rpc][:threads] if conf[:rpc][:threads]
+      threads
     end
 
-    #TODO: basic configuration from stat file
-    def self.log_configuration(conf)
-      conf
+    def self.log_configuration(conf, stats)
+      logconf = stats ? stats.log : { level: nil, dir: nil, filesize: nil, backups: nil }
+      [:level, :dir, :filesize, :backups].each do |sym|
+        logconf[sym] = conf[sym] if conf[sym]
+      end
+      logconf
     end
 
-    def initialize(host=RPC_DEFAULT_HOST, port=RPC_DEFAULT_PORT, conf={})
-      #TODO: initial configuration (targets/queries)
-      @thread_conf = self.class.threading_configuration(conf[:thread])
-      @log_conf = self.class.log_configuration(conf[:log])
+    def initialize(host, port, conf={})
+      @stats_path = conf[:stats][:path]
+      @stats_suppress_dump = conf[:stats][:suppress]
+      @stats = if @stats_path && test(?r, @stats_path)
+                 Norikra::Stats.load(@stats_path)
+               else
+                 nil
+               end
+
+      @host = host || (@stats ? @stats.host : nil)
+      @port = port || (@stats ? @stats.port : nil)
+
+      @thread_conf = self.class.threading_configuration(conf[:thread], @stats)
+      @log_conf = self.class.log_configuration(conf[:log], @stats)
 
       Norikra::Log.init(@log_conf[:level], @log_conf[:dir], {:filesize => @log_conf[:filesize], :backups => @log_conf[:backups]})
 
@@ -80,14 +86,29 @@ module Norikra
       @output_pool = Norikra::OutputPool.new
 
       @engine = Norikra::Engine.new(@output_pool, @typedef_manager, {thread: @thread_conf[:engine]})
-      @rpcserver = Norikra::RPC::HTTP.new(:engine => @engine, :port => port, :threads => @thread_conf[:rpc][:threads])
+      @rpcserver = Norikra::RPC::HTTP.new(:engine => @engine, :host => @host, :port => @port, :threads => @thread_conf[:rpc][:threads])
     end
 
     def run
       @engine.start
-      @rpcserver.start
 
       load_plugins
+
+      if @stats
+        info "loading from stats file"
+        if @stats.targets && @stats.targets.size > 0
+          @stats.targets.each do |target|
+            @engine.open(target[:name], target[:fields])
+          end
+        end
+        if @stats.queries && @stats.queries.size > 0
+          @stats.queries.each do |query|
+            @engine.register(Norikra::Query.new(:name => query[:name], :expression => query[:expression]))
+          end
+        end
+      end
+
+      @rpcserver.start
 
       @running = true
       info "Norikra server started."
@@ -124,6 +145,21 @@ module Norikra
       info "Norikra server shutting down."
       @rpcserver.stop
       @engine.stop
+      info "Norikra server stopped."
+
+      if @stats_path && !@stats_suppress_dump
+        stats = Norikra::Stats.new(
+          host: @host,
+          port: @port,
+          threads: @thread_conf,
+          log: @log_conf,
+          targets: @engine.typedef_manager.dump,
+          queries: @engine.queries.map{|q| {:name => q.name, :expression => q.expression}}
+        )
+        stats.dump(@stats_path)
+        info "Current status saved", :path => @stats_path
+      end
+
       info "Norikra server shutdown complete."
     end
   end

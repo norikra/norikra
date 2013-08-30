@@ -200,5 +200,31 @@ describe Norikra::TypedefManager do
         expect(r.summary).to eql('a:string,b:string,c:double,f:boolean')
       end
     end
+
+    describe '#dump' do
+      it 'returns array of target typedef dump' do
+        m = Norikra::TypedefManager.new
+        m.add_target('sample', {'a'=>'string','b'=>'string','c'=>'double'})
+        m.reserve('sample', 'z', 'boolean')
+        m.add_target('sample_next', {'a'=>'string','b'=>'string','c'=>'double','d'=>'double'})
+
+        r = m.dump
+        expect(r.size).to eql(2)
+        expect(r[0][:name]).to eql('sample')
+        expect(r[0][:fields]).to eql({
+            a: {name: 'a', type: 'string', optional: false},
+            b: {name: 'b', type: 'string', optional: false},
+            c: {name: 'c', type: 'double', optional: false},
+            z: {name: 'z', type: 'boolean', optional: true},
+          })
+        expect(r[1][:name]).to eql('sample_next')
+        expect(r[1][:fields]).to eql({
+            a: {name: 'a', type: 'string', optional: false},
+            b: {name: 'b', type: 'string', optional: false},
+            c: {name: 'c', type: 'double', optional: false},
+            d: {name: 'd', type: 'double', optional: false},
+          })
+      end
+    end
   end
 end

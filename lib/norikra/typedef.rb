@@ -15,8 +15,12 @@ module Norikra
       @optional = optional
     end
 
-    def to_hash
-      {'name' => @name, 'type' => @type, 'optional' => @optional}
+    def to_hash(sym=false)
+      if sym
+        {name: @name, type: @type, optional: @optional}
+      else
+        {'name' => @name, 'type' => @type, 'optional' => @optional}
+      end
     end
 
     def dup(optional=nil)
@@ -55,7 +59,7 @@ module Norikra
       when 'float' then 'float'
       when 'double' then 'double'
       else
-        raise Norikra::ArgumentError, "invalid field type #{type}"
+        raise Norikra::ArgumentError, "invalid field type '#{type}'"
       end
     end
 
@@ -80,13 +84,13 @@ module Norikra
       fields.keys.each do |key|
         data = fields[key]
         type,optional = if data.is_a?(Hash)
-                          [data[:type], (data.has_key?(:optional) ? data[:optional] : default_optional)]
-                        elsif data.is_a?(String)
-                          [data, default_optional]
+                          [data[:type].to_s, (data.has_key?(:optional) ? data[:optional] : default_optional)]
+                        elsif data.is_a?(String) || data.is_a?(Symbol)
+                          [data.to_s, default_optional]
                         else
                           raise ArgumentError, "FieldSet.new argument class unknown: #{fields.class}"
                         end
-        @fields[key.to_s] = Field.new(key, type, optional)
+        @fields[key.to_s] = Field.new(key.to_s, type, optional)
       end
       self.update_summary
 
@@ -365,6 +369,14 @@ module Norikra
         ret[key] = @fields[key].format(value)
       end
       ret
+    end
+
+    def dump
+      fields = {}
+      @fields.map{|key,field|
+        fields[key.to_sym] = field.to_hash(true)
+      }
+      fields
     end
   end
 end

@@ -7,10 +7,11 @@ module Norikra
     desc "start", "start Norikra server process"
 
     ### Server options
-    option :host, :type => :string, :default => '0.0.0.0', :aliases => "-H", :desc => 'host address that server listen [0.0.0.0]'
-    option :port, :type => :numeric, :default => 26571, :aliases => "-P", :desc => 'port that server uses [26571]'
-    option :stat, :type => :string, :default => nil, :aliases => "-s", \
-                  :desc => 'status file path to load/dump targets, queries and server configurations [none]'
+    option :host, :type => :string, :default => nil, :aliases => "-H", :desc => 'host address that server listen [0.0.0.0]'
+    option :port, :type => :numeric, :default => nil, :aliases => "-P", :desc => 'port that server uses [26571]'
+
+    option :stats, :type => :string, :default => nil, :aliases => "-s", \
+                   :desc => 'status file path to load/dump targets, queries and server configurations [none]'
     option :'suppress-dump-stat', :type => :boolean, :default => false, \
                                   :desc => 'specify not to update stat file with updated targets/queries/configurations on runtime [false]'
 
@@ -62,8 +63,8 @@ module Norikra
       #TODO: pidcheck if daemonize
 
       ### stat file
-      conf[:stat] = {
-        path: options[:stat], suppress: options[:'suppress-dump-stat'],
+      conf[:stats] = {
+        path: options[:stats], suppress: options[:'suppress-dump-stat'],
       }
 
       ### threads

@@ -79,6 +79,8 @@ module Norikra
     end
 
     def open(target, fields=nil)
+      # fields nil || [] => lazy
+      # fields {'fieldname' => 'type'} : type 'string', 'boolean', 'int', 'long', 'float', 'double'
       info "opening target", :target => target, :fields => fields
       return false if @targets.include?(target)
       raise Norikra::ArgumentError, "invalid target name" unless Norikra::Target.valid?(target)

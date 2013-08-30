@@ -140,5 +140,11 @@ module Norikra
     def format(target, event)
       @typedefs[target].format(event)
     end
+
+    def dump
+      @typedefs.keys.map{|target|
+        {:name => target, :fields => @typedefs[target].dump}
+      }
+    end
   end
 end

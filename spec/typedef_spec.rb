@@ -296,5 +296,27 @@ describe Norikra::Typedef do
         expect(d['d']).to eql(3.14)
       end
     end
+
+    describe '#dump' do
+      it 'returns hash instance to show fields and its types/optionals' do
+        t = Norikra::Typedef.new({'a'=>'string','b'=>'long'})
+        t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long'}))
+        t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long'}))
+        t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long','c'=>'double'}))
+        t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long','d'=>'string'}))
+        fields = t.fields
+
+        r = t.dump
+        expect(r.keys.sort).to eql([:a, :b, :c, :d])
+        expect(r[:a]).to eql({name: 'a', type: 'string', optional: false})
+        expect(r[:b]).to eql({name: 'b', type: 'long', optional: false})
+        expect(r[:c]).to eql({name: 'c', type: 'double', optional: true})
+        expect(r[:d]).to eql({name: 'd', type: 'string', optional: true})
+
+        t2 = Norikra::Typedef.new(r)
+        expect(t2.fields.keys.sort).to eql(fields.keys.sort)
+        expect(t2.fields.values.map(&:to_hash)).to eql(fields.values.map(&:to_hash))
+      end
+    end
   end
 end
