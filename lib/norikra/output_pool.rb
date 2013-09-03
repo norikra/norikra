@@ -1,9 +1,12 @@
+require 'set'
+
 module Norikra
   class OutputPool
     attr_accessor :pool
 
     def initialize
-      @pool = {}
+      @pool = {} # { query_name => [events] }
+      @groups = {} # { group_name => Set(query_names) }
       @mutex = Mutex.new
     end
 
@@ -11,10 +14,19 @@ module Norikra
       @pool.keys
     end
 
-    def push(query_name, events) # events must be [time(int), event_record]
+    def push(query_name, query_group, events) # events must be [time(int), event_record]
+      # called with blank events for window leavings (and/or other situations)
+      return if events.size < 1
+
       @mutex.synchronize do
+        if @groups[query_group]
+          @groups[query_group].add(query_name) # Set is unique set of elements
+        else
+          @groups[query_group] ||= Set.new([query_name])
+        end
+
         @pool[query_name] ||= []
-        @pool[query_name].push(events) if events.size > 0
+        @pool[query_name].push(events)
       end
     end
 
@@ -27,11 +39,15 @@ module Norikra
     end
 
     # returns {query_name => [[time, event], ...]}
-    def sweep
+    def sweep(group=nil)
+      return {} if @groups[group].nil?
+
       ret = {}
       sweep_pool = @mutex.synchronize do
-        sweeped = @pool
-        @pool = {}
+        sweeped = {}
+        @groups[group].each do |qname|
+          sweeped[qname] = @pool.delete(qname) if @pool[qname] && @pool[qname].size > 0
+        end
         sweeped
       end
       sweep_pool.keys.each do |k|

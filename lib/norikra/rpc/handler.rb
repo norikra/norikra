@@ -56,9 +56,9 @@ class Norikra::RPC::Handler
     }
   end
 
-  def register(query_name, expression)
-    logging(:manage, :register, query_name, expression){
-      r = @engine.register(Norikra::Query.new(:name => query_name, :expression => expression))
+  def register(query_name, query_group, expression)
+    logging(:manage, :register, query_name, query_group, expression){
+      r = @engine.register(Norikra::Query.new(:name => query_name, :group => query_group, :expression => expression))
       !!r
     }
   end
@@ -96,9 +96,9 @@ class Norikra::RPC::Handler
     }
   end
 
-  def sweep
+  def sweep(query_group=nil)
     logging(:show, :sweep){
-      @engine.output_pool.sweep
+      @engine.output_pool.sweep(query_group)
     }
   end
 

@@ -12,6 +12,7 @@ describe Norikra::Query do
             :name => 'TestTable query1', :expression => expression
           )
           expect(q.name).to eql('TestTable query1')
+          expect(q.group).to be_nil
           expect(q.expression).to eql(expression)
           expect(q.targets).to eql(['TestTable'])
 
@@ -25,9 +26,10 @@ describe Norikra::Query do
         it 'returns query instances collectly parsed' do
           expression = 'SELECT count(*) AS cnt FROM TestTable.win:time_batch(10 sec) AS source WHERE source.path="/" AND Math.abs(-1 * source.size) > 3'
           q = Norikra::Query.new(
-            :name => 'TestTable query2', :expression => expression
+            :name => 'TestTable query2', :group => 'label1', :expression => expression
           )
           expect(q.name).to eql('TestTable query2')
+          expect(q.group).to eql('label1')
           expect(q.expression).to eql(expression)
           expect(q.targets).to eql(['TestTable'])
 
@@ -106,7 +108,31 @@ describe Norikra::Query do
       end
     end
 
-   describe '#dup_with_stream_name' do
+    describe '#dup' do
+      context 'for queries without group (default group)' do
+        it 'returns query object with default group' do
+          e1 = 'SELECT max(num) AS max FROM TestTable1.win:time(5 sec)'
+          query = Norikra::Query.new(:name => 'q1', :group => nil, :expression => e1)
+          q = query.dup
+          expect(q.name).to eql('q1')
+          expect(q.group).to be_nil
+          expect(q.expression).to eql(e1)
+        end
+      end
+
+      context 'for queries with group' do
+        it 'returns query object with specified group' do
+          e2 = 'SELECT max(num) AS max FROM TestTable2.win:time(5 sec)'
+          query = Norikra::Query.new(:name => 'q2', :group => 'g2', :expression => e2)
+          q = query.dup
+          expect(q.name).to eql('q2')
+          expect(q.group).to eql('g2')
+          expect(q.expression).to eql(e2)
+        end
+      end
+    end
+
+    describe '#dup_with_stream_name' do
       context 'with simple query' do
         expression = 'SELECT count(*) AS cnt FROM TestTable.win:time_batch(10 sec) WHERE path="/" AND size > 100 and param.length() > 0'
         it 'returns duplicated object, with replaced ' do

@@ -9,10 +9,11 @@ require 'norikra/query/ast'
 
 module Norikra
   class Query
-    attr_accessor :name, :expression, :statement_name, :fieldsets
+    attr_accessor :name, :group, :expression, :statement_name, :fieldsets
 
     def initialize(param={})
       @name = param[:name]
+      @group = param[:group] # default nil
       @expression = param[:expression]
       @statement_name = nil
       @fieldsets = {} # { target => fieldset }
@@ -23,7 +24,7 @@ module Norikra
     end
 
     def dup
-      self.class.new(:name => @name, :expression => @expression.dup)
+      self.class.new(:name => @name, :group => @group, :expression => @expression.dup)
     end
 
     def dup_with_stream_name(actual_name)
@@ -37,7 +38,7 @@ module Norikra
     end
 
     def to_hash
-      {'name' => @name, 'expression' => @expression, 'targets' => self.targets}
+      {'name' => @name, 'group' => @group, 'expression' => @expression, 'targets' => self.targets}
     end
 
     def targets
