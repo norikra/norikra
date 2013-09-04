@@ -1,11 +1,8 @@
 #!/usr/bin/env ruby
 
-binpath = File.expand_path(File.join(File.dirname(__FILE__), 'norikra-server'))
-jruby_options = ['-J-server', '-J-XX:-UseGCOverheadLimit']
+require 'pathname'
+libs = ['lib', 'esper'].map{|p| Pathname.new(__FILE__).dirname.join('..', p).expand_path}
+$LOAD_PATH.unshift(*libs.map(&:to_s))
 
-while ARGV.first && ARGV.first =~ /^-X(.+)$/
-  jruby_options.push('-J-X' + $1)
-  ARGV.shift
-end
-args = jruby_options + [binpath] + ARGV
-exec('jruby', *args)
+require 'norikra/cli'
+Norikra::CLI.start

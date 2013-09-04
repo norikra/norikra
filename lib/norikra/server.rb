@@ -63,6 +63,16 @@ module Norikra
     end
 
     def initialize(host, port, conf={})
+      if conf[:daemonize]
+        outfile_path = conf[:daemonize][:outfile] || File.join(conf[:log][:dir], 'norikra.out')
+        Dir.chdir("/")
+        STDIN.reopen("/dev/null")
+        outfile = File.open(outfile_path, 'w')
+        STDOUT.reopen(outfile)
+        STDERR.reopen(outfile)
+        puts "working on #{$PID}"
+      end
+
       @stats_path = conf[:stats][:path]
       @stats_suppress_dump = conf[:stats][:suppress]
       @stats = if @stats_path && test(?r, @stats_path)
