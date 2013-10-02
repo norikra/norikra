@@ -1,7 +1,6 @@
 require_relative './spec_helper'
 
-require 'norikra/typedef'
-# require 'norikra/error'
+require 'norikra/field'
 
 require 'json'
 require 'digest'
