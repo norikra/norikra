@@ -11,7 +11,7 @@ module Norikra
   #  * known field-set list of a target
   #  * base set of a target
   class Typedef
-    attr_accessor :fields, :baseset, :queryfieldsets, :datafieldsets
+    attr_accessor :fields, :waiting_fields ,:baseset, :queryfieldsets, :datafieldsets
 
     def initialize(fields=nil)
       if fields && !fields.empty?
@@ -21,6 +21,8 @@ module Norikra
         @baseset = nil
         @fields = {}
       end
+
+      @waiting_fields = []
 
       @queryfieldsets = []
       @datafieldsets = []
@@ -45,6 +47,9 @@ module Norikra
           set.fields[fieldname] = field.dup(false)
         end
         @baseset = set
+        @baseset.fields.each do |name,f|
+          @waiting_fields.delete(name) if @waiting_fields.include?(name)
+        end
         @fields = @baseset.fields.merge(@fields)
       end
     end
@@ -53,6 +58,7 @@ module Norikra
       fieldname = fieldname.to_s
       @mutex.synchronize do
         return false if @fields[fieldname]
+        @waiting_fields.delete(fieldname) if @waiting_fields.include?(fieldname)
         @fields[fieldname] = Field.new(fieldname, type, optional)
       end
       true
@@ -61,8 +67,8 @@ module Norikra
     def consistent?(fieldset)
       fields = fieldset.fields
       @baseset.subset?(fieldset) &&
-        @fields.values.select{|f| !f.optional? }.reduce(true){|r,f| r && fields[f.name] && fields[f.name].type == f.type} &&
-        fields.values.reduce(true){|r,f| r && (@fields[f.name].nil? || @fields[f.name].type == f.type)}
+        @fields.values.select{|f| !f.optional? }.reduce(true){|r,f| r && fields.has_key?(f.name) && fields[f.name].type == f.type} &&
+        fields.values.reduce(true){|r,f| r && (!@fields.has_key?(f.name) || @fields[f.name].type == f.type)}
     end
 
     def push(level, fieldset)
@@ -81,6 +87,7 @@ module Norikra
             @queryfieldsets.push(fieldset)
 
             fieldset.fields.each do |fieldname,field|
+              @waiting_fields.delete(fieldname) if @waiting_fields.include?(fieldname)
               @fields[fieldname] = field.dup(true) unless @fields[fieldname]
             end
           end
@@ -90,6 +97,7 @@ module Norikra
             @set_map[fieldset.field_names_key] = fieldset
 
             fieldset.fields.each do |fieldname,field|
+              @waiting_fields.delete(fieldname) if @waiting_fields.include?(fieldname)
               @fields[fieldname] = field.dup(true) unless @fields[fieldname]
             end
           end
@@ -134,11 +142,47 @@ module Norikra
       true
     end
 
-    def refer(data)
-      field_names_key = FieldSet.field_names_key(data, self)
+    def simple_guess(data, optional=true, strict=false)
+      mapping = Hash[
+        data.select{|k,v| !strict || @fields[k] || @waiting_fields.include?(k)}.map{|key,value|
+          type = case value
+                 when TrueClass,FalseClass then 'boolean'
+                 when Integer then 'long'
+                 when Float   then 'double'
+                 else
+                   'string'
+                 end
+          [key,type]
+        }
+      ]
+      FieldSet.new(mapping, optional)
+    end
+
+    # def self.guess(data, optional=true)
+    #   mapping = Hash[
+    #     data.map{|key,value|
+    #       sval = value.to_s
+    #       type = case
+    #              when val.is_a?(TrueClass) || val.is_a?(FalseClass) || sval =~ /^(?:true|false)$/i
+    #                'boolean'
+    #              when val.is_a?(Integer) || sval =~ /^-?\d+[lL]?$/
+    #                'long'
+    #              when val.is_a?(Float) || sval =~ /^-?\d+\.\d+(?:[eE]-?\d+|[dDfF])?$/
+    #                'double'
+    #              else
+    #                'string'
+    #              end
+    #       [key,type]
+    #     }
+    #   ]
+    #   self.new(mapping, optional)
+    # end
+
+    def refer(data, strict=false)
+      field_names_key = FieldSet.field_names_key(data, self, strict, @waiting_fields)
       return @set_map[field_names_key] if @set_map.has_key?(field_names_key)
 
-      guessed = FieldSet.simple_guess(data)
+      guessed = self.simple_guess(data, false, strict)
       guessed_fields = guessed.fields
       @fields.each do |key,field|
         if guessed_fields.has_key?(key)
@@ -149,15 +193,6 @@ module Norikra
         end
       end
       guessed.update_summary
-    end
-
-    def format(data)
-      # all keys of data should be already known at #format (before #format, do #refer)
-      ret = {}
-      data.each do |key, value|
-        ret[key] = @fields[key].format(value)
-      end
-      ret
     end
 
     def dump

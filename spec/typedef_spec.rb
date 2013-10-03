@@ -39,6 +39,16 @@ describe Norikra::Typedef do
         expect(t.fields['l'].type).to eql('long')
         expect(t.fields['l'].optional?).to be_false
       end
+
+      it 'remove waiting field' do
+        t = Norikra::Typedef.new
+        t.waiting_fields = ['c', 'l', 'k', 'z']
+
+        t.reserve('k', 'string')
+        t.reserve('l', 'long', false)
+
+        expect(t.waiting_fields).to eql(['c','z'])
+      end
     end
 
     describe '#activate' do
@@ -53,6 +63,32 @@ describe Norikra::Typedef do
           expect(t.fields['a'].optional?).to be_false
           expect(t.fields.object_id).not_to eql(set.fields.object_id)
           expect(t.baseset.object_id).not_to eql(set.object_id)
+        end
+      end
+
+      context 'with waiting fields' do
+        it 'remove fields in waitings' do
+          t = Norikra::Typedef.new
+          t.waiting_fields = ['a', 'c']
+
+          set = Norikra::FieldSet.new({'a'=>'string','b'=>'long','c'=>'double'})
+          set.target = 'testing'
+          set.level = :base
+          t.activate(set)
+
+          expect(t.waiting_fields).to eql([])
+        end
+
+        it 'does not remove fields in waitings without definition in base fieldset' do
+          t = Norikra::Typedef.new
+          t.waiting_fields = ['a', 'c', 'x', 'y', 'z']
+
+          set = Norikra::FieldSet.new({'a'=>'string','b'=>'long','c'=>'double'})
+          set.target = 'testing'
+          set.level = :base
+          t.activate(set)
+
+          expect(t.waiting_fields).to eql(['x', 'y', 'z'])
         end
       end
     end
@@ -183,6 +219,22 @@ describe Norikra::Typedef do
         expect(t.fields['d'].type).to eql('string')
         expect(t.fields['d'].optional?).to be_true
       end
+
+      it 'deletes waiting fields' do
+        t = Norikra::Typedef.new({'a'=>'string','b'=>'long'})
+        t.waiting_fields = ['c', 'd', 'e']
+
+        t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long'}))
+        t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long'}))
+
+        expect(t.waiting_fields.size).to eql(3)
+
+        t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long','c'=>'double'}))
+        expect(t.waiting_fields).to eql(['d','e'])
+
+        t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long','d'=>'string'}))
+        expect(t.waiting_fields).to eql(['e'])
+      end
     end
 
     describe '#pop' do
@@ -232,9 +284,61 @@ describe Norikra::Typedef do
       end
     end
 
+    describe '#simple_guess' do
+      it 'can guess field definitions with class of values' do
+        typedef = Norikra::Typedef.new({'key1' => 'boolean'})
+        t = typedef.simple_guess({'key1' => true, 'key2' => false, 'key3' => 10, 'key4' => 3.1415, 'key5' => 'foobar'})
+        r = t.definition
+        expect(r['key1']).to eql('boolean')
+        expect(r['key2']).to eql('boolean')
+        expect(r['key3']).to eql('long')
+        expect(r['key4']).to eql('double')
+        expect(r['key5']).to eql('string')
+        expect(r.keys.size).to eql(5)
+      end
+
+      it 'does not guess with content of string values' do
+        typedef = Norikra::Typedef.new({})
+        t = typedef.simple_guess({'key1' => 'TRUE', 'key2' => 'false', 'key3' => "10", 'key4' => '3.1415', 'key5' => {:a => 1}})
+        r = t.definition
+        expect(r['key1']).to eql('string')
+        expect(r['key2']).to eql('string')
+        expect(r['key3']).to eql('string')
+        expect(r['key4']).to eql('string')
+        expect(r['key5']).to eql('string')
+        expect(r.keys.size).to eql(5)
+      end
+
+      it 'can guess about fields already known with strict mode' do
+        typedef = Norikra::Typedef.new({'key1' => 'boolean', 'key2' => 'boolean', 'key3' => 'long'})
+        t = typedef.simple_guess({'key1' => true, 'key2' => false, 'key3' => 10, 'key4' => 3.1415, 'key5' => 'foobar'}, true, true)
+        r = t.definition
+        expect(r['key1']).to eql('boolean')
+        expect(r['key2']).to eql('boolean')
+        expect(r['key3']).to eql('long')
+        expect(r['key4']).to be_nil
+        expect(r['key5']).to be_nil
+        expect(r.keys.size).to eql(3)
+      end
+
+      it 'can guess about fields already known or waiting fields with strict mode' do
+        typedef = Norikra::Typedef.new({'key1' => 'boolean', 'key2' => 'boolean', 'key3' => 'long'})
+        typedef.waiting_fields = ['key5']
+
+        t = typedef.simple_guess({'key1' => true, 'key2' => false, 'key3' => 10, 'key4' => 3.1415, 'key5' => 'foobar'}, true, true)
+        r = t.definition
+        expect(r['key1']).to eql('boolean')
+        expect(r['key2']).to eql('boolean')
+        expect(r['key3']).to eql('long')
+        expect(r['key4']).to be_nil
+        expect(r['key5']).to eql('string')
+        expect(r.keys.size).to eql(4)
+      end
+    end
+
     describe '#refer' do
-      context 'for event defined by data-fieldset already known' do
-        it 'returns fieldset that already known itself' do
+      context 'in non-strict mode' do
+        it 'returns fieldset that already known itself for event defined by data-fieldset already known' do
           t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
 
           set1 = Norikra::FieldSet.new({'a'=>'string','b'=>'long'})
@@ -244,10 +348,8 @@ describe Norikra::Typedef do
           expect(r).to be_instance_of(Norikra::FieldSet)
           expect(r.object_id).to eql(set1.object_id)
         end
-      end
 
-      context 'for event with known fields only' do
-        it 'returns fieldset that is overwritten with known field definitions' do
+        it 'returns fieldset that is overwritten with known field definitions for event with known fields only' do
           t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
           t.reserve('c','boolean',true)
           t.reserve('d','double',true)
@@ -261,10 +363,8 @@ describe Norikra::Typedef do
           expect(r.fields['d'].type).to eql('double')
           expect(r.summary).to eql('a:string,b:long,c:boolean,d:double')
         end
-      end
 
-      context 'for event with some unknown fields' do
-        it 'returns fieldset that contains fields as string for unknowns' do
+        it 'returns fieldset that contains fields as string for unknowns for event with some unknown fields' do
           t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
 
           r = t.refer({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14'})
@@ -277,23 +377,72 @@ describe Norikra::Typedef do
           expect(r.summary).to eql('a:string,b:long,c:string,d:string')
         end
       end
-    end
 
-    describe '#format' do
-      it 'returns hash value with formatted fields as defined' do
-        t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
-        t.reserve('c','boolean',true)
-        t.reserve('d','double',true)
+      context 'in strict mode' do
+        it 'returns fieldset that already known itself for event defined by data-fieldset already known' do
+          t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
 
-        d = t.format({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14'})
-        expect(d['a']).to be_instance_of(String)
-        expect(d['a']).to eql('hoge')
-        expect(d['b']).to be_instance_of(Fixnum)
-        expect(d['b']).to eql(2000)
-        expect(d['c']).to be_instance_of(TrueClass)
-        expect(d['c']).to eql(true)
-        expect(d['d']).to be_instance_of(Float)
-        expect(d['d']).to eql(3.14)
+          set1 = Norikra::FieldSet.new({'a'=>'string','b'=>'long'})
+          t.push(:data, set1)
+
+          r = t.refer({'a'=>'foobar','b'=>200000000}, true)
+          expect(r).to be_instance_of(Norikra::FieldSet)
+          expect(r.object_id).to eql(set1.object_id)
+        end
+
+        it 'returns fieldset that is overwritten with known field definitions for event with known fields only' do
+          t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+          t.reserve('c','boolean',true)
+          t.reserve('d','double',true)
+
+          r = t.refer({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14'}, true)
+          expect(t.datafieldsets.include?(r)).to be_false
+
+          expect(r.fields['a'].type).to eql('string')
+          expect(r.fields['b'].type).to eql('long')
+          expect(r.fields['c'].type).to eql('boolean')
+          expect(r.fields['d'].type).to eql('double')
+          expect(r.summary).to eql('a:string,b:long,c:boolean,d:double')
+        end
+
+        it 'returns fieldset that contains fields already known only for event with some unknown fields' do
+          t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+
+          r1 = t.refer({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14'}, true)
+          expect(t.datafieldsets.include?(r1)).to be_false
+
+          expect(r1.fields['a'].type).to eql('string')
+          expect(r1.fields['b'].type).to eql('long')
+          expect(r1.summary).to eql('a:string,b:long')
+
+          r2 = t.refer({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14', 'e' => 'yeeeeeees!'}, true)
+          expect(t.datafieldsets.include?(r2)).to be_false
+
+          expect(r2.fields['a'].type).to eql('string')
+          expect(r2.fields['b'].type).to eql('long')
+          expect(r2.summary).to eql('a:string,b:long')
+        end
+
+        it 'returns fieldset that contains fields already known or waiting fields for event with some unknown fields' do
+          t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
+          t.waiting_fields = ['d']
+
+          r1 = t.refer({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14'}, true)
+          expect(t.datafieldsets.include?(r1)).to be_false
+
+          expect(r1.fields['a'].type).to eql('string')
+          expect(r1.fields['b'].type).to eql('long')
+          expect(r1.fields['d'].type).to eql('string')
+          expect(r1.summary).to eql('a:string,b:long,d:string')
+
+          r2 = t.refer({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14', 'e' => 'yeeeeeees!'}, true)
+          expect(t.datafieldsets.include?(r2)).to be_false
+
+          expect(r2.fields['a'].type).to eql('string')
+          expect(r2.fields['b'].type).to eql('long')
+          expect(r1.fields['d'].type).to eql('string')
+          expect(r2.summary).to eql('a:string,b:long,d:string')
+        end
       end
     end
 

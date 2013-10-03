@@ -78,34 +78,47 @@ module Norikra
       debug "norikra engine stopped"
     end
 
-    def open(target, fields=nil)
+    def open(target_name, fields=nil, auto_field=true)
       # fields nil || [] => lazy
       # fields {'fieldname' => 'type'} : type 'string', 'boolean', 'int', 'long', 'float', 'double'
-      info "opening target", :target => target, :fields => fields
+      info "opening target", :target => target_name, :fields => fields, :auto_field => auto_field
+      raise Norikra::ArgumentError, "invalid target name" unless Norikra::Target.valid?(target_name)
+      target = Norikra::Target.new(target_name, fields, auto_field)
       return false if @targets.include?(target)
-      raise Norikra::ArgumentError, "invalid target name" unless Norikra::Target.valid?(target)
-      open_target(target, fields)
+      open_target(target)
     end
 
-    def close(target)
-      info "closing target", :target => target
-      return false unless @targets.include?(target)
-      @queries.select{|q| q.targets.include?(target)}.each do |query|
+    def close(target_name)
+      info "closing target", :target => target_name
+      targets = @targets.select{|t| t.name == target_name}
+      return false if targets.size != 1
+      target = targets.first
+      @queries.select{|q| q.targets.include?(target.name)}.each do |query|
         deregister_query(query)
       end
       close_target(target)
     end
 
-    def reserve(target, field, type)
-      @typedef_manager.reserve(target, field, type)
+    def modify(target_name, auto_field)
+      info "modify target", :target => target_name, :auto_field => auto_field
+      targets = @targets.select{|t| t.name == target_name}
+      if targets.size != 1
+        raise Norikra::ArgumentError, "target name '#{target_name}' not found"
+      end
+      target = targets.first
+      target.auto_field = auto_field
+    end
+
+    def reserve(target_name, field, type)
+      @typedef_manager.reserve(target_name, field, type)
     end
 
     def register(query)
       info "registering query", :name => query.name, :targets => query.targets, :expression => query.expression
       raise Norikra::ClientError, "query name '#{query.name}' already exists" if @queries.select{|q| q.name == query.name }.size > 0
 
-      query.targets.each do |target|
-        open(target) unless @targets.include?(target)
+      query.targets.each do |target_name|
+        open(target_name) unless @targets.any?{|t| t.name == target_name}
       end
       register_query(query)
     end
@@ -118,42 +131,46 @@ module Norikra
       deregister_query(queries.first)
     end
 
-    def send(target, events)
-      trace "send messages", :target => target, :events => events
-      unless @targets.include?(target) # discard events for target not registered
-        trace "messages skipped for non-opened target", :target => target
+    def send(target_name, events)
+      trace "send messages", :target => target_name, :events => events
+      unless @targets.include?(target_name) # discard events for target not registered
+        trace "messages skipped for non-opened target", :target => target_name
         return
       end
       return if events.size < 1
 
-      if @typedef_manager.lazy?(target)
-        info "opening lazy target", :target => target
-        debug "generating base fieldset from event", :target => target, :event => events.first
-        base_fieldset = @typedef_manager.generate_base_fieldset(target, events.first)
+      if @typedef_manager.lazy?(target_name)
+        info "opening lazy target", :target => target_name
+        debug "generating base fieldset from event", :target => target_name, :event => events.first
+        base_fieldset = @typedef_manager.generate_base_fieldset(target_name, events.first)
 
-        debug "registering base fieldset", :target => target, :base => base_fieldset
-        register_base_fieldset(target, base_fieldset)
+        debug "registering base fieldset", :target => target_name, :base => base_fieldset
+        register_base_fieldset(target_name, base_fieldset)
 
-        info "target successfully opened with fieldset", :target => target, :base => base_fieldset
+        info "target successfully opened with fieldset", :target => target_name, :base => base_fieldset
       end
 
-      registered_data_fieldset = @registered_fieldsets[target][:data]
+      registered_data_fieldset = @registered_fieldsets[target_name][:data]
+
+      target = @targets.select{|t| t.name == target_name}.first
+      strict_refer = (not target.auto_field?)
 
       events.each do |event|
-        fieldset = @typedef_manager.refer(target, event)
+        fieldset = @typedef_manager.refer(target_name, event, strict_refer)
 
         unless registered_data_fieldset[fieldset.summary]
           # register waiting queries including this fieldset, and this fieldset itself
-          debug "registering unknown fieldset", :target => target, :fieldset => fieldset
-          register_fieldset(target, fieldset)
+          debug "registering unknown fieldset", :target => target_name, :fieldset => fieldset
+          register_fieldset(target_name, fieldset)
           debug "successfully registered"
 
           # fieldset should be refined, when waiting_queries rewrite inheritance structure and data fieldset be renewed.
-          fieldset = @typedef_manager.refer(target, event)
+          fieldset = @typedef_manager.refer(target_name, event, strict_refer)
         end
 
-        trace "calling sendEvent", :target => target, :fieldset => fieldset, :event_type_name => fieldset.event_type_name, :event => event
-        @runtime.sendEvent(@typedef_manager.format(target, event).to_java, fieldset.event_type_name)
+        trace "calling sendEvent", :target => target_name, :fieldset => fieldset, :event_type_name => fieldset.event_type_name, :event => event
+        # @runtime.sendEvent(@typedef_manager.format(target_name, event).to_java, fieldset.event_type_name)
+        @runtime.sendEvent(fieldset.format(event).to_java, fieldset.event_type_name)
       end
       nil
     end
@@ -202,18 +219,18 @@ module Norikra
 
     private
 
-    def open_target(target, fields)
+    def open_target(target)
       @mutex.synchronize do
         return false if @targets.include?(target)
 
-        @typedef_manager.add_target(target, fields)
-        @registered_fieldsets[target] = {:base => {}, :query => {}, :data => {}}
+        @typedef_manager.add_target(target.name, target.fields)
+        @registered_fieldsets[target.name] = {:base => {}, :query => {}, :data => {}}
 
-        unless @typedef_manager.lazy?(target)
-          base_fieldset = @typedef_manager.base_fieldset(target)
+        unless @typedef_manager.lazy?(target.name)
+          base_fieldset = @typedef_manager.base_fieldset(target.name)
 
-          @typedef_manager.bind_fieldset(target, :base, base_fieldset)
-          register_fieldset_actually(target, base_fieldset, :base)
+          @typedef_manager.bind_fieldset(target.name, :base, base_fieldset)
+          register_fieldset_actually(target.name, base_fieldset, :base)
         end
 
         @targets.push(target)
@@ -225,33 +242,33 @@ module Norikra
       @mutex.synchronize do
         return false unless @targets.include?(target)
 
-        @typedef_manager.remove_target(target)
-        @registered_fieldsets.delete(target)
+        @typedef_manager.remove_target(target.name)
+        @registered_fieldsets.delete(target.name)
 
         @targets.delete(target)
       end
       true
     end
 
-    def register_base_fieldset(target, fieldset)
+    def register_base_fieldset(target_name, fieldset)
       # for lazy target, with generated fieldset from sent events.first
       @mutex.synchronize do
-        return false unless @typedef_manager.lazy?(target)
+        return false unless @typedef_manager.lazy?(target_name)
 
-        @typedef_manager.activate(target, fieldset)
-        register_fieldset_actually(target, fieldset, :base)
+        @typedef_manager.activate(target_name, fieldset)
+        register_fieldset_actually(target_name, fieldset, :base)
       end
       true
     end
 
-    def update_inherits_graph(target, query_fieldset)
+    def update_inherits_graph(target_name, query_fieldset)
       # replace registered data fieldsets with new fieldset inherits this query fieldset
-      @typedef_manager.supersets(target, query_fieldset).each do |set|
+      @typedef_manager.supersets(target_name, query_fieldset).each do |set|
         rebound = set.rebind(true) # update event_type_name with new inheritations
 
-        register_fieldset_actually(target, rebound, :data, true) # replacing on esper engine
-        @typedef_manager.replace_fieldset(target, set, rebound)
-        deregister_fieldset_actually(target, set.event_type_name, :data)
+        register_fieldset_actually(target_name, rebound, :data, true) # replacing on esper engine
+        @typedef_manager.replace_fieldset(target_name, set, rebound)
+        deregister_fieldset_actually(target_name, set.event_type_name, :data)
       end
     end
 
@@ -261,16 +278,17 @@ module Norikra
 
         unless @typedef_manager.ready?(query)
           @waiting_queries.push(query)
+          @typedef_manager.register_waiting_fields(query)
           @queries.push(query)
           return
         end
 
         mapping = @typedef_manager.generate_fieldset_mapping(query)
-        mapping.each do |target, query_fieldset|
-          @typedef_manager.bind_fieldset(target, :query, query_fieldset)
-          register_fieldset_actually(target, query_fieldset, :query)
-          update_inherits_graph(target, query_fieldset)
-          query.fieldsets[target] = query_fieldset
+        mapping.each do |target_name, query_fieldset|
+          @typedef_manager.bind_fieldset(target_name, :query, query_fieldset)
+          register_fieldset_actually(target_name, query_fieldset, :query)
+          update_inherits_graph(target_name, query_fieldset)
+          query.fieldsets[target_name] = query_fieldset
         end
 
         register_query_actually(query, mapping)
@@ -289,19 +307,19 @@ module Norikra
         if @waiting_queries.include?(query)
           @waiting_queries.delete(query)
         else
-          query.fieldsets.each do |target, query_fieldset|
+          query.fieldsets.each do |target_name, query_fieldset|
             removed_event_type_name = query_fieldset.event_type_name
 
-            @typedef_manager.unbind_fieldset(target, :query, query_fieldset)
-            update_inherits_graph(target, query_fieldset)
-            deregister_fieldset_actually(target, removed_event_type_name, :query)
+            @typedef_manager.unbind_fieldset(target_name, :query, query_fieldset)
+            update_inherits_graph(target_name, query_fieldset)
+            deregister_fieldset_actually(target_name, removed_event_type_name, :query)
           end
         end
       end
       true
     end
 
-    def register_waiting_queries(target)
+    def register_waiting_queries
       ready = []
       not_ready = []
       @waiting_queries.each do |q|
@@ -315,25 +333,25 @@ module Norikra
 
       ready.each do |query|
         mapping = @typedef_manager.generate_fieldset_mapping(query)
-        mapping.each do |target, query_fieldset|
-          @typedef_manager.bind_fieldset(target, :query, query_fieldset)
-          register_fieldset_actually(target, query_fieldset, :query)
-          update_inherits_graph(target, query_fieldset)
-          query.fieldsets[target] = query_fieldset
+        mapping.each do |target_name, query_fieldset|
+          @typedef_manager.bind_fieldset(target_name, :query, query_fieldset)
+          register_fieldset_actually(target_name, query_fieldset, :query)
+          update_inherits_graph(target_name, query_fieldset)
+          query.fieldsets[target_name] = query_fieldset
         end
         register_query_actually(query, mapping)
       end
     end
 
-    def register_fieldset(target, fieldset)
+    def register_fieldset(target_name, fieldset)
       @mutex.synchronize do
-        @typedef_manager.bind_fieldset(target, :data, fieldset)
+        @typedef_manager.bind_fieldset(target_name, :data, fieldset)
 
         if @waiting_queries.size > 0
-          register_waiting_queries(target)
+          register_waiting_queries
         end
 
-        register_fieldset_actually(target, fieldset, :data)
+        register_fieldset_actually(target_name, fieldset, :data)
       end
     end
 
@@ -379,8 +397,8 @@ module Norikra
     end
 
     # this method should be protected with @mutex lock
-    def register_fieldset_actually(target, fieldset, level, replace=false)
-      return if level == :data && @registered_fieldsets[target][level][fieldset.summary] && !replace
+    def register_fieldset_actually(target_name, fieldset, level, replace=false)
+      return if level == :data && @registered_fieldsets[target_name][level][fieldset.summary] && !replace
 
       # Map Supertype (target) and Subtype (typedef name, like TARGET_TypeDefName)
       # http://esper.codehaus.org/esper-4.9.0/doc/reference/en-US/html/event_representation.html#eventrep-map-supertype
@@ -388,29 +406,29 @@ module Norikra
       #   .addEventType("AccountUpdate", accountUpdateDef, new String[] {"BaseUpdate"});
       case level
       when :base
-        debug "add event type", :target => target, :level => 'base', :event_type => fieldset.event_type_name
+        debug "add event type", :target => target_name, :level => 'base', :event_type => fieldset.event_type_name
         @config.addEventType(fieldset.event_type_name, fieldset.definition)
       when :query
-        base_name = @typedef_manager.base_fieldset(target).event_type_name
-        debug "add event type", :target => target, :level => 'query', :event_type => fieldset.event_type_name, :base => base_name
+        base_name = @typedef_manager.base_fieldset(target_name).event_type_name
+        debug "add event type", :target => target_name, :level => 'query', :event_type => fieldset.event_type_name, :base => base_name
         @config.addEventType(fieldset.event_type_name, fieldset.definition, [base_name].to_java(:string))
       else
-        subset_names = @typedef_manager.subsets(target, fieldset).map(&:event_type_name)
-        debug "add event type", :target => target, :level => 'data', :event_type => fieldset.event_type_name, :inherit => subset_names
+        subset_names = @typedef_manager.subsets(target_name, fieldset).map(&:event_type_name)
+        debug "add event type", :target => target_name, :level => 'data', :event_type => fieldset.event_type_name, :inherit => subset_names
         @config.addEventType(fieldset.event_type_name, fieldset.definition, subset_names.to_java(:string))
 
-        @registered_fieldsets[target][level][fieldset.summary] = fieldset
+        @registered_fieldsets[target_name][level][fieldset.summary] = fieldset
       end
       nil
     end
 
     # this method should be protected with @mutex lock as same as register
-    def deregister_fieldset_actually(target, event_type_name, level)
+    def deregister_fieldset_actually(target_name, event_type_name, level)
       return if level == :base
 
-      # DON'T check @registered_fieldsets[target][level][fieldset.summary]
+      # DON'T check @registered_fieldsets[target_name][level][fieldset.summary]
       # removed fieldset should be already replaced with register_fieldset_actually w/ replace flag
-      debug "remove event type", :target => target, :event_type => event_type_name
+      debug "remove event type", :target => target_name, :event_type => event_type_name
       @config.removeEventType(event_type_name, true)
     end
 

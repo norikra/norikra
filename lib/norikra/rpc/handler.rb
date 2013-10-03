@@ -32,13 +32,13 @@ class Norikra::RPC::Handler
 
   def targets
     logging(:show, :targets){
-      @engine.targets
+      @engine.targets.map(&:to_hash)
     }
   end
 
-  def open(target, fields)
+  def open(target, fields, auto_field)
     logging(:manage, :open, target, fields){
-      r = @engine.open(target, fields)
+      r = @engine.open(target, fields, auto_field)
       !!r
     }
   end
@@ -46,6 +46,13 @@ class Norikra::RPC::Handler
   def close(target)
     logging(:manage, :close, target){
       r = @engine.close(target)
+      !!r
+    }
+  end
+
+  def modify(target, auto_field)
+    logging(:manage, :modify, target, auto_field){
+      r = @engine.modify(target, auto_field)
       !!r
     }
   end

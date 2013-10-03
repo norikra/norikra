@@ -32,21 +32,38 @@ module Norikra
       self.class.new(fields, nil, @rebounds)
     end
 
-    def self.field_names_key(data, fieldset=nil)
-      if fieldset
-        keys = []
-        fieldset.fields.each do |key,field|
-          unless field.optional?
-            keys.push(key)
-          end
+    def self.field_names_key(data, fieldset=nil, strict=false, additional_fields=[])
+      if !fieldset && strict
+        raise RuntimeError, "strict(true) cannot be specified with fieldset=nil"
+      end
+
+      unless fieldset
+        return data.keys.sort.join(',')
+      end
+
+      keys = []
+      optionals = []
+
+      fieldset.fields.each do |key,field|
+        if field.optional?
+          optionals.push(key)
+        else
+          keys.push(key)
         end
+      end
+      optionals += additional_fields
+
+      if strict
+        data.keys.each do |key|
+          keys.push(key) if !keys.include?(key) && optionals.include?(key)
+        end
+      else
         data.keys.each do |key|
           keys.push(key) unless keys.include?(key)
         end
-        keys.sort.join(',')
-      else
-        data.keys.sort.join(',')
       end
+
+      keys.sort.join(',')
     end
 
     def field_names_key
@@ -107,40 +124,13 @@ module Norikra
       self.dup.bind(@target, @level, update_type_name)
     end
 
-    def self.simple_guess(data, optional=true)
-      mapping = Hash[
-        data.map{|key,value|
-          type = case value
-                 when TrueClass,FalseClass then 'boolean'
-                 when Integer then 'long'
-                 when Float   then 'double'
-                 else
-                   'string'
-                 end
-          [key,type]
-        }
-      ]
-      self.new(mapping, optional)
+    def format(data)
+      # all keys of data should be already known at #format (before #format, do #refer)
+      ret = {}
+      @fields.each do |key,field|
+        ret[key] = field.format(data[key])
+      end
+      ret
     end
-
-    # def self.guess(data, optional=true)
-    #   mapping = Hash[
-    #     data.map{|key,value|
-    #       sval = value.to_s
-    #       type = case
-    #              when val.is_a?(TrueClass) || val.is_a?(FalseClass) || sval =~ /^(?:true|false)$/i
-    #                'boolean'
-    #              when val.is_a?(Integer) || sval =~ /^-?\d+[lL]?$/
-    #                'long'
-    #              when val.is_a?(Float) || sval =~ /^-?\d+\.\d+(?:[eE]-?\d+|[dDfF])?$/
-    #                'double'
-    #              else
-    #                'string'
-    #              end
-    #       [key,type]
-    #     }
-    #   ]
-    #   self.new(mapping, optional)
-    # end
   end
 end

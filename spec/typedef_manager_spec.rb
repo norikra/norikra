@@ -67,12 +67,6 @@ describe Norikra::TypedefManager do
         expect(manager.typedefs['sample'].fields['x'].optional?).to be_true
       end
     end
-    describe '#fields_defined?' do
-      it 'does not fail' do
-        expect(manager.fields_defined?('sample', ['a','b','x'])).to be_true
-        expect(manager.fields_defined?('sample', ['a','b','y'])).to be_false
-      end
-    end
 
     describe '#ready?' do
       context 'with query with single target' do
@@ -97,6 +91,41 @@ describe Norikra::TypedefManager do
         it 'returns true' do
           q = Norikra::Query.new(:name => 'test', :expression => 'select x.a,d from sample.win:time(5 sec) as x, sample_next.win:time(5 sec) as y where x.c > 1.0 and y.d > 1.0')
           expect(manager.ready?(q)).to be_true
+        end
+      end
+    end
+
+    describe '#register_waiting_fields' do
+      context 'with query with single target' do
+        it 'add no fields into waiting_fields about known fields only' do
+          q1 = Norikra::Query.new(:name => 'test', :expression => 'select a,b from sample.win:time(5 sec) where c > 1.0')
+          manager.register_waiting_fields(q1)
+          q2 = Norikra::Query.new(:name => 'test', :expression => 'select a,b from sample.win:time(5 sec) where c > 1.0 and z')
+          manager.register_waiting_fields(q2)
+          q3 = Norikra::Query.new(:name => 'test', :expression => 'select a from sample_next.win:time(5 sec) where c > 1.0 and d > 2.0')
+          manager.register_waiting_fields(q3)
+
+          expect(manager.typedefs['sample'].waiting_fields).to eql([])
+          expect(manager.typedefs['sample_next'].waiting_fields).to eql([])
+        end
+      end
+
+      context 'with query with single target with unknown fields' do
+        it 'adds unknown fields into waiting_fields' do
+          expect(manager.typedefs['sample'].waiting_fields).to eql([])
+          expect(manager.typedefs['sample_next'].waiting_fields).to eql([])
+
+          q1 = Norikra::Query.new(:name => 'test', :expression => 'select a from sample.win:time(5 sec) where c > 1.0 and p')
+          manager.register_waiting_fields(q1)
+          q2 = Norikra::Query.new(:name => 'test', :expression => 'select a from sample.win:time(5 sec) where c > 1.0 and p and q')
+          manager.register_waiting_fields(q2)
+          q3 = Norikra::Query.new(:name => 'test', :expression => 'select a,e from sample_next.win:time(5 sec) where c > 1.0 and d > 2.0')
+          manager.register_waiting_fields(q3)
+
+          expect(q1.fields('sample')).to eql(['a','c','p'])
+          expect(q2.fields('sample')).to eql(['a','c','p','q'])
+          expect(manager.typedefs['sample'].waiting_fields).to eql(['p', 'q'])
+          expect(manager.typedefs['sample_next'].waiting_fields).to eql(['e'])
         end
       end
     end
@@ -148,12 +177,6 @@ describe Norikra::TypedefManager do
     describe '#refer' do
       it 'does not fail' do
         expect(manager.refer('sample', {'a'=>'foo','b'=>'bar','c'=>'0.03'})).to be_instance_of(Norikra::FieldSet)
-      end
-    end
-
-    describe '#format' do
-      it 'does not fail' do
-        expect(manager.format('sample', {'a'=>'foo','b'=>'bar','c'=>'0.03'})).to be_instance_of(Hash)
       end
     end
 

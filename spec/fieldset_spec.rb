@@ -6,28 +6,6 @@ require 'json'
 require 'digest'
 
 describe Norikra::FieldSet do
-  describe '.simple_guess' do
-    it 'can guess field definitions with class of values' do
-      t = Norikra::FieldSet.simple_guess({'key1' => true, 'key2' => false, 'key3' => 10, 'key4' => 3.1415, 'key5' => 'foobar'})
-      r = t.definition
-      expect(r['key1']).to eql('boolean')
-      expect(r['key2']).to eql('boolean')
-      expect(r['key3']).to eql('long')
-      expect(r['key4']).to eql('double')
-      expect(r['key5']).to eql('string')
-    end
-
-    it 'does not guess with content of string values' do
-      t = Norikra::FieldSet.simple_guess({'key1' => 'TRUE', 'key2' => 'false', 'key3' => "10", 'key4' => '3.1415', 'key5' => {:a => 1}})
-      r = t.definition
-      expect(r['key1']).to eql('string')
-      expect(r['key2']).to eql('string')
-      expect(r['key3']).to eql('string')
-      expect(r['key4']).to eql('string')
-      expect(r['key5']).to eql('string')
-    end
-  end
-
   describe 'can be initialized with both of Hash parameter and String' do
     it 'accepts String as type' do
       set = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long'})
@@ -78,6 +56,14 @@ describe Norikra::FieldSet do
 
       it 'returns comma-separated sorted field names of argument hash AND non-optional fields of 2nd argument fieldset instance' do
         expect(Norikra::FieldSet.field_names_key({'x1'=>1,'y3'=>2,'xx'=>3,'xx1'=>4}, set)).to eql('a,x,x1,xx,xx1,y,y3')
+      end
+
+      it 'returns only fields with defined previously in strict-mode' do
+        expect(Norikra::FieldSet.field_names_key({'x'=>1,'y'=>2,'xx'=>3,'xx1'=>4}, set, true)).to eql('a,x,y')
+      end
+
+      it 'returns fields also in additional_fields in strict-mode and additional_fields' do
+        expect(Norikra::FieldSet.field_names_key({'x'=>1,'y'=>2,'xx'=>3,'xx1'=>4,'xx2'=>5,'yy'=>6,'yy1'=>7}, set, true, ['xx2','yy1'])).to eql('a,x,xx2,y,yy1')
       end
     end
 
@@ -206,6 +192,22 @@ describe Norikra::FieldSet do
         internal = x.instance_eval{ @event_type_name }
         expect(x.event_type_name.object_id).not_to eql(internal.object_id)
         expect(x.event_type_name).to eql(internal)
+      end
+    end
+
+    describe '#format' do
+      it 'returns hash value with formatted fields as defined' do
+        t = Norikra::FieldSet.new({'a' => 'string', 'b' => 'long', 'c' => 'boolean', 'd' => 'double'})
+
+        d = t.format({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14'})
+        expect(d['a']).to be_instance_of(String)
+        expect(d['a']).to eql('hoge')
+        expect(d['b']).to be_instance_of(Fixnum)
+        expect(d['b']).to eql(2000)
+        expect(d['c']).to be_instance_of(TrueClass)
+        expect(d['c']).to eql(true)
+        expect(d['d']).to be_instance_of(Float)
+        expect(d['d']).to eql(3.14)
       end
     end
   end

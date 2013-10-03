@@ -45,13 +45,24 @@ module Norikra
       @typedefs[target].reserve(field, type)
     end
 
-    def fields_defined?(target, field_name_list)
-      @typedefs[target].field_defined?(field_name_list)
-    end
-
     def ready?(query)
       query.targets.all?{|t| @typedefs[t] && ! @typedefs[t].lazy? && @typedefs[t].field_defined?(query.fields(t))} &&
         query.fields(nil).all?{|f| query.targets.any?{|t| @typedefs[t].field_defined?([f])}}
+    end
+
+    def register_waiting_fields(query)
+      query.targets.each do |t|
+        next if t.nil?
+
+        typedef = @typedefs[t]
+        fields = typedef.fields
+
+        query.fields(t).each do |fieldname|
+          if !fields.has_key?(fieldname) && !typedef.waiting_fields.include?(fieldname)
+            typedef.waiting_fields.push(fieldname)
+          end
+        end
+      end
     end
 
     def generate_fieldset_mapping(query)
@@ -89,7 +100,7 @@ module Norikra
     end
 
     def generate_base_fieldset(target, event)
-      guessed = Norikra::FieldSet.simple_guess(event, false) # all fields are non-optional
+      guessed = @typedefs[target].simple_guess(event, false, false) # all fields are non-optional
       guessed.update(@typedefs[target].fields, false)
       guessed
     end
@@ -133,17 +144,13 @@ module Norikra
       sets
     end
 
-    def refer(target, event)
-      @typedefs[target].refer(event)
-    end
-
-    def format(target, event)
-      @typedefs[target].format(event)
+    def refer(target_name, event, strict=false)
+      @typedefs[target_name].refer(event, strict)
     end
 
     def dump
-      @typedefs.keys.map{|target|
-        {:name => target, :fields => @typedefs[target].dump}
+      @typedefs.keys.map{|target_name|
+        {:name => target_name, :fields => @typedefs[target_name].dump}
       }
     end
   end

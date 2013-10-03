@@ -21,4 +21,22 @@ describe Norikra::Target do
       expect(Norikra::Target.valid?('_Foo')).to be_false
     end
   end
+
+  describe '==' do
+    it 'returns true whenever 2 targets have same name' do
+      t1 = Norikra::Target.new("target1")
+      t2 = Norikra::Target.new("target2")
+      t3 = Norikra::Target.new("target3")
+      tt = Norikra::Target.new("target1")
+
+      expect(t1 == tt).to be_true
+      expect(t2 == tt).to be_false
+      expect(t3 == tt).to be_false
+
+      expect([t1, t2, t3].include?(tt)).to be_true
+      expect([t2, t3].include?(tt)).to be_false
+
+      expect([t1, t2, t3].include?("target1")).to be_true
+    end
+  end
 end
