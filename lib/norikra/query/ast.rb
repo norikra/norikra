@@ -52,6 +52,33 @@ module Norikra
     #      "double"],
     #     "10.5"]]]]
 
+    ### SELECT count(*) AS cnt
+    ### FROM TestTable.win:time_batch(10 sec)
+    ### WHERE params.$$path.$1="/" AND size.$0.bytes > 100 and opts.num.seq.length() > 0
+
+    # ["EPL_EXPR",
+    #  ["SELECTION_EXPR", ["SELECTION_ELEMENT_EXPR", "count", "cnt"]],
+    #  ["STREAM_EXPR",
+    #   ["EVENT_FILTER_EXPR", "TestTable"],
+    #   ["VIEW_EXPR", "win", "time_batch", ["TIME_PERIOD", ["SECOND_PART", "10"]]]],
+    #  ["WHERE_EXPR",
+    #   ["EVAL_AND_EXPR",
+    #    ["EVAL_EQUALS_EXPR",
+    #     ["EVENT_PROP_EXPR",
+    #      ["EVENT_PROP_SIMPLE", "params"],
+    #      ["EVENT_PROP_SIMPLE", "$$path"],
+    #      ["EVENT_PROP_SIMPLE", "$1"]],
+    #     "\"/\""],
+    #    [">",
+    #     ["EVENT_PROP_EXPR",
+    #      ["EVENT_PROP_SIMPLE", "size"],
+    #      ["EVENT_PROP_SIMPLE", "$0"],
+    #      ["EVENT_PROP_SIMPLE", "bytes"]],
+    #     "100"],
+    #    [">",
+    #     ["LIB_FUNC_CHAIN", ["LIB_FUNCTION", "opts.num.seq", "length", "("]],
+    #     "0"]]]]
+
     def astnode(tree)
       children = if tree.children
                    tree.children.map{|c| astnode(c)}
@@ -114,23 +141,28 @@ module Norikra
         result
       end
 
-      def fields(default_target=nil)
-        @children.map{|c| c.nodetype?(:subquery) ? [] : c.fields(default_target)}.reduce(&:+) || []
+      def fields(default_target=nil, known_targets_aliases=[])
+        @children.map{|c| c.nodetype?(:subquery) ? [] : c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
       end
     end
 
     class ASTEventPropNode < ASTNode # EVENT_PROP_EXPR
-      # ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "bbb"]]
-      # ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "fraud"], ["EVENT_PROP_SIMPLE", "aaa"]]
+      # "bbb"           => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "bbb"]]
+      # "fraud.aaa"     => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "fraud"], ["EVENT_PROP_SIMPLE", "aaa"]]
+      # "size.$0.bytes" => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "size"],  ["EVENT_PROP_SIMPLE", "$0"], ["EVENT_PROP_SIMPLE", "bytes"]]
 
       def nodetype?(*sym)
         sym.include?(:prop) || sym.include?(:property)
       end
 
-      def fields(default_target=nil)
+      def fields(default_target=nil, known_targets_aliases=[])
         props = self.listup('EVENT_PROP_SIMPLE')
-        if props.size > 1 # alias.fieldname
-          [ {:f => props[1].child.name, :t => props[0].child.name} ]
+        if props.size > 1 # alias.fieldname or container_fieldname.key.$1
+          if known_targets_aliases.include?(props[0].child.name)
+            [ {:f => props[1..-1].map{|n| n.child.name}.join("."), :t => props[0].child.name} ]
+          else
+            [ {:f => props.map{|n| n.child.name}.join("."), :t => default_target} ]
+          end
         else # fieldname (default target)
           [ {:f => props[0].child.name, :t => default_target } ]
         end
@@ -138,42 +170,54 @@ module Norikra
     end
 
     class ASTLibFunctionNode < ASTNode # LIB_FUNCTION
-      # ["LIB_FUNCTION", "now", "("]                 #### now()
-      # ["LIB_FUNCTION", "hoge", "length", "("] #    #### hoge.length()
-      # ["LIB_FUNCTION", "hoge", "substr", "0", "("] #### hoge.substr(0)
-      # ["LIB_FUNCTION", "substr", "10", "0", "("]   #### substr(10,0)
-      # ["LIB_FUNCTION", "hoge", "substr", "0", "8", "("] #### hoge.substr(0,8)
-      # ["LIB_FUNCTION", "max", ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "size"]], "("] #### max(size)
+      # "now()"            => ["LIB_FUNCTION", "now", "("]
+      # "hoge.length()"    => ["LIB_FUNCTION", "hoge", "length", "("]
+      # "hoge.substr(0)"   => ["LIB_FUNCTION", "hoge", "substr", "0", "("]
+      # "substr(10,0)"     => ["LIB_FUNCTION", "substr", "10", "0", "("]
+      # "hoge.substr(0,8)" => ["LIB_FUNCTION", "hoge", "substr", "0", "8", "("]
+
+      # "opts.num.$0.length()" => ["LIB_FUNCTION", "opts.num.$0", "length", "("]
+
+      # "max(size)"             => ["LIB_FUNCTION", "max", ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "size"]], "("]
 
       def nodetype?(*sym)
         sym.include?(:lib) || sym.include?(:libfunc)
       end
 
-      def fields(default_target=nil)
+      ##TODO: container field access chain + function call
+      def fields(default_target=nil, known_targets_aliases=[])
         if @children.size <= 2
           # single function like 'now()', function-name and "("
           []
 
         elsif @children[1].nodetype?(:prop, :lib, :subquery)
           # first element should be func name if second element is property, library call or subqueries
-          self.listup('EVENT_PROP_EXPR').map{|c| c.fields(default_target)}.reduce(&:+) || []
+          self.listup('EVENT_PROP_EXPR').map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
 
         elsif @children[1].name =~ /^(-)?\d+(\.\d+)$/ || @children[1].name =~ /^'[^']*'$/ || @children[1].name =~ /^"[^"]*"$/
           # first element should be func name if secod element is number/string literal
-          self.listup('EVENT_PROP_EXPR').map{|c| c.fields(default_target)}.reduce(&:+) || []
+          self.listup('EVENT_PROP_EXPR').map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
 
         elsif Norikra::Query.imported_java_class?(@children[0].name)
           # Java imported class name (ex: 'Math.abs(-1)')
-          self.listup('EVENT_PROP_EXPR').map{|c| c.fields(default_target)}.reduce(&:+) || []
+          self.listup('EVENT_PROP_EXPR').map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
 
         else
-          # first element may be property (simple 'fieldname.funcname()' or fully qualified 'target.fieldname.funcname()')
+          # first element may be property
+          #  * simple 'fieldname.funcname()'
+          #  * fully qualified 'target.fieldname.funcname()'
+          #  * simple/fully-qualified container field access 'fieldname.key.$0.funcname()' or 'target.fieldname.$1.funcname()'
           target,fieldname = if @children[0].name.include?('.')
-                               @children[0].name.split('.', 2)
+                               parts = @children[0].name.split('.')
+                               if known_targets_aliases.include?(parts[0])
+                                 [ parts[0], parts[1..-1].join(".") ]
+                               else
+                                 [ default_target, @children[0].name ]
+                               end
                              else
                                [default_target,@children[0].name]
                              end
-          children_list = self.listup('EVENT_PROP_EXPR').map{|c| c.fields(default_target)}.reduce(&:+) || []
+          children_list = self.listup('EVENT_PROP_EXPR').map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
           [{:f => fieldname, :t => target}] + children_list
         end
       end
@@ -202,9 +246,9 @@ module Norikra
         @children.last.children.size < 1 ? @children.last.name : nil
       end
 
-      def fields(default_target=nil)
+      def fields(default_target=nil, known_targets_aliases=[])
         this_target = self.target
-        self.listup('EVENT_PROP_EXPR').map{|p| p.fields(this_target)}.reduce(&:+) || []
+        self.listup('EVENT_PROP_EXPR').map{|p| p.fields(this_target,known_targets_aliases)}.reduce(&:+) || []
       end
     end
 

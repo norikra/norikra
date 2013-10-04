@@ -106,6 +106,40 @@ describe Norikra::Query do
           expect(q.fields(nil)).to eql([])
         end
       end
+
+      context 'with simple query including container field accesses' do
+        it 'returns query instances collectly parsed' do
+          expression = 'SELECT count(*) AS cnt FROM TestTable.win:time_batch(10 sec) WHERE params.path="/" AND size > 100 and opts.$0 > 0'
+          q = Norikra::Query.new(
+            :name => 'TestTable query7', :expression => expression
+          )
+          expect(q.name).to eql('TestTable query7')
+          expect(q.group).to be_nil
+          expect(q.expression).to eql(expression)
+          expect(q.targets).to eql(['TestTable'])
+
+          expect(q.fields).to eql(['params.path', 'size', 'opts.$0'].sort)
+          expect(q.fields('TestTable')).to eql(['params.path', 'size', 'opts.$0'].sort)
+          expect(q.fields(nil)).to eql([])
+        end
+      end
+
+      context 'with simple query including deep depth container field accesses and function calls' do
+        it 'returns query instances collectly parsed' do
+          expression = 'SELECT count(*) AS cnt FROM TestTable.win:time_batch(10 sec) WHERE params.$$path.$1="/" AND size.$0.bytes > 100 and opts.num.$0.length() > 0'
+          q = Norikra::Query.new(
+            :name => 'TestTable query8', :expression => expression
+          )
+          expect(q.name).to eql('TestTable query8')
+          expect(q.group).to be_nil
+          expect(q.expression).to eql(expression)
+          expect(q.targets).to eql(['TestTable'])
+
+          expect(q.fields).to eql(['params.$$path.$1', 'size.$0.bytes', 'opts.num.$0'].sort)
+          expect(q.fields('TestTable')).to eql(['params.$$path.$1', 'size.$0.bytes', 'opts.num.$0'].sort)
+          expect(q.fields(nil)).to eql([])
+        end
+      end
     end
 
     describe '#dup' do

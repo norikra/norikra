@@ -82,7 +82,9 @@ module Norikra
         field_bag.push(subquery.explore(fields.keys, alias_map))
       end
 
-      self.ast.fields(default_target).each do |field_def|
+      #TODO: container field access chains
+      known_targets_aliases = fields.keys + alias_map.keys
+      self.ast.fields(default_target, known_targets_aliases).each do |field_def|
         f = field_def[:f]
         all.push(f)
 
@@ -144,6 +146,8 @@ module Norikra
     rescue Java::ComEspertechEsperClient::EPStatementSyntaxException => e
       raise Norikra::QueryError, e.message
     end
+
+    ##TODO: self.rewrite_container_field_access(statement_model, mapping)
 
     def self.rewrite_event_type_name(statement_model, mapping)
       # mapping: {target_name => query_event_type_name}
