@@ -41,6 +41,8 @@ module Norikra
     @@levelnum = nil
     @@devmode = false
 
+    @@test_flag = false
+
     @@mon = Monitor.new
 
     def self.init(level, logdir, opts, devmode=false)
@@ -48,6 +50,11 @@ module Norikra
       # logdir: nil => ConsoleAppender
       #         else => RollingFileAppender (output: directory path)
       # http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/RollingFileAppender.html
+
+      if level.upcase == 'TEST' # with opts[:logger] as DummyLogger instance
+        level = LOG_LEVEL_DEFAULT
+        @@test_flag = true
+      end
 
       @@level = level.upcase
       raise ArgumentError, "unknown log level: #{@@level}" unless LOG_LEVELS.include?(@@level)
@@ -67,29 +74,37 @@ module Norikra
       p.setProperty('log4j.appender.builtin.layout', 'org.apache.log4j.PatternLayout')
       p.setProperty('log4j.appender.builtin.layout.ConversionPattern', LOG_LOG4J_BUILTIN_FORMAT)
 
-      if logdir.nil?
-        p.setProperty('log4j.appender.default', 'org.apache.log4j.ConsoleAppender')
-        p.setProperty('log4j.appender.builtin', 'org.apache.log4j.ConsoleAppender')
-      else
-        # DailyRollingFileAppender ?
-        # http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/DailyRollingFileAppender.html
-        norikra_log = File.join(logdir, 'norikra.log')
-        p.setProperty('log4j.appender.default', 'org.apache.log4j.RollingFileAppender')
-        p.setProperty('log4j.appender.default.File', norikra_log)
-        p.setProperty('log4j.appender.default.MaxFileSize', opts[:filesize] || LOGFILE_DEFAULT_MAX_SIZE)
-        p.setProperty('log4j.appender.default.MaxBackupIndex', opts[:backups].to_s || LOGFILE_DEFAULT_MAX_BACKUP_INDEX.to_s)
+      unless @@test_flag
+        if logdir.nil?
+          p.setProperty('log4j.appender.default', 'org.apache.log4j.ConsoleAppender')
+          p.setProperty('log4j.appender.builtin', 'org.apache.log4j.ConsoleAppender')
+        else
+          # DailyRollingFileAppender ?
+          # http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/DailyRollingFileAppender.html
+          norikra_log = File.join(logdir, 'norikra.log')
+          p.setProperty('log4j.appender.default', 'org.apache.log4j.RollingFileAppender')
+          p.setProperty('log4j.appender.default.File', norikra_log)
+          p.setProperty('log4j.appender.default.MaxFileSize', opts[:filesize] || LOGFILE_DEFAULT_MAX_SIZE)
+          p.setProperty('log4j.appender.default.MaxBackupIndex', opts[:backups].to_s || LOGFILE_DEFAULT_MAX_BACKUP_INDEX.to_s)
 
-        builtin_log = File.join(logdir, 'builtin.log')
-        p.setProperty('log4j.appender.builtin', 'org.apache.log4j.RollingFileAppender')
-        p.setProperty('log4j.appender.builtin.File', builtin_log)
-        p.setProperty('log4j.appender.builtin.MaxFileSize', opts[:filesize] || LOGFILE_DEFAULT_MAX_SIZE)
-        p.setProperty('log4j.appender.builtin.MaxBackupIndex', opts[:backups].to_s || LOGFILE_DEFAULT_MAX_BACKUP_INDEX.to_s)
+          builtin_log = File.join(logdir, 'builtin.log')
+          p.setProperty('log4j.appender.builtin', 'org.apache.log4j.RollingFileAppender')
+          p.setProperty('log4j.appender.builtin.File', builtin_log)
+          p.setProperty('log4j.appender.builtin.MaxFileSize', opts[:filesize] || LOGFILE_DEFAULT_MAX_SIZE)
+          p.setProperty('log4j.appender.builtin.MaxBackupIndex', opts[:backups].to_s || LOGFILE_DEFAULT_MAX_BACKUP_INDEX.to_s)
+        end
+        p.setProperty('log4j.rootLogger', "#{@@level},default")
+        org.apache.log4j.PropertyConfigurator.configure(p)
+
+        @@logger = Logger.new('norikra.log')
+
+      else # for test(rspec)
+        p.setProperty('log4j.appender.default', 'org.apache.log4j.varia.NullAppender')
+        p.setProperty('log4j.appender.builtin', 'org.apache.log4j.varia.NullAppender')
+        p.setProperty('log4j.rootLogger', "#{@@level},default")
+        org.apache.log4j.PropertyConfigurator.configure(p)
+        @@logger = opts[:logger]
       end
-
-      p.setProperty('log4j.rootLogger', "#{@@level},default")
-      org.apache.log4j.PropertyConfigurator.configure(p)
-
-      @@logger = Logger.new('norikra.log')
 
       @@devmode = devmode
     end
