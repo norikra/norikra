@@ -184,7 +184,6 @@ module Norikra
         sym.include?(:lib) || sym.include?(:libfunc)
       end
 
-      ##TODO: container field access chain + function call
       def fields(default_target=nil, known_targets_aliases=[])
         if @children.size <= 2
           # single function like 'now()', function-name and "("

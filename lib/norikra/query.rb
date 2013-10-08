@@ -19,22 +19,13 @@ module Norikra
       @fieldsets = {} # { target => fieldset }
       @ast = nil
       @targets = nil
+      @aliases = nil
       @subqueries = nil
       @fields = nil
     end
 
     def dup
       self.class.new(:name => @name, :group => @group, :expression => @expression.dup)
-    end
-
-    def dup_with_stream_name(actual_name)
-      first_target = self.targets.first
-      query = self.dup
-      query.expression = self.expression.gsub(/(\s[Ff][Rr][Oo][Mm]\s+)#{first_target}(\.|\s)/, '\1' + actual_name + '\2')
-      if query.targets.first != actual_name
-        raise RuntimeError, 'failed to replace query target into stream name:' + self.expression
-      end
-      query
     end
 
     def to_hash
@@ -45,6 +36,12 @@ module Norikra
       return @targets if @targets
       @targets = (self.ast.listup(:stream).map(&:target) + self.subqueries.map(&:targets).flatten).sort.uniq
       @targets
+    end
+
+    def aliases
+      return @aliases if @aliases
+      @aliases = (self.ast.listup(:stream).map(&:alias) + self.subqueries.map(&:aliases).flatten).sort.uniq
+      @aliases
     end
 
     def subqueries
@@ -82,7 +79,6 @@ module Norikra
         field_bag.push(subquery.explore(fields.keys, alias_map))
       end
 
-      #TODO: container field access chains
       known_targets_aliases = fields.keys + alias_map.keys
       self.ast.fields(default_target, known_targets_aliases).each do |field_def|
         f = field_def[:f]
@@ -127,6 +123,10 @@ module Norikra
       @fields[target]
     end
 
+    def self.encode_field_name(name)
+      name.gsub('.','$')
+    end
+
     class ParseRuleSelectorImpl
       include com.espertech.esper.epl.parse.ParseRuleSelector
       def invokeParseRule(parser)
@@ -147,7 +147,64 @@ module Norikra
       raise Norikra::QueryError, e.message
     end
 
-    ##TODO: self.rewrite_container_field_access(statement_model, mapping)
+    def self.rewrite_event_field_name(statement_model, mapping)
+      p statement_model.toEPL
+      p mapping
+      # mapping: {target_name => query_event_type_name}
+      #  mapping is for target name rewriting of fully qualified field name access
+
+
+      # model.getFromClause.getStreams[0].getViews[0].getParameters[0].getPropertyName
+
+      # model.getSelectClause.getSelectList[0].getExpression.getPropertyName
+      # model.getSelectClause.getSelectList[0].getExpression.getChildren[0].getPropertyName #=> 'field.key1.$0'
+
+      # model.getWhereClause.getChildren[1].getChildren[0].getPropertyName #=> 'field.key1.$1'
+      # model.getWhereClause.getChildren[2].getChildren[0].getChain[0].getName #=> 'opts.num.$0' from opts.num.$0.length()
+
+      query = Norikra::Query.new(:expression => statement_model.toEPL)
+      targets = query.targets
+      fqfs_prefixes = targets + query.aliases
+
+      default_target = (targets.size == 1 ? targets.first : nil)
+
+      rewrite_name = lambda {|node,getter,setter|
+        name = node.send(getter)
+        if name && name.index('.')
+          prefix = nil
+          body = nil
+          first_part = name.split('.').first
+          if fqfs_prefixes.include?(first_part) or mapping.has_key?(first_part) # fully qualified field specification
+            prefix = first_part
+            if mapping[prefix]
+              prefix = mapping[prefix]
+            end
+            body = name.split('.')[1..-1].join('.')
+          elsif default_target # default target field (outside of join context)
+            body = name
+          else
+            raise Norikra::QueryError, "target cannot be determined for field '#{name}'"
+          end
+          encoded = (prefix ? "#{prefix}." : "") + Norikra::Query.encode_field_name(body)
+          node.send(setter, encoded)
+        end
+      }
+
+      rewriter = lambda {|node|
+        if node.respond_to?(:getPropertyName)
+          rewrite_name.call(node, :getPropertyName, :setPropertyName)
+        elsif node.respond_to?(:getChain)
+          node.getChain.each do |chain|
+            rewrite_name.call(chain, :getName, :setName)
+          end
+        end
+      }
+      recaller = lambda {|node|
+        Norikra::Query.rewrite_event_field_name(node.getModel, mapping)
+      }
+
+      traverse_fields(rewriter, recaller, statement_model)
+    end
 
     def self.rewrite_event_type_name(statement_model, mapping)
       # mapping: {target_name => query_event_type_name}
@@ -170,19 +227,96 @@ module Norikra
         stream.getFilter.setEventTypeName(mapping[target_name])
       end
 
+      rewriter = lambda {|node|
+        # nothing for query expression clauses
+      }
+      recaller = lambda {|node|
+        Norikra::Query.rewrite_event_type_name(node.getModel, mapping)
+      }
+      traverse_fields(rewriter, recaller, statement_model)
+    end
+
+    # model.methods.select{|m| m.to_s.start_with?('get')}
+    # :getContextName,
+    # :getCreateContext,
+    # :getCreateDataFlow,
+    # :getCreateExpression,
+    # :getCreateIndex,
+    # :getCreateSchema,
+    # :getCreateVariable,
+    # :getCreateWindow,
+    # :getExpressionDeclarations,
+    # :getFireAndForgetClause,
+    # :getForClause,
+    # (*) :getFromClause,
+    # :getGroupByClause,
+    # :getHavingClause,
+    # :getInsertInto,
+    # :getMatchRecognizeClause,
+    # :getOnExpr,
+    # :getOrderByClause,
+    # :getOutputLimitClause,
+    # :getRowLimitClause,
+    # :getScriptExpressions,
+    # (*) :getSelectClause,
+    # :getTreeObjectName,
+    # :getUpdateClause,
+    # (*) :getWhereClause,
+
+    def self.traverse_fields(rewriter, recaller, statement_model)
+      #NOTICE: SQLStream is not supported yet.
+      #TODO: other clauses with fields, especially: OrderBy, Having, GroupBy, For
+
       dig = lambda {|node|
+        rewriter.call(node)
+
         if node.is_a?(Java::ComEspertechEsperClientSoda::SubqueryExpression)
-          Norikra::Query.rewrite_event_type_name(node.getModel, mapping)
-        elsif node.getChildren.size > 0
+          recaller.call(node)
+        end
+        if node.respond_to?(:getFilter)
+          dig.call(node.getFilter)
+        end
+        if node.respond_to?(:getChildren)
           node.getChildren.each do |c|
+            dig.call(c)
+          end
+        end
+        if node.respond_to?(:getParameters)
+          node.getParameters.each do |p|
+            dig.call(p)
+          end
+        end
+        if node.respond_to?(:getChain)
+          node.getChain.each do |c|
             dig.call(c)
           end
         end
       }
 
+      statement_model.getFromClause.getStreams.each do |stream|
+        if stream.respond_to?(:getExpression) # PatternStream < ProjectedStream
+          dig.call(stream.getExpression)
+        end
+        if stream.respond_to?(:getFilter) # Filter < ProjectedStream
+          dig.call(stream.getFilter.getFilter) #=> Expression
+        end
+        if stream.respond_to?(:getParameterExpressions) # MethodInvocationStream
+          dig.call(stream.getParameterExpressions)
+        end
+        if stream.respond_to?(:getViews) # ProjectedStream
+          stream.getViews.each do |view|
+            view.getParameters.each do |parameter|
+              dig.call(parameter)
+            end
+          end
+        end
+      end
+
       if statement_model.getSelectClause
         statement_model.getSelectClause.getSelectList.each do |item|
-          dig.call(item.getExpression)
+          if item.respond_to?(:getExpression)
+            dig.call(item.getExpression)
+          end
         end
       end
 

@@ -2,6 +2,8 @@ require_relative './spec_helper'
 
 require 'norikra/query'
 
+include Norikra::SpecHelper
+
 describe Norikra::Query do
   context 'when instanciate' do
     describe '#initialize' do
@@ -166,39 +168,105 @@ describe Norikra::Query do
       end
     end
 
-    describe '#dup_with_stream_name' do
-      context 'with simple query' do
-        expression = 'SELECT count(*) AS cnt FROM TestTable.win:time_batch(10 sec) WHERE path="/" AND size > 100 and param.length() > 0'
-        it 'returns duplicated object, with replaced ' do
-          query = Norikra::Query.new(
-            :name => 'TestTable query1', :expression => expression
-          )
-          expect(query.dup_with_stream_name('hoge').expression).to eql(
-            'SELECT count(*) AS cnt FROM hoge.win:time_batch(10 sec) WHERE path="/" AND size > 100 and param.length() > 0'
-          )
+    describe '.rewrite_event_field_name' do
+      context 'without any container field access' do
+        expression = 'select count(*) as cnt from TestTable.win:time_batch(10 seconds) where path = "/" and size > 100 and (param.length()) > 0'
+        it 'returns same query with original' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_event_field_name(model, {'TestTable' => 'T1'}).toEPL).to eql(expression)
+          end
         end
       end
 
-      context 'with query with newlines' do
-        expression = <<EOQ
-SELECT
-  count(*) AS cnt
-FROM TestTable.win:time_batch(10 sec)
-WHERE path="/" AND size > 100
-  AND param.length() > 0
-EOQ
-        expected_query = <<EOQ
-SELECT
-  count(*) AS cnt
-FROM hoge.win:time_batch(10 sec)
-WHERE path="/" AND size > 100
-  AND param.length() > 0
-EOQ
-        it 'returns duplicated object, with replaced ' do
-          query = Norikra::Query.new(
-            :name => 'TestTable query1', :expression => expression
-          )
-          expect(query.dup_with_stream_name('hoge').expression).to eql(expected_query)
+      context 'with container field access' do
+        expression = 'select max(result.$0.size) as cnt from TestTable.win:time_batch(10 seconds) where req.path = "/" and result.$0.size > 100 and (req.param.length()) > 0'
+        expected   = 'select max(result$$0$size) as cnt from TestTable.win:time_batch(10 seconds) where req$path = "/" and result$$0$size > 100 and (req$param.length()) > 0'
+        it 'returns query with encoded container fields' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_event_field_name(model, {'TestTable' => 'T1'}).toEPL).to eql(expected)
+          end
+        end
+      end
+
+      context 'with container field access with joins' do
+        expression = 'select product, max(sta.param.size) as maxsize from StreamA.win:keepall() as sta, StreamB(size > 10).win:time(20 seconds) as stb where (sta.data.$0.$$body.substr(0, 8)) = stb.header and (Math.abs(sta.size)) > 3'
+        expected   = 'select product, max(sta.param$size) as maxsize from StreamA.win:keepall() as sta, StreamB(size > 10).win:time(20 seconds) as stb where (sta.data$$0$$$body.substr(0, 8)) = stb.header and (Math.abs(sta.size)) > 3'
+        it 'returns query with encoded container fields' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_event_field_name(model, {'StreamA' => 'S1', 'StreamB' => 'S2'}).toEPL).to eql(expected)
+          end
+        end
+      end
+
+      context 'without any container field access, but with alias specification, without joins' do
+        expression = 'select count(*) as cnt from TestTable.win:time_batch(10 seconds) where path = "/" and TestTable.size > 100 and (param.length()) > 0'
+        expected =   'select count(*) as cnt from TestTable.win:time_batch(10 seconds) where path = "/" and T1.size > 100 and (param.length()) > 0'
+        it 'returns query expression' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_event_field_name(model, {'TestTable' => 'T1'}).toEPL).to eql(expected)
+          end
+        end
+      end
+
+      context 'with subquery in select clause' do
+        expression = 'select RfidEvent.zoneId.$0, (select name.x from Zones.std:unique(zoneName) where zoneId = RfidEvent.zoneId.$0) as name from RfidEvent'
+        expected   = 'select Z2.zoneId$$0, (select name$x from Zones.std:unique(zoneName) where zoneId = Z2.zoneId$$0) as name from RfidEvent'
+        it 'returns query model which have replaced stream name, for only targets of fully qualified field name access' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_event_field_name(model, {'Zones' => 'Z1', 'RfidEvent' => 'Z2'}).toEPL).to eql(expected)
+          end
+        end
+      end
+
+      context 'with container field accesses, with targets, aliases and joins' do
+        ###############TODO: write
+      end
+    end
+
+    describe '.rewrite_event_type_name' do
+      context 'with simple query' do
+        expression = 'select count(*) as cnt from TestTable.win:time_batch(10 seconds) where path = "/" and size > 100 and (param.length()) > 0'
+
+        it 'returns query model which have replaced stream name' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_event_type_name(model, {'TestTable' => 'hoge'}).toEPL).to eql(expression.sub('TestTable','hoge'))
+          end
+        end
+      end
+      context 'with subquery in select clause' do
+        expression = 'select zoneId.$0, (select name.x from Zones.std:unique(zoneName) where zoneId = RfidEvent.zoneId.$0) as name from RfidEvent'
+        expected   = 'select zoneId.$0, (select name.x from Z1.std:unique(zoneName) where zoneId = RfidEvent.zoneId.$0) as name from Z2'
+        it 'returns query model which have replaced stream name, for only From clause' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_event_type_name(model, {'Zones' => 'Z1', 'RfidEvent' => 'Z2'}).toEPL).to eql(expected)
+          end
+        end
+      end
+      context 'with subquery in from clause' do
+        expression = "select * from BarData(ticker='MSFT', sub(closePrice, (select movAgv from SMA20Stream(ticker='MSFT').std:lastevent())) > 0)"
+        expected   = 'select * from B1(ticker = "MSFT" and (sub(closePrice, (select movAgv from B2(ticker = "MSFT").std:lastevent()))) > 0)'
+        it 'returns query model which have replaced stream name' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_event_type_name(model, {'BarData' => 'B1', 'SMA20Stream' => 'B2'}).toEPL).to eql(expected)
+          end
+        end
+      end
+      context 'with joins' do
+        expression = 'select product, max(sta.size) as maxsize from StreamA.win:keepall() as sta, StreamB(size > 10).win:time(20 seconds) as stb where (sta.data.substr(0, 8)) = stb.header and (Math.abs(sta.size)) > 3'
+        it 'returns query model which have replaced stream name' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            mapping = {'StreamA' => 'sa', 'StreamB' => 'sb'}
+            expect(Norikra::Query.rewrite_event_type_name(model, mapping).toEPL).to eql(expression.sub('StreamA','sa').sub('StreamB','sb'))
+          end
         end
       end
     end
