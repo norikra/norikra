@@ -22,6 +22,37 @@ def rspec(file=nil)
   end
 end
 
+$service = nil
+def service
+  $service ||= com.espertech.esper.client.EPServiceProviderManager.getDefaultProvider
+end
+
+$administrator = nil
+def administrator
+  $administrator ||= service.getEPAdministrator
+end
+
+def compileEPL(query_str)
+  administrator.compileEPL(query_str)
+end
+
+def query_string(model)
+  writer = java.io.StringWriter.new
+  formatter = com.espertech.esper.client.soda.EPStatementFormatter.new
+  if model.respond_to?(:toEPLElement)
+    model.toEPLElement(writer)
+    writer.toString
+  elsif model.respond_to?(:toPrecedenceFreeEPL)
+    model.toPrecedenceFreeEPL(writer)
+    writer.toString
+  elsif model.is_a?(Java::ComEspertechEsperClientSoda::EPStatementObjectModel)
+    model.toEPL
+  else
+    model.toEPL(writer, formatter)
+    writer.toString
+  end
+end
+
 puts <<DESC
 
 Example:
