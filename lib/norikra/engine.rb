@@ -377,7 +377,7 @@ module Norikra
       administrator = @service.getEPAdministrator
 
       statement_model = administrator.compileEPL(query.expression)
-      Norikra::Query.rewrite_event_type_name(statement_model, event_type_name_map)
+      Norikra::Query.rewrite_query(statement_model, event_type_name_map)
 
       epl = administrator.create(statement_model)
       epl.java_send :addListener, [com.espertech.esper.client.UpdateListener.java_class], Listener.new(query.name, query.group, @output_pool)

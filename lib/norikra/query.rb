@@ -147,9 +147,12 @@ module Norikra
       raise Norikra::QueryError, e.message
     end
 
+    def self.rewrite_query(statement_model, mapping)
+      rewrite_event_type_name(statement_model, mapping)
+      rewrite_event_field_name(statement_model, mapping)
+    end
+
     def self.rewrite_event_field_name(statement_model, mapping)
-      p statement_model.toEPL
-      p mapping
       # mapping: {target_name => query_event_type_name}
       #  mapping is for target name rewriting of fully qualified field name access
 
