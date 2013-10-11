@@ -6,6 +6,7 @@ require 'esper/lib/cglib-nodep-2.2.jar'
 
 require 'norikra/error'
 require 'norikra/query/ast'
+require 'norikra/field'
 
 module Norikra
   class Query
@@ -123,10 +124,6 @@ module Norikra
       @fields[target]
     end
 
-    def self.encode_field_name(name)
-      name.gsub('.','$')
-    end
-
     class ParseRuleSelectorImpl
       include com.espertech.esper.epl.parse.ParseRuleSelector
       def invokeParseRule(parser)
@@ -188,7 +185,7 @@ module Norikra
           else
             raise Norikra::QueryError, "target cannot be determined for field '#{name}'"
           end
-          encoded = (prefix ? "#{prefix}." : "") + Norikra::Query.encode_field_name(body)
+          encoded = (prefix ? "#{prefix}." : "") + Norikra::Field.escape_name(body)
           node.send(setter, encoded)
         end
       }

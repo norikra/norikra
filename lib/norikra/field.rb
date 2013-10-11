@@ -15,6 +15,9 @@ module Norikra
     ### norikra types of container
     # hash    A single value which is represented as Hash class (ex: parsed json object), and can be nested with hash/array
     #             # select h.value1, h.value2.value3 #<= "h":{"value1":"...","value2":{"value3":"..."}}
+    #             Hash key item as "String of Numbers" be escaped with '$$'.
+    #             # select h.$$3 #<= "h":{"3":3}
+    #
     # array   A single value which is represented as Array class (ex: parsed json array), and can be nested with hash/array
     #             # select h.$0, h.$1.$0.name        #<= "h":["....", [{"name":"value..."}]]
     #
@@ -24,12 +27,64 @@ module Norikra
     ### expected java.lang.Class or java.util.Map or the name of a previously-declared Map or ObjectArray type
     #### Correct type name is 'int'. see and run 'junks/esper-test.rb'
 
-    attr_accessor :name, :type, :optional
+    attr_accessor :name, :type, :optional, :escaped_name, :container_name
 
     def initialize(name, type, optional=nil)
       @name = name.to_s
       @type = self.class.valid_type?(type)
       @optional = optional
+
+      @escaped_name = self.class.escape_name(@name)
+
+      @container_name = nil
+
+      @chained_access = !!@name.index('.')
+      if @chained_access
+        @container_name = @name.split('.').first
+        @optional = true
+      end
+
+      define_value_accessor(@name, @chained_access)
+    end
+
+    def chained_access?
+      @chained_access
+    end
+
+    def self.escape_name(name)
+      # hoge.pos #=> "hoge$pos"
+      # hoge.0   #=> "hoge$$0"
+      # hoge.$0  #=> "hoge$$0"
+      # hoge.$$0 #=> "hoge$$$0"
+
+      # hoge..pos #=> "hoge$_pos"
+      # hoge...pos #=> "hoge$__pos"
+
+      parts = name.split(/(?<!\.)\./).map do |part|
+        if part =~ /^\d+$/
+          '$' + part.to_s
+        else
+          part.gsub(/[^$_a-zA-Z0-9]/,'_')
+        end
+      end
+      parts.join('$')
+    end
+
+    def self.escape_key_chain(*keys)
+      # "hoge", "pos" #=> "hoge$pos"
+      # "hoge", 3     #=> "hoge$$3"
+      # "hoge", "3"   #=> "hoge$$$3"
+      # "hoge", ".pos" #=> "hoge
+      escaped = []
+      keys.each do |key|
+        key = case
+              when key.is_a?(Integer) then '$' + key.to_s
+              when key.is_a?(String) && key =~ /^[0-9]+$/ then '$$' + key.to_s
+              else key.gsub(/[^$_a-zA-Z0-9]/,'_')
+              end
+        escaped.push key
+      end
+      escaped.join('$')
     end
 
     def to_hash(sym=false)
@@ -67,18 +122,66 @@ module Norikra
       end
     end
 
+    # def value(event) # by define_value_accessor
+
     def format(value, element_path=nil) #element_path ex: 'fname.fchild', 'fname.$0', 'f.fchild.$2'
       case @type
       when 'string'  then value.to_s
       when 'boolean' then value =~ /^(true|false)$/i ? ($1.downcase == 'true') : (!!value)
       when 'long','int' then value.to_i
       when 'double','float' then value.to_f
-      when 'hash'
-        #TODO: ... ...
-      when 'array'
-        #TODO: ... ...
+      when 'hash', 'array'
+        raise RuntimeError, "container field not permitted to access directly, maybe BUG. name:#{@name},type:#{@type}"
       else
         raise RuntimeError, "unknown field type (in format), maybe BUG. name:#{@name},type:#{@type}"
+      end
+    end
+
+    def define_value_accessor(name, chained)
+      # "fieldname" -> def value(event) ; event["fieldname"] ; end
+      # "fieldname.key1" -> def value(event) ; event["fieldname"]["key1"] ; end
+      # "fieldname.key1.$$2" -> def value(event) ; event["fieldname"]["key1"]["2"] ; end
+      # "fieldname.2" -> def value(event) ; event["fieldname"][2] ; end
+      # "fieldname.$2" -> def value(event) ; event["fieldname"][2] ; end
+
+      unless chained
+        @accessors = [name]
+        self.instance_eval do
+          def value(event)
+            event[@accessors.first]
+          end
+        end
+        return
+      end
+
+      @accessors = name.split(/(?<!\.)\./).map do |part|
+        case part
+        when /^\d+$/ then part.to_i
+        when /^\$(\d+)$/ then $1.to_i
+        when /^\$\$(\d+)$/ then $1.to_s
+        else part
+        end
+      end
+      self.instance_eval do
+        def safe_container(v, accessor_class)
+          unless accessor_class == String || accessor_class == Fixnum
+            raise ArgumentError, "container_accessor must be a String or Interger, but #{accessor_class.to_s}"
+          end
+          if v.is_a?(Hash)
+            v # hash[string] is valid, and hash[int] is also valid
+          elsif v.is_a?(Array)
+            if accessor_class == Fixnum
+              v
+            else # String -> Hash
+              {}
+            end
+          else
+            accessor_class == String ? {} : []
+          end
+        end
+        def value(event)
+          @accessors.reduce(event){|e,a| safe_container(e, a.class)[a]}
+        end
       end
     end
   end

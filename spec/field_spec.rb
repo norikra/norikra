@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 require_relative './spec_helper'
 
 require 'norikra/field'
@@ -6,6 +7,42 @@ require 'json'
 require 'digest'
 
 describe Norikra::Field do
+  describe '.escape_name' do
+    it 'escapes chars not alphabetic and numeric chars, with "_"' do
+      expect(Norikra::Field.escape_name("part1 part2")).to eql('part1_part2')
+      expect(Norikra::Field.escape_name("part1^part2")).to eql('part1_part2')
+      expect(Norikra::Field.escape_name("part1|part2")).to eql('part1_part2')
+      expect(Norikra::Field.escape_name("part1\"part2")).to eql('part1_part2')
+      expect(Norikra::Field.escape_name("part1'part2")).to eql('part1_part2')
+      expect(Norikra::Field.escape_name("part1@part2")).to eql('part1_part2')
+      expect(Norikra::Field.escape_name("part1#part2")).to eql('part1_part2')
+      expect(Norikra::Field.escape_name("part1あpart2")).to eql('part1_part2')
+    end
+
+    it 'escape "." in field name with "$"' do
+      expect(Norikra::Field.escape_name("part1.part2")).to eql('part1$part2')
+    end
+
+    it 'escape additional "." which specify string-dot of key chain escaped with "_"' do
+      expect(Norikra::Field.escape_name("part1..part2")).to eql('part1$_part2')
+    end
+
+    it 'escape numeric-only part with prefix "$"' do
+      expect(Norikra::Field.escape_name("part1.0")).to eql('part1$$0')
+    end
+  end
+
+  describe '.escape_key_chain' do
+    it 'escape String chain items which started with numeric, with "$$", and joins keys with separator "$"' do
+      expect(Norikra::Field.escape_key_chain("part1", "part2")).to eql('part1$part2')
+      expect(Norikra::Field.escape_key_chain("part.1", "2")).to eql('part_1$$$2')
+      expect(Norikra::Field.escape_key_chain("part1", 2)).to eql('part1$$2')
+      expect(Norikra::Field.escape_key_chain("part1", 2, "2")).to eql('part1$$2$$$2')
+      expect(Norikra::Field.escape_key_chain("part1", ".part2")).to eql('part1$_part2')
+      expect(Norikra::Field.escape_key_chain("part1", 2, ".part2")).to eql('part1$$2$_part2')
+    end
+  end
+
   describe '.valid_type?' do
     it 'returns normalized type strings' do
       expect(Norikra::Field.valid_type?('String')).to eql('string')
@@ -136,6 +173,74 @@ describe Norikra::Field do
         expect(f.format(' ')).to eql(0.0)
         expect(f.format(nil)).to eql(0.0)
       end
+    end
+  end
+
+  describe '#define_value_accessor' do
+    it 'defines value accessor method for simple single field name' do
+      f = Norikra::Field.new('foo', 'string')
+
+      f.define_value_accessor('foo', false)
+      expect(f.value({'foo' => 'value1', 'bar' => 'value2', 'baz' => 'value3'})).to eql('value1')
+    end
+
+    it 'defines chain value accessor for 2-depth hash access chain' do
+      f = Norikra::Field.new('foo', 'hash')
+      f.define_value_accessor('foo.bar', true)
+      expect(f.value({'foo' => {'bar' => 'value1'}, 'bar' => 'value2'})).to eql('value1')
+      expect(f.value({'foo' => ['value1'], 'bar' => 'value2'})).to be_nil
+      expect(f.value({'foo' => 'value1', 'bar' => 'value2'})).to be_nil
+    end
+
+    it 'defines chain value accessor for 2-depth array access chain' do
+      f = Norikra::Field.new('foo', 'array')
+      f.define_value_accessor('foo.0', true)
+      expect(f.value({'foo' => {'bar' => 'value1'}, 'bar' => 'value2'})).to be_nil
+      expect(f.value({'foo' => ['value1'], 'bar' => 'value2'})).to eql('value1')
+      expect(f.value({'foo' => 'value1', 'bar' => 'value2'})).to be_nil
+    end
+
+    it 'defines chain value accessor for 2-depth array access chain' do
+      f = Norikra::Field.new('foo', 'array')
+      f.define_value_accessor('foo.$0', true)
+      expect(f.value({'foo' => {0 => 'value1'}, 'bar' => 'value2'})).to eql('value1')
+      expect(f.value({'foo' => {'bar' => 'value1'}, 'bar' => 'value2'})).to be_nil
+      expect(f.value({'foo' => ['value1'], 'bar' => 'value2'})).to eql('value1')
+      expect(f.value({'foo' => 'value1', 'bar' => 'value2'})).to be_nil
+    end
+
+    it 'defines chain value accessor for 2-depth hash access chain, with numeric string' do
+      f = Norikra::Field.new('foo', 'hash')
+      f.define_value_accessor('foo.$$0', true)
+      expect(f.value({'foo' => {0 => 'value1'}, 'bar' => 'value2'})).to be_nil
+      expect(f.value({'foo' => {'0' => 'value1'}, 'bar' => 'value2'})).to eql('value1')
+      expect(f.value({'foo' => ['value1'], 'bar' => 'value2'})).to be_nil
+      expect(f.value({'foo' => 'value1', 'bar' => 'value2'})).to be_nil
+    end
+
+    it 'defines chain value accessor for 2-depth access chain, with integer key' do
+      f = Norikra::Field.new('foo', 'hash')
+      f.define_value_accessor('foo.0', true)
+      expect(f.value({'foo' => {0 => 'value1'}, 'bar' => 'value2'})).to eql('value1')
+      expect(f.value({'foo' => {'0' => 'value1'}, 'bar' => 'value2'})).to be_nil
+      expect(f.value({'foo' => ['value1'], 'bar' => 'value2'})).to eql('value1')
+      expect(f.value({'foo' => 'value1', 'bar' => 'value2'})).to be_nil
+    end
+
+    it 'defines chain value accessor for 2-depth chain with dots' do
+      f = Norikra::Field.new('foo', 'hash')
+      f.define_value_accessor('foo..data', true)
+      expect(f.value({'foo' => {'.data' => 'value1'}, 'bar' => 'value2'})).to eql('value1')
+      expect(f.value({'foo' => ['value1'], 'bar' => 'value2'})).to be_nil
+      expect(f.value({'foo' => 'value1', 'bar' => 'value2'})).to be_nil
+    end
+
+    it 'defines chain value accessor for N-depth hash and array' do
+      f = Norikra::Field.new('foo', 'hash')
+      f.define_value_accessor('foo.bar.$0.baz', true)
+      expect(f.value({'foo' => {'bar' => [{'baz' => 'value1'}, {'baz' => 'value2'}]}})).to eql('value1')
+      f.define_value_accessor('foo.bar.1.baz', true)
+      expect(f.value({'foo' => {'bar' => [{'baz' => 'value1'}, {'baz' => 'value2'}]}})).to eql('value2')
     end
   end
 end
