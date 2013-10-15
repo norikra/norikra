@@ -43,6 +43,20 @@ describe Norikra::Field do
     end
   end
 
+  describe '.container_type?' do
+    it 'returns true for only "hash" and "array"' do
+      expect(Norikra::Field.container_type?('')).to be_false
+      expect(Norikra::Field.container_type?('string')).to be_false
+      expect(Norikra::Field.container_type?('int')).to be_false
+      expect(Norikra::Field.container_type?('long')).to be_false
+
+      expect(Norikra::Field.container_type?('Hash')).to be_true
+      expect(Norikra::Field.container_type?('hash')).to be_true
+      expect(Norikra::Field.container_type?('Array')).to be_true
+      expect(Norikra::Field.container_type?('array')).to be_true
+    end
+  end
+
   describe '.valid_type?' do
     it 'returns normalized type strings' do
       expect(Norikra::Field.valid_type?('String')).to eql('string')
@@ -222,7 +236,7 @@ describe Norikra::Field do
       f = Norikra::Field.new('foo', 'hash')
       f.define_value_accessor('foo.0', true)
       expect(f.value({'foo' => {0 => 'value1'}, 'bar' => 'value2'})).to eql('value1')
-      expect(f.value({'foo' => {'0' => 'value1'}, 'bar' => 'value2'})).to be_nil
+      expect(f.value({'foo' => {'0' => 'value1'}, 'bar' => 'value2'})).to eql('value1')
       expect(f.value({'foo' => ['value1'], 'bar' => 'value2'})).to eql('value1')
       expect(f.value({'foo' => 'value1', 'bar' => 'value2'})).to be_nil
     end

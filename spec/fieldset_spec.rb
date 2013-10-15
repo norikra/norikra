@@ -49,6 +49,40 @@ describe Norikra::FieldSet do
       end
     end
 
+    describe '.leaves' do
+      it 'returns field access chains to all keys of 1-depth Hash container' do
+        leaves = Norikra::FieldSet.leaves({'field1' => 1, 'field2' => 2})
+        expect(leaves.size).to eql(2)
+        expect(leaves).to eql([['field1', 1], ['field2', 2]])
+      end
+
+      it 'returns field access chains to all indexes of 1-depth Array container' do
+        leaves = Norikra::FieldSet.leaves([1, 2, 3])
+        expect(leaves.size).to eql(3)
+        expect(leaves).to eql([[0, 1], [1, 2], [2, 3]])
+      end
+
+      it 'returns field access chains of 2-depth array' do
+        leaves = Norikra::FieldSet.leaves([[0, 1, 2], 3, 4])
+        expect(leaves.size).to eql(5)
+        expect(leaves[0]).to eql([0, 0, 0])
+        expect(leaves[1]).to eql([0, 1, 1])
+        expect(leaves[2]).to eql([0, 2, 2])
+        expect(leaves[3]).to eql([1, 3])
+        expect(leaves[4]).to eql([2, 4])
+      end
+
+      it 'returns field access chains of deep containers' do
+        leaves = Norikra::FieldSet.leaves({'f1' => [{'fz1' => 1, 'fz2' => {'fz3' => 2, 'fz4' => 3}}, 4], 'f2' => 5})
+        expect(leaves.size).to eql(5)
+        expect(leaves[0]).to eql(['f1', 0, 'fz1', 1])
+        expect(leaves[1]).to eql(['f1', 0, 'fz2', 'fz3', 2])
+        expect(leaves[2]).to eql(['f1', 0, 'fz2', 'fz4', 3])
+        expect(leaves[3]).to eql(['f1', 1, 4])
+        expect(leaves[4]).to eql(['f2', 5])
+      end
+    end
+
     describe '.field_names_key' do
       it 'returns comma-separated sorted field names of argument hash' do
         expect(Norikra::FieldSet.field_names_key({'x1'=>1,'y3'=>2,'xx'=>3,'xx1'=>4,'a'=>5})).to eql('a,x1,xx,xx1,y3')

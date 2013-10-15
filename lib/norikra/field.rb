@@ -27,7 +27,7 @@ module Norikra
     ### expected java.lang.Class or java.util.Map or the name of a previously-declared Map or ObjectArray type
     #### Correct type name is 'int'. see and run 'junks/esper-test.rb'
 
-    attr_accessor :name, :type, :optional, :escaped_name, :container_name
+    attr_accessor :name, :type, :optional, :escaped_name, :container_name, :container_type
 
     def initialize(name, type, optional=nil)
       @name = name.to_s
@@ -36,15 +36,21 @@ module Norikra
 
       @escaped_name = self.class.escape_name(@name)
 
-      @container_name = nil
+      @container_name = @container_type = nil
 
       @chained_access = !!@name.index('.')
       if @chained_access
-        @container_name = @name.split('.').first
+        parts = @name.split(/(?<!\.)\./)
+        @container_name = parts[0]
+        @container_type = parts[1] =~ /^(\$)?\d+$/ ? 'array' : 'hash'
         @optional = true
       end
 
       define_value_accessor(@name, @chained_access)
+    end
+
+    def container_field?
+      @type == 'hash' || @type == 'array'
     end
 
     def chained_access?
@@ -80,7 +86,7 @@ module Norikra
         key = case
               when key.is_a?(Integer) then '$' + key.to_s
               when key.is_a?(String) && key =~ /^[0-9]+$/ then '$$' + key.to_s
-              else key.gsub(/[^$_a-zA-Z0-9]/,'_')
+              else key.to_s.gsub(/[^$_a-zA-Z0-9]/,'_')
               end
         escaped.push key
       end
@@ -105,6 +111,15 @@ module Norikra
 
     def optional? # used outside of FieldSet
       @optional
+    end
+
+    def self.container_type?(type)
+      case type.to_s.downcase
+      when 'hash' then true
+      when 'array' then true
+      else
+        false
+      end
     end
 
     def self.valid_type?(type)
@@ -163,24 +178,24 @@ module Norikra
         end
       end
       self.instance_eval do
-        def safe_container(v, accessor_class)
-          unless accessor_class == String || accessor_class == Fixnum
-            raise ArgumentError, "container_accessor must be a String or Interger, but #{accessor_class.to_s}"
+        def safe_fetch(v, accessor)
+          unless accessor.is_a?(String) || accessor.is_a?(Fixnum)
+            raise ArgumentError, "container_accessor must be a String or Interger, but #{accessor.class.to_s}"
           end
           if v.is_a?(Hash)
-            v # hash[string] is valid, and hash[int] is also valid
+            v[accessor] || v[accessor.to_s] # hash[string] is valid, and hash[int] is also valid, and hash["int"] is valid too.
           elsif v.is_a?(Array)
-            if accessor_class == Fixnum
-              v
-            else # String -> Hash
-              {}
+            if accessor.is_a?(Fixnum)
+              v[accessor]
+            else # String -> Hash expected
+              nil
             end
-          else
-            accessor_class == String ? {} : []
+          else # non-container value
+            nil
           end
         end
         def value(event)
-          @accessors.reduce(event){|e,a| safe_container(e, a.class)[a]}
+          @accessors.reduce(event){|e,a| safe_fetch(e, a)}
         end
       end
     end

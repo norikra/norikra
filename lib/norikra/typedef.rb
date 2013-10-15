@@ -7,16 +7,24 @@ require 'norikra/fieldset'
 
 module Norikra
   # Typedef is
-  #  * known field list of target (and these are optional or not)
+  #  * known field list of target (and these are optional or not), and container fields
   #  * known field-set list of a target
   #  * base set of a target
   class Typedef
-    attr_accessor :fields, :waiting_fields ,:baseset, :queryfieldsets, :datafieldsets
+    attr_accessor :fields, :container_fields, :waiting_fields ,:baseset, :queryfieldsets, :datafieldsets
 
     def initialize(fields=nil)
+      @container_fields = {}
+
       if fields && !fields.empty?
-        @baseset = FieldSet.new(fields, false) # all fields are required
+        @baseset = FieldSet.new(fields, false) # all fields are required, but exclude for container access chains
         @fields = @baseset.fields.dup
+        @fields.values.each do |field|
+          if field.chained_access?
+            cname = field.container_name
+            @container_fields[cname] = Norikra::Field.new(cname, field.container_type, true)
+          end
+        end
       else
         @baseset = nil
         @fields = {}
@@ -33,6 +41,8 @@ module Norikra
     end
 
     def field_defined?(list)
+      # used for only queries: TypedefManager#ready?(query) and TypedefManager#generate_field_mapping(query)
+      #  be not needed to think about containers
       list.reduce(true){|r,f| r && @fields[f]}
     end
 
@@ -58,8 +68,15 @@ module Norikra
       fieldname = fieldname.to_s
       @mutex.synchronize do
         return false if @fields[fieldname]
-        @waiting_fields.delete(fieldname) if @waiting_fields.include?(fieldname)
-        @fields[fieldname] = Field.new(fieldname, type, optional)
+        field = Norikra::Field.new(fieldname, type, optional)
+        if @waiting_fields.include?(fieldname)
+          @waiting_fields.delete(fieldname)
+        end
+        @fields[fieldname] = field
+        if field.chained_access? && !@container_fields[field.container_name]
+          container = Norikra::Field.new(field.container_name, field.container_type, true)
+          @container_fields[field.container_name] = container
+        end
       end
       true
     end
@@ -97,8 +114,15 @@ module Norikra
             @set_map[fieldset.field_names_key] = fieldset
 
             fieldset.fields.each do |fieldname,field|
-              @waiting_fields.delete(fieldname) if @waiting_fields.include?(fieldname)
-              @fields[fieldname] = field.dup(true) unless @fields[fieldname]
+              if @waiting_fields.include?(fieldname)
+                @waiting_fields.delete(fieldname)
+              end
+              unless @fields[fieldname]
+                @fields[fieldname] = field.dup(true)
+                if field.chained_access? && !@container_fields[field.container_name]
+                  @container_fields[field.container_name] = Norikra::Field.new(field.container_name, field.container_type, true)
+                end
+              end
             end
           end
         else
@@ -143,8 +167,25 @@ module Norikra
     end
 
     def simple_guess(data, optional=true, strict=false)
+      flatten_key_value_pairs = []
+
+      data.each do |key,value|
+        next if strict && !(@fields.has_key?(key) || @waiting_fields.include?(key) || value.is_a?(Hash) || value.is_a?(Array))
+
+        if value.is_a?(Hash) || value.is_a?(Array)
+          Norikra::FieldSet.leaves(value).map{|chain| [key] + chain}.each do |chain|
+            value = chain.pop
+            key = chain.map(&:to_s).join('.')
+            next unless @fields.has_key?(key) || @waiting_fields.include?(key)
+            flatten_key_value_pairs.push([key, value])
+          end
+        else
+          flatten_key_value_pairs.push([key, value])
+        end
+      end
+
       mapping = Hash[
-        data.select{|k,v| !strict || @fields[k] || @waiting_fields.include?(k)}.map{|key,value|
+        flatten_key_value_pairs.map{|key,value|
           type = case value
                  when TrueClass,FalseClass then 'boolean'
                  when Integer then 'long'
@@ -155,6 +196,7 @@ module Norikra
           [key,type]
         }
       ]
+
       FieldSet.new(mapping, optional)
     end
 
@@ -195,11 +237,14 @@ module Norikra
       guessed.update_summary
     end
 
-    def dump
+    def dump # to cli display
       fields = {}
-      @fields.map{|key,field|
+      @fields.each do |key,field|
+        fields[key.to_sym] = field.to_hash(true) unless field.chained_access?
+      end
+      @container_fields.each do |key, field|
         fields[key.to_sym] = field.to_hash(true)
-      }
+      end
       fields
     end
   end

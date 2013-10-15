@@ -6,8 +6,10 @@ module Norikra
     attr_accessor :summary, :fields
     attr_accessor :target, :level
 
+    # fieldset doesn't have container fields
     def initialize(fields, default_optional=nil, rebounds=0)
       @fields = {}
+      # fields.keys are raw key for container access chains
       fields.keys.each do |key|
         data = fields[key]
         type,optional = if data.is_a?(Hash)
@@ -32,6 +34,32 @@ module Norikra
       self.class.new(fields, nil, @rebounds)
     end
 
+    def self.leaves(container)
+      # returns list of [ [key-chain-items-flatten-list, value] ]
+      dig = Proc.new do |obj|
+        if obj.is_a?(Array)
+          ary = []
+          obj.each_with_index do |v,i|
+            if v.is_a?(Hash) || v.is_a?(Array)
+              ary += dig.call(v).map{|chain| [i] + chain}
+            else
+              ary.push([i, v])
+            end
+          end
+          ary
+        else # Hash
+          obj.map {|k,v|
+            if v.is_a?(Hash) || v.is_a?(Array)
+              dig.call(v).map{|chain| [k] + chain}
+            else
+              [[k, v]]
+            end
+          }.reduce(:+)
+        end
+      end
+      dig.call(container)
+    end
+
     def self.field_names_key(data, fieldset=nil, strict=false, additional_fields=[])
       if !fieldset && strict
         raise RuntimeError, "strict(true) cannot be specified with fieldset=nil"
@@ -53,13 +81,13 @@ module Norikra
       end
       optionals += additional_fields
 
-      if strict
-        data.keys.each do |key|
-          keys.push(key) if !keys.include?(key) && optionals.include?(key)
-        end
-      else
-        data.keys.each do |key|
-          keys.push(key) unless keys.include?(key)
+      Norikra::FieldSet.leaves(data).each do |chain|
+        value = chain.pop
+        key = chain.map(&:to_s).join('.')
+        unless keys.include?(key)
+          if (strict && optionals.include?(key)) || !strict
+            keys.push(key)
+          end
         end
       end
 
@@ -91,7 +119,7 @@ module Norikra
     def definition
       d = {}
       @fields.each do |key, field|
-        d[field.name] = field.type
+        d[field.escaped_name] = field.type
       end
       d
     end
@@ -128,7 +156,7 @@ module Norikra
       # all keys of data should be already known at #format (before #format, do #refer)
       ret = {}
       @fields.each do |key,field|
-        ret[key] = field.format(data[key])
+        ret[key] = field.format(field.value(data))
       end
       ret
     end

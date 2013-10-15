@@ -111,6 +111,14 @@ describe Norikra::Typedef do
       expect(t.fields['b'].optional?).to be_false
     end
 
+    it 'has container fields with chained access fields' do
+      t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long', 'c.0' => 'boolean'})
+      expect(t.fields.size).to eql(3)
+      expect(t.container_fields.size).to eql(1)
+      expect(t.container_fields['c'].name).to eql('c')
+      expect(t.container_fields['c'].type).to eql('array')
+    end
+
     describe '#lazy?' do
       it 'returns false' do
         t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
@@ -235,6 +243,22 @@ describe Norikra::Typedef do
         t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long','d'=>'string'}))
         expect(t.waiting_fields).to eql(['e'])
       end
+
+      it 'deletes waiting chained access fields' do
+        t = Norikra::Typedef.new({'a'=>'string','b'=>'long'})
+        t.waiting_fields = ['c', 'd', 'e', 'f.0', 'f.1', 'g.fieldx']
+
+        t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long'}))
+        t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long'}))
+
+        expect(t.waiting_fields.size).to eql(6)
+
+        t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long','c'=>'double','g.fieldy'=>'long','g.fieldz'=>'string'}))
+        expect(t.waiting_fields).to eql(['d','e','f.0','f.1','g.fieldx'])
+
+        t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long','d'=>'string','f.0'=>'long','f.1'=>'long','g.fieldx'=>'string'}))
+        expect(t.waiting_fields).to eql(['e'])
+      end
     end
 
     describe '#pop' do
@@ -297,16 +321,15 @@ describe Norikra::Typedef do
         expect(r.keys.size).to eql(5)
       end
 
-      it 'does not guess with content of string values' do
+      it 'does not guess with content of string values, nor containers' do
         typedef = Norikra::Typedef.new({})
         t = typedef.simple_guess({'key1' => 'TRUE', 'key2' => 'false', 'key3' => "10", 'key4' => '3.1415', 'key5' => {:a => 1}})
         r = t.definition
+        expect(r.size).to eql(4)
         expect(r['key1']).to eql('string')
         expect(r['key2']).to eql('string')
         expect(r['key3']).to eql('string')
         expect(r['key4']).to eql('string')
-        expect(r['key5']).to eql('string')
-        expect(r.keys.size).to eql(5)
       end
 
       it 'can guess about fields already known with strict mode' do
@@ -333,6 +356,27 @@ describe Norikra::Typedef do
         expect(r['key4']).to be_nil
         expect(r['key5']).to eql('string')
         expect(r.keys.size).to eql(4)
+      end
+
+      it 'can guess about container chain access fields which pre-defined or be waiting' do
+        typedef = Norikra::Typedef.new({'key1' => 'boolean', 'key2' => 'long', 'key3.0.key4' => 'string'})
+        typedef.waiting_fields = ['key4.f1', 'key4.f2.0', 'key5']
+
+        t = typedef.simple_guess({
+            'key1' => true,
+            'key2' => 10,
+            'key3' => [{'k2' => 1, 'k3' => 'sssss', 'key4' => 'baz'}],
+            'key4' => {'f1' => 'xxx', 'f2' => [30, true]},
+            'key5' => 'foobar'
+          }, true, true)
+        r = t.definition
+        expect(r.size).to eql(6)
+        expect(r['key1']).to eql('boolean')
+        expect(r['key2']).to eql('long')
+        expect(r['key3$$0$key4']).to eql('string')
+        expect(r['key4$f1']).to eql('string')
+        expect(r['key4$f2$$0']).to eql('long')
+        expect(r['key5']).to eql('string')
       end
     end
 
@@ -465,6 +509,24 @@ describe Norikra::Typedef do
         t2 = Norikra::Typedef.new(r)
         expect(t2.fields.keys.sort).to eql(fields.keys.sort)
         expect(t2.fields.values.map(&:to_hash)).to eql(fields.values.map(&:to_hash))
+      end
+
+      it 'returns hash instance to show fields which contains hash/array fields' do
+        t = Norikra::Typedef.new({'a'=>'string','b'=>'long'})
+        t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long','e.0'=>'string'}))
+        t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long','e.0'=>'string','e.1'=>'long'}))
+        t.push(:data, Norikra::FieldSet.new({'a'=>'string','b'=>'long','c'=>'double','f.f1'=>'string'}))
+        t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long','d'=>'string'}))
+        fields = t.fields
+
+        r = t.dump
+        expect(r.keys.sort).to eql([:a, :b, :c, :d, :e, :f])
+        expect(r[:a]).to eql({name: 'a', type: 'string', optional: false})
+        expect(r[:b]).to eql({name: 'b', type: 'long', optional: false})
+        expect(r[:c]).to eql({name: 'c', type: 'double', optional: true})
+        expect(r[:d]).to eql({name: 'd', type: 'string', optional: true})
+        expect(r[:e]).to eql({name: 'e', type: 'array', optional: true})
+        expect(r[:f]).to eql({name: 'f', type: 'hash', optional: true})
       end
     end
   end
