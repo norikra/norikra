@@ -246,7 +246,7 @@ module Norikra
     def dump_all
       fields = {}
       @fields.each do |key,field|
-        fields[field.name] = field.to_hash(true)
+        fields[field.name.to_sym] = field.to_hash(true)
       end
       fields
     end
