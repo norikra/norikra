@@ -168,9 +168,11 @@ module Norikra
           fieldset = @typedef_manager.refer(target_name, event, strict_refer)
         end
 
-        trace "calling sendEvent", :target => target_name, :fieldset => fieldset, :event_type_name => fieldset.event_type_name, :event => event
-        # @runtime.sendEvent(@typedef_manager.format(target_name, event).to_java, fieldset.event_type_name)
-        @runtime.sendEvent(fieldset.format(event).to_java, fieldset.event_type_name)
+        trace "calling sendEvent with bound fieldset (w/ valid event_type_name)", :target => target_name, :event => event
+        trace "This is assert for valid event_type_name", :event_type_name => fieldset.event_type_name
+        formed = fieldset.format(event)
+        trace "sendEvent", :data => formed
+        @runtime.sendEvent(formed.to_java, fieldset.event_type_name)
       end
       nil
     end
@@ -278,6 +280,7 @@ module Norikra
 
         unless @typedef_manager.ready?(query)
           @waiting_queries.push(query)
+          trace "waiting query fields", :targets => query.targets, :fields => query.targets.map{|t| query.fields(t)}
           @typedef_manager.register_waiting_fields(query)
           @queries.push(query)
           return
@@ -350,7 +353,7 @@ module Norikra
         if @waiting_queries.size > 0
           register_waiting_queries
         end
-
+        debug "registering data fieldset", :target => target_name, :fields => fieldset.fields
         register_fieldset_actually(target_name, fieldset, :data)
       end
     end
