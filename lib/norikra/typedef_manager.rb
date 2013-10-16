@@ -13,7 +13,8 @@ module Norikra
     end
 
     def field_list(target)
-      @typedefs[target].fields.values.sort{|a,b| a.name <=> b.name}.map(&:to_hash)
+      @typedefs[target].dump.map{|key,hash_value| hash_value}
+      # @typedefs[target].fields.values.sort{|a,b| a.name <=> b.name}.map(&:to_hash)
     end
 
     def add_target(target, fields)
@@ -148,10 +149,8 @@ module Norikra
       @typedefs[target_name].refer(event, strict)
     end
 
-    def dump
-      @typedefs.keys.map{|target_name|
-        {:name => target_name, :fields => @typedefs[target_name].dump}
-      }
+    def dump_target(name)
+      @typedefs[name].dump_all
     end
   end
 end

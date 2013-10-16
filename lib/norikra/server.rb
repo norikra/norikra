@@ -108,7 +108,7 @@ module Norikra
         info "loading from stats file"
         if @stats.targets && @stats.targets.size > 0
           @stats.targets.each do |target|
-            @engine.open(target[:name], target[:fields])
+            @engine.open(target[:name], target[:fields], target[:auto_field])
           end
         end
         if @stats.queries && @stats.queries.size > 0
@@ -163,7 +163,13 @@ module Norikra
           port: @port,
           threads: @thread_conf,
           log: @log_conf,
-          targets: @engine.typedef_manager.dump,
+          targets: @engine.targets.map{|t|
+            {
+              :name => t.name,
+              :fields => @engine.typedef_manager.dump_target(t.name),
+              :auto_field => t.auto_field
+            }
+          },
           queries: @engine.queries.map{|q| {:name => q.name, :expression => q.expression}}
         )
         stats.dump(@stats_path)
