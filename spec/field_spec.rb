@@ -32,6 +32,17 @@ describe Norikra::Field do
     end
   end
 
+  describe '.regulate_key_chain' do
+    it 'escape String chain items and returns by array which started with numeric, with "$$", and joins keys with separator "$"' do
+      expect(Norikra::Field.regulate_key_chain(["part1", "part2"])).to eql(['part1','part2'])
+      expect(Norikra::Field.regulate_key_chain(["part.1", "2"])).to eql(['part_1', '$$2'])
+      expect(Norikra::Field.regulate_key_chain(["part1", 2])).to eql(['part1', '$2'])
+      expect(Norikra::Field.regulate_key_chain(["part1", 2, "2"])).to eql(['part1', '$2', '$$2'])
+      expect(Norikra::Field.regulate_key_chain(["part1", ".part2"])).to eql(['part1', '_part2'])
+      expect(Norikra::Field.regulate_key_chain(["part1", 2, ".part2"])).to eql(['part1', '$2', '_part2'])
+    end
+  end
+
   describe '.escape_key_chain' do
     it 'escape String chain items which started with numeric, with "$$", and joins keys with separator "$"' do
       expect(Norikra::Field.escape_key_chain("part1", "part2")).to eql('part1$part2')

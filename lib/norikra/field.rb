@@ -76,21 +76,22 @@ module Norikra
       parts.join('$')
     end
 
+    def self.regulate_key_chain(keys)
+      keys.map{|key|
+        case
+        when key.is_a?(Integer) then '$' + key.to_s
+        when key.is_a?(String) && key =~ /^[0-9]+$/ then '$$' + key.to_s
+        else key.to_s.gsub(/[^$_a-zA-Z0-9]/,'_')
+        end
+      }
+    end
+
     def self.escape_key_chain(*keys)
       # "hoge", "pos" #=> "hoge$pos"
       # "hoge", 3     #=> "hoge$$3"
       # "hoge", "3"   #=> "hoge$$$3"
       # "hoge", ".pos" #=> "hoge
-      escaped = []
-      keys.each do |key|
-        key = case
-              when key.is_a?(Integer) then '$' + key.to_s
-              when key.is_a?(String) && key =~ /^[0-9]+$/ then '$$' + key.to_s
-              else key.to_s.gsub(/[^$_a-zA-Z0-9]/,'_')
-              end
-        escaped.push key
-      end
-      escaped.join('$')
+      regulate_key_chain(keys).join('$')
     end
 
     def to_hash(sym=false)
