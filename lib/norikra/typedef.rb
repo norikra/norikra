@@ -17,14 +17,18 @@ module Norikra
       @container_fields = {}
 
       if fields && !fields.empty?
-        @baseset = FieldSet.new(fields, false) # all fields are required, but exclude for container access chains
-        @fields = @baseset.fields.dup
+        given_set = FieldSet.new(fields, false) # default_optional=false, but chained access fields are always optional
+        @fields = given_set.fields.dup
+        base_fields = {}
         @fields.values.each do |field|
-          if field.chained_access?
+          if !field.optional?
+            base_fields[field.name] = field
+          elsif field.chained_access?
             cname = field.container_name
             @container_fields[cname] = Norikra::Field.new(cname, field.container_type, true)
           end
         end
+        @baseset = FieldSet.new(base_fields, false)
       else
         @baseset = nil
         @fields = {}
@@ -90,6 +94,7 @@ module Norikra
 
     def push(level, fieldset)
       unless self.consistent?(fieldset)
+        warn "fieldset mismatch", :self => self, :with => fieldset
         raise Norikra::ArgumentError, "field definition mismatch with already defined fields"
       end
 
@@ -150,6 +155,7 @@ module Norikra
 
     def replace(level, old_fieldset, fieldset)
       unless self.consistent?(fieldset)
+        warn "fieldset mismatch", :self => self, :with => fieldset
         raise Norikra::ArgumentError, "field definition mismatch with already defined fields"
       end
       if level != :data
@@ -235,7 +241,15 @@ module Norikra
         end
       end
       guessed.update_summary #=> guessed
-   end
+    end
+
+    def dump_all
+      fields = {}
+      @fields.each do |key,field|
+        fields[field.name] = field.to_hash(true)
+      end
+      fields
+    end
 
     def dump # to cli display
       fields = {}

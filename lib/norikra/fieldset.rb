@@ -12,14 +12,17 @@ module Norikra
       # fields.keys are raw key for container access chains
       fields.keys.each do |key|
         data = fields[key]
-        type,optional = if data.is_a?(Hash)
-                          [data[:type].to_s, (data.has_key?(:optional) ? data[:optional] : default_optional)]
-                        elsif data.is_a?(String) || data.is_a?(Symbol)
-                          [data.to_s, default_optional]
-                        else
-                          raise ArgumentError, "FieldSet.new argument class unknown: #{fields.class}"
-                        end
-        @fields[key.to_s] = Field.new(key.to_s, type, optional)
+        if data.is_a?(Norikra::Field)
+          @fields[data.name] = data
+        elsif data.is_a?(Hash)
+          type = data[:type].to_s
+          optional = data.has_key?(:optional) ? data[:optional] : default_optional
+          @fields[key.to_s] = Field.new(key.to_s, type, optional)
+        elsif data.is_a?(String) || data.is_a?(Symbol)
+          @fields[key.to_s] = Field.new(key.to_s, data.to_s, default_optional)
+        else
+          raise ArgumentError, "FieldSet.new argument class unknown: #{fields.class}"
+        end
       end
       self.update_summary
 
@@ -74,9 +77,9 @@ module Norikra
 
       fieldset.fields.each do |key,field|
         if field.optional?
-          optionals.push(key)
+          optionals.push(field.name)
         else
-          keys.push(key)
+          keys.push(field.name)
         end
       end
       optionals += additional_fields
