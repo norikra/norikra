@@ -83,9 +83,9 @@ module Norikra
 
       Norikra::FieldSet.leaves(data).each do |chain|
         value = chain.pop
-        key = chain.map(&:to_s).join('.')
+        key = Norikra::Field.regulate_key_chain(chain).join('.')
         unless keys.include?(key)
-          if (strict && optionals.include?(key)) || !strict
+          if optionals.include?(key) || (!strict && chain.size == 1)
             keys.push(key)
           end
         end
@@ -99,7 +99,7 @@ module Norikra
     end
 
     def update_summary
-      @summary = @fields.keys.sort.map{|k| @fields[k].name + ':' + @fields[k].type}.join(',')
+      @summary = @fields.keys.sort.map{|k| @fields[k].escaped_name + ':' + @fields[k].type}.join(',')
       self
     end
 
@@ -156,7 +156,7 @@ module Norikra
       # all keys of data should be already known at #format (before #format, do #refer)
       ret = {}
       @fields.each do |key,field|
-        ret[key] = field.format(field.value(data))
+        ret[field.escaped_name] = field.format(field.value(data))
       end
       ret
     end

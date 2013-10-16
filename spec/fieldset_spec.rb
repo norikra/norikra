@@ -99,6 +99,24 @@ describe Norikra::FieldSet do
       it 'returns fields also in additional_fields in strict-mode and additional_fields' do
         expect(Norikra::FieldSet.field_names_key({'x'=>1,'y'=>2,'xx'=>3,'xx1'=>4,'xx2'=>5,'yy'=>6,'yy1'=>7}, set, true, ['xx2','yy1'])).to eql('a,x,xx2,y,yy1')
       end
+
+      it 'returns result w/o chained field accesses not reserved (also in non-strict mode)' do
+        expect(Norikra::FieldSet.field_names_key({'x'=>1,'y'=>2,'z'=>{'x1'=>1,'x2'=>2}}, set, true, [])).to eql('a,x,y')
+        expect(Norikra::FieldSet.field_names_key({'x'=>1,'y'=>2,'z'=>{'x1'=>1,'x2'=>2}}, set, false, [])).to eql('a,x,y')
+      end
+
+      it 'returns result w/ reserved chained field accesses' do
+        expect(Norikra::FieldSet.field_names_key({'x'=>1,'y'=>2,'z'=>{'x1'=>1,'x2'=>2}}, set, false, ['z.x2'])).to eql('a,x,y,z.x2')
+        expect(Norikra::FieldSet.field_names_key({'x'=>1,'y'=>2,'z'=>{'x1'=>1,'x2'=>2}}, set, true, ['z.x1'])).to eql('a,x,y,z.x1')
+      end
+
+      it 'returns result w/ newly founded fields in non-strict mode, only for non-chained field accesses' do
+        expect(Norikra::FieldSet.field_names_key({'x'=>1,'y'=>2,'z'=>{'x1'=>1,'x2'=>2},'p'=>true}, set, false, [])).to eql('a,p,x,y')
+      end
+
+      it 'returns result w/ regulared names for chained field accesses' do
+        expect(Norikra::FieldSet.field_names_key({'x'=>1,'y'=>2,'z'=>['a','b','c']}, set, false, ['z.$0'])).to eql('a,x,y,z.$0')
+      end
     end
 
     describe '#field_names_key' do
@@ -242,6 +260,21 @@ describe Norikra::FieldSet do
         expect(d['c']).to eql(true)
         expect(d['d']).to be_instance_of(Float)
         expect(d['d']).to eql(3.14)
+      end
+
+      it 'returns data with keys encoded for chained field accesses' do
+        t = Norikra::FieldSet.new({'a' => 'string', 'b' => 'long', 'e.$0' => 'string', 'f.foo.$$0' => 'string'})
+
+        d = t.format({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14','e'=>['moris','tago'],'f'=>{'foo'=>{'0'=>'zero','1'=>'one'},'bar'=>{'0'=>'ZERO','1'=>'ONE'}}})
+        expect(d.size).to eql(4)
+        expect(d['a']).to be_instance_of(String)
+        expect(d['a']).to eql('hoge')
+        expect(d['b']).to be_instance_of(Fixnum)
+        expect(d['b']).to eql(2000)
+        expect(d['e$$0']).to be_instance_of(String)
+        expect(d['e$$0']).to eql('moris')
+        expect(d['f$foo$$$0']).to be_instance_of(String)
+        expect(d['f$foo$$$0']).to eql('zero')
       end
     end
   end
