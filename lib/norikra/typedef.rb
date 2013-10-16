@@ -175,7 +175,7 @@ module Norikra
         if value.is_a?(Hash) || value.is_a?(Array)
           Norikra::FieldSet.leaves(value).map{|chain| [key] + chain}.each do |chain|
             value = chain.pop
-            key = chain.map(&:to_s).join('.')
+            key = Norikra::Field.regulate_key_chain(chain).join('.')
             next unless @fields.has_key?(key) || @waiting_fields.include?(key)
             flatten_key_value_pairs.push([key, value])
           end
@@ -234,8 +234,8 @@ module Norikra
           guessed_fields[key] = field unless field.optional?
         end
       end
-      guessed.update_summary
-    end
+      guessed.update_summary #=> guessed
+   end
 
     def dump # to cli display
       fields = {}

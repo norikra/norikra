@@ -359,8 +359,8 @@ describe Norikra::Typedef do
       end
 
       it 'can guess about container chain access fields which pre-defined or be waiting' do
-        typedef = Norikra::Typedef.new({'key1' => 'boolean', 'key2' => 'long', 'key3.0.key4' => 'string'})
-        typedef.waiting_fields = ['key4.f1', 'key4.f2.0', 'key5']
+        typedef = Norikra::Typedef.new({'key1' => 'boolean', 'key2' => 'long', 'key3.$0.key4' => 'string'})
+        typedef.waiting_fields = ['key4.f1', 'key4.f2.$0', 'key5']
 
         t = typedef.simple_guess({
             'key1' => true,
