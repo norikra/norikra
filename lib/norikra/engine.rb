@@ -133,26 +133,27 @@ module Norikra
 
     def send(target_name, events)
       trace "send messages", :target => target_name, :events => events
-      unless @targets.include?(target_name) # discard events for target not registered
+      unless @targets.any?{|t| t.name == target_name} # discard events for target not registered
         trace "messages skipped for non-opened target", :target => target_name
         return
       end
       return if events.size < 1
 
-      if @typedef_manager.lazy?(target_name)
-        info "opening lazy target", :target => target_name
-        debug "generating base fieldset from event", :target => target_name, :event => events.first
-        base_fieldset = @typedef_manager.generate_base_fieldset(target_name, events.first)
+      target = @targets.select{|t| t.name == target_name}.first
 
-        debug "registering base fieldset", :target => target_name, :base => base_fieldset
-        register_base_fieldset(target_name, base_fieldset)
+      if @typedef_manager.lazy?(target.name)
+        info "opening lazy target", :target => target
+        debug "generating base fieldset from event", :target => target.name, :event => events.first
+        base_fieldset = @typedef_manager.generate_base_fieldset(target.name, events.first)
 
-        info "target successfully opened with fieldset", :target => target_name, :base => base_fieldset
+        debug "registering base fieldset", :target => target.name, :base => base_fieldset
+        register_base_fieldset(target.name, base_fieldset)
+
+        info "target successfully opened with fieldset", :target => target, :base => base_fieldset
       end
 
       registered_data_fieldset = @registered_fieldsets[target_name][:data]
 
-      target = @targets.select{|t| t.name == target_name}.first
       strict_refer = (not target.auto_field?)
 
       events.each do |event|
