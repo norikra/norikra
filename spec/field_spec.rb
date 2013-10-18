@@ -32,6 +32,14 @@ describe Norikra::Field do
     end
   end
 
+  describe '.unescape_name' do
+    it 're_make dotted pattern fieldname for container access chain' do
+      expect(Norikra::Field.unescape_name("part1$part2")).to eql('part1.part2')
+      expect(Norikra::Field.unescape_name("part1$$0")).to eql('part1.$0')
+      expect(Norikra::Field.unescape_name("part1$$$0")).to eql('part1.$$0')
+    end
+  end
+
   describe '.regulate_key_chain' do
     it 'escape String chain items and returns by array which started with numeric, with "$$", and joins keys with separator "$"' do
       expect(Norikra::Field.regulate_key_chain(["part1", "part2"])).to eql(['part1','part2'])

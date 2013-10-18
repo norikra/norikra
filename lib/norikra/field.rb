@@ -76,6 +76,14 @@ module Norikra
       parts.join('$')
     end
 
+    def self.unescape_name(name)
+      if name.index('$')
+        name.split(/(?<!\$)\$/).join('.')
+      else
+        name
+      end
+    end
+
     def self.regulate_key_chain(keys)
       keys.map{|key|
         case

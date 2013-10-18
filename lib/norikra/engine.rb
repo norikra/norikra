@@ -193,15 +193,19 @@ module Norikra
 
       def type_convert(event)
         event = (event.respond_to?(:getUnderlying) ? event.getUnderlying : event).to_hash
+        converted = {}
         event.keys.each do |key|
           trace "event content key:#{key}, value:#{event[key]}, value class:#{event[key].class}"
+          unescaped_key = Norikra::Field.unescape_name(key)
           if event[key].respond_to?(:to_hash)
-            event[key] = event[key].to_hash
+            converted[unescaped_key] = event[key].to_hash
           elsif event[key].respond_to?(:to_a)
-            event[key] = event[key].to_a
+            converted[unescaped_key] = event[key].to_a
+          else
+            converted[unescaped_key] = event[key]
           end
         end
-        event
+        converted
       end
 
       def update(new_events, old_events)
