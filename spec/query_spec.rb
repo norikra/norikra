@@ -24,6 +24,23 @@ describe Norikra::Query do
         end
       end
 
+      context 'with order by' do
+        it 'returns query instances, collectly parsed, without AS_names for fields' do
+          expression = 'SELECT name.string, count(*) AS cnt FROM TestTable.win:time_batch(10 sec) WHERE path="/" AND size > 100 and param.length() > 0 GROUP BY name.string ORDER BY cnt'
+          q = Norikra::Query.new(
+            :name => 'TestTable query1', :expression => expression
+          )
+          expect(q.name).to eql('TestTable query1')
+          expect(q.group).to be_nil
+          expect(q.expression).to eql(expression)
+          expect(q.targets).to eql(['TestTable'])
+
+          expect(q.fields).to eql(['name.string', 'param', 'path', 'size'].sort)
+          expect(q.fields('TestTable')).to eql(['name.string', 'param','path','size'].sort)
+          expect(q.fields(nil)).to eql([])
+        end
+      end
+
       context 'with query including Static lib call' do
         it 'returns query instances collectly parsed' do
           expression = 'SELECT count(*) AS cnt FROM TestTable.win:time_batch(10 sec) AS source WHERE source.path="/" AND Math.abs(-1 * source.size) > 3'
@@ -340,6 +357,18 @@ describe Norikra::Query do
           model = administrator.compileEPL(e10)
           mapping = {'StreamA' => 'S1', 'StreamB' => 'S2'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x10)
+
+          e11 = 'select campaign.id as campaign_id, member.region as region, member.lang as lang, count(*) as click, count(distinct member.id) as uu from applog_linereward.win:time_batch(1 minutes) where type = "click" group by campaign.id, member.region, member.lang'
+          x11 = 'select campaign$id as campaign_id, member$region as region, member$lang as lang, count(*) as click, count(distinct member$id) as uu from A1.win:time_batch(1 minutes) where type = "click" group by campaign$id, member$region, member$lang'
+          model = administrator.compileEPL(e11)
+          mapping = {'applog_linereward' => 'A1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x11)
+
+          e11 = 'select campaign.id, member.region as region, member.lang as lang, count(*) as click, count(distinct member.id) as uu from applog_linereward.win:time_batch(1 minutes) where type = "click" group by campaign.id, member.region, member.lang order by campaign.id'
+          x11 = 'select campaign$id, member$region as region, member$lang as lang, count(*) as click, count(distinct member$id) as uu from A1.win:time_batch(1 minutes) where type = "click" group by campaign$id, member$region, member$lang order by campaign$id'
+          model = administrator.compileEPL(e11)
+          mapping = {'applog_linereward' => 'A1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x11)
         end
       end
     end

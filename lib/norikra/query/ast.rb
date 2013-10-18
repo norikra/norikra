@@ -88,6 +88,8 @@ module Norikra
       case tree.text
       when 'EVENT_PROP_EXPR'
         ASTEventPropNode.new(tree.text, children)
+      when 'SELECTION_ELEMENT_EXPR'
+        ASTSelectionElementNode.new(tree.text, children)
       when 'LIB_FUNCTION'
         ASTLibFunctionNode.new(tree.text, children)
       when 'STREAM_EXPR'
@@ -166,6 +168,18 @@ module Norikra
         else # fieldname (default target)
           [ {:f => props[0].child.name, :t => default_target } ]
         end
+      end
+    end
+
+    class ASTSelectionElementNode < ASTNode # SELECTION_ELEMENT_EXPR
+      # "count(*) AS cnt"  => ["SELECTION_ELEMENT_EXPR", "count", "cnt"]
+      # "n.s as s"         => ["SELECTION_ELEMENT_EXPR", ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "n"], ["EVENT_PROP_SIMPLE", "s"]], "s"]
+      def nodetype?(*sym)
+        sym.include?(:selection)
+      end
+
+      def alias
+        @children.size == 2 ? @children[1].name : nil
       end
     end
 

@@ -80,9 +80,14 @@ module Norikra
         field_bag.push(subquery.explore(fields.keys, alias_map))
       end
 
+      # names of 'AS'
+      field_aliases = self.ast.listup(:selection).map(&:alias).compact
+
       known_targets_aliases = fields.keys + alias_map.keys
       self.ast.fields(default_target, known_targets_aliases).each do |field_def|
         f = field_def[:f]
+        next if field_aliases.include?(f)
+
         all.push(f)
 
         if field_def[:t]
@@ -249,12 +254,12 @@ module Norikra
     # :getFireAndForgetClause,
     # :getForClause,
     # (*) :getFromClause,
-    # :getGroupByClause,
+    # (*) :getGroupByClause,
     # :getHavingClause,
     # :getInsertInto,
     # :getMatchRecognizeClause,
     # :getOnExpr,
-    # :getOrderByClause,
+    # (*) :getOrderByClause,
     # :getOutputLimitClause,
     # :getRowLimitClause,
     # :getScriptExpressions,
@@ -265,7 +270,7 @@ module Norikra
 
     def self.traverse_fields(rewriter, recaller, statement_model)
       #NOTICE: SQLStream is not supported yet.
-      #TODO: other clauses with fields, especially: OrderBy, Having, GroupBy, For
+      #TODO: other clauses with fields, especially: Having, For
 
       dig = lambda {|node|
         rewriter.call(node)
@@ -323,6 +328,20 @@ module Norikra
       if statement_model.getWhereClause
         statement_model.getWhereClause.getChildren.each do |child|
           dig.call(child)
+        end
+      end
+
+      if statement_model.getGroupByClause
+        statement_model.getGroupByClause.getGroupByExpressions.each do |child|
+          dig.call(child)
+        end
+      end
+
+      if statement_model.getOrderByClause
+        statement_model.getOrderByClause.getOrderByExpressions.each do |item|
+          if item.respond_to?(:getExpression)
+            dig.call(item.getExpression)
+          end
         end
       end
 
