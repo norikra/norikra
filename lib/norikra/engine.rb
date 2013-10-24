@@ -18,6 +18,11 @@ module Norikra
     attr_reader :targets, :queries, :output_pool, :typedef_manager
 
     def initialize(output_pool, typedef_manager, opts={})
+      @statistics = {
+        started: Time.now,
+        events: { input: 0, processed: 0, output: 0, },
+      }
+
       @output_pool = output_pool
       @typedef_manager = typedef_manager
 
@@ -34,6 +39,40 @@ module Norikra
       @queries = []
 
       @waiting_queries = []
+    end
+
+    def statistics
+      s = @statistics
+      {
+        started: s[:started].httpdate,
+        uptime: self.uptime,
+        memory: self.memory_statistics,
+        input_events: s[:events][:input],
+        processed_events: s[:events][:processed],
+        output_events: s[:events][:output],
+        queries: @queries.size,
+        targets: @targets.size,
+      }
+    end
+
+    def uptime
+      # up 239 days, 20:40
+      seconds = (Time.now - @statistics[:started]).to_i
+      days = seconds / (24*60*60)
+      hours = (seconds - days * (24*60*60)) / (60*60)
+      minutes = (seconds - days * (24*60*60) - hours * (60*60)) / 60
+      "#{days} days, #{sprintf("%02d", hours)}:#{sprintf("%02d", minutes)}"
+    end
+
+    def memory_statistics
+      runtime = Java::JavaLang::Runtime.getRuntime()
+      mb = 1024 * 1024
+      total = runtime.totalMemory() / mb
+      free = runtime.freeMemory() / mb
+      used = (runtime.totalMemory() - runtime.freeMemory()) / mb
+      used_percent = (used.to_f / total * 1000).floor / 10.0
+      max = runtime.maxMemory() / mb
+      { total: total, free: free, used: used, used_percent: used_percent, max: max }
     end
 
     def camelize(sym)
@@ -133,6 +172,9 @@ module Norikra
 
     def send(target_name, events)
       trace "send messages", :target => target_name, :events => events
+
+      @statistics[:events][:input] += events.size
+
       unless @targets.any?{|t| t.name == target_name} # discard events for target not registered
         trace "messages skipped for non-opened target", :target => target_name
         return
@@ -175,6 +217,7 @@ module Norikra
         trace "sendEvent", :data => formed
         @runtime.sendEvent(formed.to_java, fieldset.event_type_name)
       end
+      @statistics[:events][:processed] += events.size
       nil
     end
 
@@ -213,6 +256,7 @@ module Norikra
         events = new_events.map{|e| [t, type_convert(e)]}
         trace "updated event", :query => @query_name, :group => @query_group, :event => events
         @output_pool.push(@query_name, @query_group, events)
+        @statistics[:events][:output] += events.size
       end
     end
     ##### Unmatched events are simply ignored

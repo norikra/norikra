@@ -372,7 +372,21 @@ describe Norikra::Query do
         end
       end
     end
+
+    describe '.<=>' do
+      it 'returns sort order by group,name' do
+        q1 = Norikra::Query.new(:name => '211', :group => 'a1', :expression => '')
+        q2 = Norikra::Query.new(:name => '111', :group => 'a1', :expression => '')
+        q3 = Norikra::Query.new(:name => '011', :group => 'b1', :expression => '')
+        q4 = Norikra::Query.new(:name => '011', :group => 'a1', :expression => '')
+        q5 = Norikra::Query.new(:name => '999', :group => nil, :expression => '')
+        q6 = Norikra::Query.new(:name => '899', :group => nil, :expression => '')
+
+        expect([q1,q2,q3,q4,q5,q6].sort).to eql([q6,q5,q4,q2,q1,q3])
+      end
+    end
   end
+
 
   describe '.imported_java_class?' do
     it 'can do judge passed name exists under java package tree or not' do

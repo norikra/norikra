@@ -1,17 +1,16 @@
 require 'mizuno/server'
 require 'rack/builder'
-require 'msgpack-rpc-over-http-jruby'
 
 require_relative 'handler'
 
 require 'norikra/logger'
 include Norikra::Log
 
-module Norikra::RPC
+module Norikra::WebUI
   class HTTP
     DEFAULT_LISTEN_HOST = '0.0.0.0'
-    DEFAULT_LISTEN_PORT = 26571
-    # 26571 = 3026 + 3014 + 2968 + 2950 + 2891 + 2896 + 2975 + 2979 + 2872
+    DEFAULT_LISTEN_PORT = 26578
+    # 26578 from 26571 and magic number 8 (for web)
 
     DEFAULT_THREADS = 2
 
@@ -23,14 +22,14 @@ module Norikra::RPC
       @host = opts[:host] || DEFAULT_LISTEN_HOST
       @port = opts[:port] || DEFAULT_LISTEN_PORT
       @threads = opts[:threads] || DEFAULT_THREADS
-      handler = Norikra::RPC::Handler.new(@engine)
+      Norikra::WebUI::Handler.engine = @engine
       @app = Rack::Builder.new {
-        run MessagePack::RPCOverHTTP::Server.app(handler)
+        run Norikra::WebUI::Handler
       }
     end
 
     def start
-      info "RPC server #{@host}:#{@port}, #{@threads} threads"
+      info "WebUI server #{@host}:#{@port}, #{@threads} threads"
       @thread = Thread.new do
         @mizuno = Mizuno::Server.new
         @mizuno.run(@app, :embedded => true, :threads => @threads, :port => @port, :host => @host)

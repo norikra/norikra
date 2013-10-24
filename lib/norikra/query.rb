@@ -25,6 +25,22 @@ module Norikra
       @fields = nil
     end
 
+    def <=>(other)
+      if self.group.nil?
+        if other.group.nil?
+          self.name <=> other.name
+        else
+          -1
+        end
+      else
+        if self.group == other.group
+          self.name <=> other.name
+        else
+          self.group <=> other.group
+        end
+      end
+    end
+
     def dup
       self.class.new(:name => @name, :group => @group, :expression => @expression.dup)
     end

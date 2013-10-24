@@ -21,6 +21,7 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency "mizuno", "~> 0.6"
   spec.add_runtime_dependency "rack"
+  spec.add_runtime_dependency "sinatra"
   spec.add_runtime_dependency "msgpack-rpc-over-http-jruby", ">= 0.0.5"
   spec.add_runtime_dependency "thor"
   spec.add_runtime_dependency "norikra-client-jruby", ">= 0.0.7"

@@ -46,6 +46,7 @@ module Norikra
         option :'timer-thread-capacity',    :type => :numeric, :default => nil
         # Jetty
         option :'rpc-threads', :type => :numeric, :default => nil, :desc => 'number of threads for rpc handlers'
+        option :'web-threads', :type => :numeric, :default => nil, :desc => 'number of threads for WebUI handlers'
 
         ### Logging options
         option :logdir, :type => :string, :default => nil, :aliases => "-l", \
@@ -140,12 +141,14 @@ module Norikra
         micro: options[:micro], small: options[:small], middle: options[:middle], large: options[:large],
         engine: {inbound:{}, outbound:{}, route_exec:{}, timer_exec:{}},
         rpc: {},
+        web: {},
       }
       [:inbound, :outbound, :route_exec, :timer_exec].each do |sym|
         conf[:thread][:engine][sym][:threads] = options[:"#{sym}-threads"] if options[:"#{sym}-threads"]
         conf[:thread][:engine][sym][:capacity] = options[:"#{sym}-thread-capacity"] if options[:"#{sym}-thread-capacity"]
       end
       conf[:thread][:rpc][:threads] = options[:'rpc-threads'] if options[:'rpc-threads']
+      conf[:thread][:web][:threads] = options[:'web-threads'] if options[:'web-threads']
 
       ### logs
       loglevel = case

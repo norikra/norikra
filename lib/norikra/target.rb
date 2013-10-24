@@ -12,6 +12,10 @@ module Norikra
       @auto_field = !!auto_field
     end
 
+    def <=>(other)
+      self.name <=> other.name
+    end
+
     def to_hash
       {:name => @name, :auto_field => @auto_field}
     end

@@ -10,6 +10,8 @@ require 'norikra/typedef'
 require 'norikra/query'
 
 require 'norikra/rpc'
+require 'norikra/webui'
+
 require 'norikra/udf'
 
 module Norikra
@@ -20,21 +22,25 @@ module Norikra
       :engine => { inbound:    { threads: 0, capacity: 0 }, outbound:   { threads: 0, capacity: 0 },
                    route_exec: { threads: 0, capacity: 0 }, timer_exec: { threads: 0, capacity: 0 }, },
       :rpc => { threads: 2 },
+      :web => { threads: 2 },
     }
     SMALL_PREDEFINED = {
       :engine => { inbound:    { threads: 1, capacity: 0 }, outbound:   { threads: 1, capacity: 0 },
                    route_exec: { threads: 1, capacity: 0 }, timer_exec: { threads: 1, capacity: 0 }, },
       :rpc => { threads: 2 },
+      :web => { threads: 2 },
     }
     MIDDLE_PREDEFINED = {
       :engine => { inbound:    { threads: 4, capacity: 0 }, outbound:   { threads: 2, capacity: 0 },
                    route_exec: { threads: 2, capacity: 0 }, timer_exec: { threads: 2, capacity: 0 }, },
       :rpc => { threads: 4 },
+      :web => { threads: 2 },
     }
     LARGE_PREDEFINED = {
       :engine => { inbound:    { threads: 6, capacity: 0 }, outbound:   { threads: 6, capacity: 0 },
                    route_exec: { threads: 4, capacity: 0 }, timer_exec: { threads: 4, capacity: 0 }, },
       :rpc => { threads: 8 },
+      :web => { threads: 2 },
     }
 
     def self.threading_configuration(conf, stats)
@@ -51,6 +57,7 @@ module Norikra
         end
       end
       threads[:rpc][:threads] = conf[:rpc][:threads] if conf[:rpc][:threads]
+      threads[:web][:threads] = conf[:web][:threads] if conf[:web][:threads]
       threads
     end
 
@@ -83,6 +90,7 @@ module Norikra
 
       @host = host || (@stats ? @stats.host : nil)
       @port = port || (@stats ? @stats.port : nil)
+      @ui_port = @stats ? @stats.ui_port : nil
 
       @thread_conf = self.class.threading_configuration(conf[:thread], @stats)
       @log_conf = self.class.log_configuration(conf[:log], @stats)
@@ -96,7 +104,17 @@ module Norikra
       @output_pool = Norikra::OutputPool.new
 
       @engine = Norikra::Engine.new(@output_pool, @typedef_manager, {thread: @thread_conf[:engine]})
-      @rpcserver = Norikra::RPC::HTTP.new(:engine => @engine, :host => @host, :port => @port, :threads => @thread_conf[:rpc][:threads])
+
+      @rpcserver = Norikra::RPC::HTTP.new(
+        :engine => @engine,
+        :host => @host, :port => @port,
+        :threads => @thread_conf[:rpc][:threads]
+      )
+      @webserver = Norikra::WebUI::HTTP.new(
+        :engine => @engine,
+        :host => @host, :port => @ui_port,
+        :threads => @thread_conf[:web][:threads]
+      )
     end
 
     def run
@@ -119,6 +137,7 @@ module Norikra
       end
 
       @rpcserver.start
+      @webserver.start
 
       @running = true
       info "Norikra server started."
@@ -153,6 +172,7 @@ module Norikra
 
     def shutdown
       info "Norikra server shutting down."
+      @webserver.stop
       @rpcserver.stop
       @engine.stop
       info "Norikra server stopped."

@@ -11,6 +11,7 @@ describe Norikra::Stats do
       args = {
         host: nil,
         port: nil,
+        ui_port: nil,
         threads: Norikra::Server::SMALL_PREDEFINED,
         log: {level: nil, dir: nil, filesize: nil, backups: nil},
         targets: [],
@@ -28,6 +29,7 @@ describe Norikra::Stats do
           args = {
             host: nil,
             port: nil,
+            ui_port: nil,
             threads: Norikra::Server::LARGE_PREDEFINED,
             log: {level: 'WARN', dir: '/var/log/norikra', filesize: '50MB', backups: 300},
             targets: [
