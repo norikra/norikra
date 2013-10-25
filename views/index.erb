@@ -62,6 +62,7 @@
   <h1 id="queries">Queries</h1>
 </div>
 
+<% if queries.size > 0 %>
 <table class="table">
   <tr><th>Group</th><th>Query name</th><th>Targets</th><th>Query</th><th>Events</th><th></th></tr>
   <% queries.each do |query| %>
@@ -70,19 +71,70 @@
     <td><%= query.name %></td>
     <td><%= query.targets.join(", ") %></td>
     <td>
-      <a href="#" class="btn btn-default btn-xs show-query-expression"
+      <button class="btn btn-default btn-xs show-query-expression"
         data-toggle="popover" data-placement="left" data-html="true"
-        data-content="<%= "query:<pre>" + query.expression + "</pre>" %>">show query</a>
+        data-content="<%= "query:<pre>" + query.expression + "</pre>" %>">show query</button>
     </td>
     <td><%= pool[query.name] %></td>
-    <td>TODO:<button class="btn btn-danger btn-xs"><span class="glyphicon glyphicon-trash"></span></button>
+    <td>
+      <a class="btn btn-danger btn-xs" data-toggle="modal" href="#removeQuery<%= query.name %>"><span class="glyphicon glyphicon-trash"></span></a>
+      <div class="modal fade"
+        id="removeQuery<%= query.name %>"
+        tabindex="-1" role="dialog" aria-labelledby="removeQueryLabel<%= query.name %>" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title">Remove Query <%= query.name %></h4>
+            </div>
+            <div class="modal-body">
+              <p>name: <%= query.name %>, group: <%= query.group || "(default)" %></p>
+              <pre><%= query.expression %></pre>
+            </div>
+            <div class="modal-footer">
+              <form class="form-inline" action="/deregister" method="POST">
+                <input type="hidden" name="query_name" value="<%= query.name %>" />
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">Remove</button>
+              </form>
+            </div>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+    </td>
   </tr>
   <% end %>
 </table>
+<% else %>
+<p>No queries found.</p>
+<% end %>
 
-<h3>Add Query</h3>
+<h3 id="query_add">Add Query</h3>
+<!-- TODO: toggle button this "Add Query", and opened with input_data[:query_add] -->
 <div class="well">
-  <p>TODO: Add textarea and "add" button here!</p>
+  <% input_data ||= {}; input_data[:query_add] ||= {} %>
+  <% if input_data[:query_add][:error] %>
+    <div class="alert alert-danger"><%= input_data[:query_add][:error] %></div>
+  <% end %>
+  <form action="/register", method="POST">
+    <div class="row">
+      <div class="col-sm-8 form-group">
+        <label for="addQueryExpression">Query</label>
+        <textarea name="expression" id="addQueryExpression" class="form-control" rows="5"><%= input_data[:query_add][:expression] %></textarea>
+      </div>
+      <div class="col-sm-4">
+        <div class="form-group">
+          <label for="addQueryName">Name</label>
+          <input type="text" name="query_name" value="<%= input_data[:query_add][:query_name] %>" id="addQueryName" class="form-control" placeholder="Query Name" />
+        </div>
+        <div class="form-group">
+          <label for="addQueryGroup">Group</label>
+          <input type="text" name="query_group" value="<%= input_data[:query_add][:query_group] %>" id="addQueryGroup" class="form-control" placeholder="(blank:default)" />
+        </div>
+        <button type="submit" class="btn btn-primary">Add Query</button>
+      </div>
+    </div>
+  </form>
 </div>
 
 
@@ -90,6 +142,7 @@
   <h1 id="targets">Targets</h1>
 </div>
 
+<% if targets.size > 0 %>
 <table class="table">
   <tr><th>Target</th><th>Auto field</th><th>Fields</th><th></th></tr>
   <% targets.each do |target| %>
@@ -99,9 +152,9 @@
     <td>
       <% if target[:fields].size > 0 %>
         <% field_html = target[:fields].map{|t| "<tr><td>#{t[:name]}</td><td>#{t[:type]}</td><td>#{t[:optional] ? '(optional)' : ''}</td></tr>"}.join %>
-        <a href="#" class="btn btn-default btn-xs show-target-fields"
+        <button class="btn btn-default btn-xs show-target-fields"
           data-toggle="popover" data-placement="top" data-html="true"
-          data-content="<table><tr><th>name</th><th>type</th><th></th></tr><%= field_html %></table>">show fields</a>
+          data-content="<table><tr><th>name</th><th>type</th><th></th></tr><%= field_html %></table>">show fields</button>
       <% else %>
         (lazy target)
       <% end %>
@@ -110,3 +163,6 @@
   </tr>
   <% end %>
 </table>
+<% else %>
+<p>No targets found.</p>
+<% end %>
