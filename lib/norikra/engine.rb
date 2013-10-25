@@ -241,10 +241,11 @@ module Norikra
     class Listener
       include com.espertech.esper.client.UpdateListener
 
-      def initialize(query_name, query_group, output_pool)
+      def initialize(query_name, query_group, output_pool, events_statistics)
         @query_name = query_name
         @query_group = query_group
         @output_pool = output_pool
+        @events_statistics = events_statistics
       end
 
       def type_convert(event)
@@ -269,7 +270,7 @@ module Norikra
         events = new_events.map{|e| [t, type_convert(e)]}
         trace "updated event", :query => @query_name, :group => @query_group, :event => events
         @output_pool.push(@query_name, @query_group, events)
-        @statistics[:events][:output] += events.size
+        @events_statistics[:output] += events.size
       end
     end
     ##### Unmatched events are simply ignored
@@ -445,7 +446,7 @@ module Norikra
       Norikra::Query.rewrite_query(statement_model, event_type_name_map)
 
       epl = administrator.create(statement_model)
-      epl.java_send :addListener, [com.espertech.esper.client.UpdateListener.java_class], Listener.new(query.name, query.group, @output_pool)
+      epl.java_send :addListener, [com.espertech.esper.client.UpdateListener.java_class], Listener.new(query.name, query.group, @output_pool, @statistics[:events])
       query.statement_name = epl.getName
       # epl is automatically started.
       # epl.isStarted #=> true
