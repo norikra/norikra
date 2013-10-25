@@ -1,3 +1,4 @@
+require 'norikra/version'
 require 'norikra/error'
 require 'norikra/logger'
 
@@ -10,6 +11,8 @@ class Norikra::WebUI::Handler < Sinatra::Base
   set :views, File.absolute_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'views'))
 
   enable :sessions
+
+  def norikra_version; Norikra::VERSION ; end
 
   def logger ; Norikra::Log.logger ; end
 
