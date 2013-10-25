@@ -117,6 +117,8 @@ module Norikra
       end
     end
 
+    def self.logger; @@logger ; end
+
     def trace(message, data=nil)
       return if LEVEL_TRACE < @@levelnum
       from = @@devmode ? caller_locations(1,1) : nil
