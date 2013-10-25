@@ -14,8 +14,11 @@ module Norikra
 
     def initialize(param={})
       @name = param[:name]
+      raise Norikra::ArgumentError, "Query name MUST NOT be blank" if @name.nil? || @name.empty?
       @group = param[:group] # default nil
       @expression = param[:expression]
+      raise Norikra::ArgumentError, "Query expression MUST NOT be blank" if @expression.nil? || @expression.empty?
+
       @statement_name = nil
       @fieldsets = {} # { target => fieldset }
       @ast = nil
@@ -26,14 +29,14 @@ module Norikra
     end
 
     def <=>(other)
-      if self.group.nil?
-        if other.group.nil?
-          self.name <=> other.name
+      if @group.nil? || other.group.nil?
+        if @group.nil? && other.group.nil?
+          @name <=> other.name
         else
-          -1
+          @group.to_s <=> other.group.to_s
         end
       else
-        if self.group == other.group
+        if @group == other.group
           self.name <=> other.name
         else
           self.group <=> other.group
@@ -47,6 +50,10 @@ module Norikra
 
     def to_hash
       {'name' => @name, 'group' => @group, 'expression' => @expression, 'targets' => self.targets}
+    end
+
+    def dump
+      {name: @name, group: @group, expression: @expression}
     end
 
     def targets
@@ -183,7 +190,7 @@ module Norikra
       # model.getWhereClause.getChildren[1].getChildren[0].getPropertyName #=> 'field.key1.$1'
       # model.getWhereClause.getChildren[2].getChildren[0].getChain[0].getName #=> 'opts.num.$0' from opts.num.$0.length()
 
-      query = Norikra::Query.new(:expression => statement_model.toEPL)
+      query = Norikra::Query.new(:name => 'dummy name by .rewrite_event_field_name', :expression => statement_model.toEPL)
       targets = query.targets
       fqfs_prefixes = targets + query.aliases
 

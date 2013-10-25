@@ -190,7 +190,7 @@ module Norikra
               :auto_field => t.auto_field
             }
           },
-          queries: @engine.queries.map{|q| {:name => q.name, :expression => q.expression}}
+          queries: @engine.queries.map(&:dump)
         )
         stats.dump(@stats_path)
         info "Current status saved", :path => @stats_path

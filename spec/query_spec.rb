@@ -375,14 +375,21 @@ describe Norikra::Query do
 
     describe '.<=>' do
       it 'returns sort order by group,name' do
-        q1 = Norikra::Query.new(:name => '211', :group => 'a1', :expression => '')
-        q2 = Norikra::Query.new(:name => '111', :group => 'a1', :expression => '')
-        q3 = Norikra::Query.new(:name => '011', :group => 'b1', :expression => '')
-        q4 = Norikra::Query.new(:name => '011', :group => 'a1', :expression => '')
-        q5 = Norikra::Query.new(:name => '999', :group => nil, :expression => '')
-        q6 = Norikra::Query.new(:name => '899', :group => nil, :expression => '')
+        q1 = Norikra::Query.new(:name => '211', :group => 'a1', :expression => 'x')
+        q2 = Norikra::Query.new(:name => '111', :group => 'a1', :expression => 'x')
+        q3 = Norikra::Query.new(:name => '011', :group => 'b1', :expression => 'x')
+        q4 = Norikra::Query.new(:name => '011', :group => 'a1', :expression => 'x')
+        q5 = Norikra::Query.new(:name => '999', :group => nil, :expression => 'x')
+        q6 = Norikra::Query.new(:name => '899', :group => nil, :expression => 'x')
 
         expect([q1,q2,q3,q4,q5,q6].sort).to eql([q6,q5,q4,q2,q1,q3])
+      end
+
+      it 'must be stable for sort' do
+        q1 = Norikra::Query.new(name: "hoge", group: nil, expression: "select hoge from pos")
+        q2 = Norikra::Query.new(name: "test1", group: nil, expression: "select hoge,count(*)\r\nfrom pos\r\nwhere age >= 20\r\ngroup by hoge")
+        q3 = Norikra::Query.new(name: "test2", group: "sweep1", expression: "select moge\r\nfrom pos.win:time_batch(5 sec)\r\nwhere x=1\r\n")
+        expect([q1,q2,q3].sort).to eql([q1, q2, q3])
       end
     end
   end
