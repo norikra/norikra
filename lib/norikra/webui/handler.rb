@@ -5,7 +5,6 @@ require 'norikra/logger'
 require 'norikra/webui'
 
 require 'sinatra/base'
-require 'erubis'
 
 class Norikra::WebUI::Handler < Sinatra::Base
   set :public_folder, File.absolute_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'public'))
