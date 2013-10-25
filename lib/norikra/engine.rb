@@ -65,14 +65,27 @@ module Norikra
     end
 
     def memory_statistics
-      runtime = Java::JavaLang::Runtime.getRuntime()
       mb = 1024 * 1024
-      total = runtime.totalMemory() / mb
-      free = runtime.freeMemory() / mb
-      used = (runtime.totalMemory() - runtime.freeMemory()) / mb
+
+      memoryBean = Java::JavaLangManagement::ManagementFactory.getMemoryMXBean()
+
+      usage = memoryBean.getHeapMemoryUsage()
+      total = usage.getMax() / mb
+      committed = usage.getCommitted() / mb
+      committed_percent = (committed.to_f / total * 1000).floor / 10.0
+      used = usage.getUsed() / mb
       used_percent = (used.to_f / total * 1000).floor / 10.0
-      max = runtime.maxMemory() / mb
-      { total: total, free: free, used: used, used_percent: used_percent, max: max }
+      heap = { max: total, committed: committed, committed_percent: committed_percent, used: used, used_percent: used_percent }
+
+      usage = memoryBean.getNonHeapMemoryUsage()
+      total = usage.getMax() / mb
+      committed = usage.getCommitted() / mb
+      committed_percent = (committed.to_f / total * 1000).floor / 10.0
+      used = usage.getUsed() / mb
+      used_percent = (used.to_f / total * 1000).floor / 10.0
+      non_heap = { max: total, committed: committed, committed_percent: committed_percent, used: used, used_percent: used_percent }
+
+      { heap: heap, nonheap: non_heap }
     end
 
     def camelize(sym)

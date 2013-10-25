@@ -2,22 +2,27 @@
   <h1 id="summary">Runtime Summary</h1>
 </div>
 
-<% used_p = stat[:memory][:used_percent] %>
-<% usage_bar_color = used_p > 80 ? "danger" : (used_p > 60 ? "warning" : "success") %>
-
-<div class="progress">
-  <div
-    class="progress-bar progress-bar-<%= usage_bar_color %>"
-    role="progressbar"
-    aria-valuenow="<%= used_p.to_i %>"
-    aria-valuemin="0"
-    aria-valuemax="100"
-    style="width: <%= used_p %>%;">
-    <span class="sr-only"><%= used_p %> % used</span>
+<% [["HEAP", :heap],["NON-HEAP", :nonheap]].each do |name,sym| %>
+<div class="row">
+  <div class="col-sm-2" style="text-align: right;"><%= name %></div>
+  <div class="col-sm-8">
+    <% used_p = stat[:memory][sym][:used_percent] %>
+    <% committed_p = stat[:memory][sym][:committed_percent] %>
+    <% usage_bar_color = used_p > 80 ? "danger" : (used_p > 60 ? "warning" : "info") %>
+    <div class="progress">
+      <div class="progress-bar progress-bar-<%= usage_bar_color %>" style="width: <%= used_p.to_i %>%;">
+        <span class="sr-only"><%= used_p %> % used</span>
+      </div>
+      <div class="progress-bar progress-bar-success" style="width: <%= committed_p.to_i %>%;">
+        <span class="sr-only"><%= committed_p %> % used</span>
+      </div>
+    </div>
   </div>
 </div>
+<% end %>
+
 <div class="row">
-  <div class="col-sm-7">
+  <div class="col-sm-8">
     <div class="panel panel-default">
       <div class="panel-heading">
         <h3 class="panel-title">Server</h3>
@@ -25,15 +30,20 @@
       <div class="panel-body">
         <div><strong>STARTED:</strong> <%= stat[:started] %></div>
         <div><strong>UPTIME:</strong> <%= stat[:uptime] %></div>
-        <div><strong>MEMORY TOTAL:</strong> <%= stat[:memory][:total] %>MB</div>
         <div>
-          <strong>MEMORY USED:</strong> <%= stat[:memory][:used] %>MB (<%= stat[:memory][:used_percent] %>%),
-          <strong>FREE:</strong> <%= stat[:memory][:free] %>MB
+          <strong>HEAP MEMORY USED:</strong> <%= stat[:memory][:heap][:used] %>MB (<%= stat[:memory][:heap][:used_percent] %>%),
+          <strong>COMMITTED:</strong> <%= stat[:memory][:heap][:committed] %>MB,
+          <strong>MAX:</strong> <%= stat[:memory][:heap][:max] %>MB
+        </div>
+        <div>
+          <strong>NON-HEAP MEMORY USED:</strong> <%= stat[:memory][:nonheap][:used] %>MB (<%= stat[:memory][:nonheap][:used_percent] %>%),
+          <strong>COMMITTED:</strong> <%= stat[:memory][:nonheap][:committed] %>MB,
+          <strong>MAX:</strong> <%= stat[:memory][:nonheap][:max] %>MB
         </div>
       </div>
     </div>
   </div>
-  <div class="col-sm-5">
+  <div class="col-sm-4">
     <div class="panel panel-default">
       <div class="panel-heading">
         <h3 class="panel-title">Data</h3>
