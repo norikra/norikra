@@ -5,10 +5,12 @@ require 'norikra/logger'
 require 'norikra/webui'
 
 require 'sinatra/base'
+require 'erubis'
 
 class Norikra::WebUI::Handler < Sinatra::Base
   set :public_folder, File.absolute_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'public'))
   set :views, File.absolute_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'views'))
+  # set :erb, :escape_html => true # hmmm, this doesn't works...
 
   enable :sessions
 

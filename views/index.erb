@@ -73,7 +73,7 @@
     <td>
       <button class="btn btn-default btn-xs show-query-expression"
         data-toggle="popover" data-placement="left" data-html="true"
-        data-content="<%= "query:<pre>" + query.expression + "</pre>" %>">show query</button>
+        data-content="query:<pre><%= escape_html query.expression %></pre>">show query</button>
     </td>
     <td><%= pool[query.name] %></td>
     <td>
