@@ -6,7 +6,7 @@ RSpec::Core::RakeTask.new(:spec) do |t|
   t.pattern = 'spec/**/*_spec.rb'
 end
 
-task :devstart do |t|
+task :devserver do |t|
   require 'pathname'
   libs = ['lib', 'esper'].map{|p| Pathname.new(__FILE__).dirname.join('.', p).expand_path}
   $LOAD_PATH.unshift(*libs.map(&:to_s))
