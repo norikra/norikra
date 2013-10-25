@@ -131,7 +131,7 @@ module Norikra
         end
         if @stats.queries && @stats.queries.size > 0
           @stats.queries.each do |query|
-            @engine.register(Norikra::Query.new(:name => query[:name], :expression => query[:expression]))
+            @engine.register(Norikra::Query.new(:name => query[:name], :group => query[:group], :expression => query[:expression]))
           end
         end
       end
