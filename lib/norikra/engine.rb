@@ -44,7 +44,7 @@ module Norikra
     def statistics
       s = @statistics
       {
-        started: s[:started].httpdate,
+        started: s[:started].rfc2822,
         uptime: self.uptime,
         memory: self.memory_statistics,
         input_events: s[:events][:input],

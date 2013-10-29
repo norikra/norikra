@@ -1,5 +1,6 @@
 <div class="page-header">
   <h1 id="summary">Runtime Summary</h1>
+  at: <%= Time.now.rfc2822 %>
 </div>
 
 <% [["HEAP", :heap],["NON-HEAP", :nonheap]].each do |name,sym| %>
@@ -162,7 +163,7 @@
         (lazy target)
       <% end %>
     </td>
-    <td>TODO: change auto_fields, reserve fields, remove targets</td>
+    <td style="font-size: small; color: #c0c0c0;">TODO: change auto_fields, reserve fields, remove targets</td>
   </tr>
   <% end %>
 </table>
