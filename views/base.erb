@@ -52,7 +52,7 @@
     </div>
 
     <div class="container theme-showcase">
-      <%= yield %>
+      <%== yield %>
     </div> <!-- /container -->
 
     <!-- Bootstrap core JavaScript
@@ -61,12 +61,7 @@
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="//code.jquery.com/jquery.js"></script>
     <script src="/js/bootstrap.min.js"></script>
-    <script>
-      $(function(){
-        $('.show-query-expression').each(function(i){ console.log(this); $(this).popover() });
-        $('.show-target-fields').each(function(i){ console.log(this); $(this).popover() });
-      })
-    </script>
+    <script src="/js/norikra.webui.js"></script>
   </body>
 </html>
 

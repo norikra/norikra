@@ -64,20 +64,27 @@
 
 <% if queries.size > 0 %>
 <table class="table">
-  <tr><th>Group</th><th>Query name</th><th>Targets</th><th>Query</th><th>Events</th><th></th></tr>
+  <tr><th>Group</th><th>Query name</th><th>Targets</th><th>Query</th><th style="text-align:right;">Events</th><th></th><th></th></tr>
   <% queries.each do |query| %>
   <tr>
     <td><%= query.group || "(default)" %></td>
     <td><%= query.name %></td>
     <td><%= query.targets.join(", ") %></td>
     <td>
-      <button class="btn btn-default btn-xs show-query-expression"
-        data-toggle="popover" data-placement="left" data-html="true"
-        data-content="query:<pre><%= escape_html query.expression %></pre>">show query</button>
+      <button class="btn btn-default btn-xs show-query-expression" data-load="/json/query/<%= query.name %>">show query</button>
     </td>
-    <td><%= pool[query.name] %></td>
+    <td style="text-align: right;"><%= pool[query.name] %></td>
     <td>
-      <a class="btn btn-danger btn-xs" data-toggle="modal" href="#removeQuery<%= query.name %>"><span class="glyphicon glyphicon-trash"></span></a>
+      <% if pool[query.name].to_i > 0 %>
+      <button class="btn btn-info btn-xs show-query-events-sample" data-load="/json/events_sample/<%= query.name %>">
+        <span class="glyphicon glyphicon-search"></span>
+      </button>
+      <% end %>
+    </td>
+    <td>
+      <a class="btn btn-danger btn-xs" data-toggle="modal" href="#removeQuery<%= query.name %>">
+        <span class="glyphicon glyphicon-trash"></span>
+      </a>
       <div class="modal fade"
         id="removeQuery<%= query.name %>"
         tabindex="-1" role="dialog" aria-labelledby="removeQueryLabel<%= query.name %>" aria-hidden="true">
@@ -109,10 +116,9 @@
 <p>No queries found.</p>
 <% end %>
 
-<h3 id="query_add">Add Query</h3>
-<!-- TODO: toggle button this "Add Query", and opened with input_data[:query_add] -->
-<div class="well">
-  <% input_data ||= {}; input_data[:query_add] ||= {} %>
+<h3 id="query_add">Add Query <button class="btn btn-warning btn-xs" id="query_add_editor_toggle">editor</button></h3>
+<% input_data ||= {}; input_data[:query_add] ||= {} %>
+<div id="query_add_editor" class="well" style="display: <%= input_data[:query_add].empty? ? "none" : "block" %>;">
   <% if input_data[:query_add][:error] %>
     <div class="alert alert-danger"><%= input_data[:query_add][:error] %></div>
   <% end %>
@@ -151,15 +157,12 @@
     <td><%= target[:auto_field] %></td>
     <td>
       <% if target[:fields].size > 0 %>
-        <% field_html = target[:fields].map{|t| "<tr><td>#{t[:name]}</td><td>#{t[:type]}</td><td>#{t[:optional] ? '(optional)' : ''}</td></tr>"}.join %>
-        <button class="btn btn-default btn-xs show-target-fields"
-          data-toggle="popover" data-placement="top" data-html="true"
-          data-content="<table><tr><th>name</th><th>type</th><th></th></tr><%= field_html %></table>">show fields</button>
+        <button class="btn btn-default btn-xs show-target-fields" data-load="/json/target/<%= target[:name] %>">show fields</button>
       <% else %>
         (lazy target)
       <% end %>
     </td>
-    <td>TODO: reserve fields, remove targets</td>
+    <td>TODO: change auto_fields, reserve fields, remove targets</td>
   </tr>
   <% end %>
 </table>

@@ -5,11 +5,13 @@ require 'norikra/logger'
 require 'norikra/webui'
 
 require 'sinatra/base'
+require 'sinatra/json'
+require 'erubis'
 
 class Norikra::WebUI::Handler < Sinatra::Base
   set :public_folder, File.absolute_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'public'))
   set :views, File.absolute_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'views'))
-  # set :erb, :escape_html => true # hmmm, this doesn't works...
+  set :erb, :escape_html => true
 
   enable :sessions
 
@@ -108,6 +110,55 @@ class Norikra::WebUI::Handler < Sinatra::Base
     logging(:manage, :deregister, [query_name]) do
       engine.deregister(query_name)
       redirect '/#queries'
+    end
+  end
+
+  get '/json/query/:name' do
+    query_name = params[:name]
+    logging(:show, :json_query, [query_name]) do
+      query = engine.queries.select{|q| q.name == query_name}.first
+      if query
+        content = {
+          name: query.name,
+          group: query.group || "(default)",
+          targets: query.targets,
+          expression: query.expression,
+          events: engine.output_pool.fetch(query.name).size
+        }
+        json content
+      else
+        halt 404
+      end
+    end
+  end
+
+  get '/json/events_sample/:query_name' do
+    query_name = params[:query_name]
+    logging(:show, :json_query, [query_name]) do
+      query = engine.queries.select{|q| q.name == query_name}.first
+      if query
+        events = engine.output_pool.fetch(query.name).last(5)
+        json events
+      else
+        halt 404
+      end
+    end
+  end
+
+  get '/json/target/:name' do
+    target_name = params[:name]
+    logging(:show, :json_target, [target_name]) do
+      target = engine.targets.select{|t| t.name == target_name}.first
+      if target
+        content = {
+          name: target.name,
+          auto_field: target.auto_field,
+          fields: engine.typedef_manager.field_list(target.name)
+        }
+        json content
+      else
+        halt 404
+      end
     end
   end
 

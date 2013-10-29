@@ -30,6 +30,14 @@ module Norikra
       end
     end
 
+    # returns [[time, event], ...], but not remove from pool
+    def fetch(query_name)
+      events = @mutex.synchronize do
+        @pool.fetch(query_name, [])
+      end
+      events.reduce(&:+) || []
+    end
+
     # returns [[time(int from epoch), event], ...], event: hash
     def pop(query_name)
       events = @mutex.synchronize do
