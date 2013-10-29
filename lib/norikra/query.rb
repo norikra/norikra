@@ -264,6 +264,7 @@ module Norikra
       traverse_fields(rewriter, recaller, statement_model)
     end
 
+    ### Targets and fields re-writing supports (*) nodes
     # model.methods.select{|m| m.to_s.start_with?('get')}
     # :getContextName,
     # :getCreateContext,
@@ -278,7 +279,7 @@ module Norikra
     # :getForClause,
     # (*) :getFromClause,
     # (*) :getGroupByClause,
-    # :getHavingClause,
+    # (*) :getHavingClause,
     # :getInsertInto,
     # :getMatchRecognizeClause,
     # :getOnExpr,
@@ -293,8 +294,6 @@ module Norikra
 
     def self.traverse_fields(rewriter, recaller, statement_model)
       #NOTICE: SQLStream is not supported yet.
-      #TODO: other clauses with fields, especially: Having, For
-
       dig = lambda {|node|
         rewriter.call(node)
 
@@ -366,6 +365,10 @@ module Norikra
             dig.call(item.getExpression)
           end
         end
+      end
+
+      if statement_model.getHavingClause
+        dig.call(statement_model.getHavingClause)
       end
 
       statement_model
