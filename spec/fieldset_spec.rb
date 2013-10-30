@@ -81,6 +81,31 @@ describe Norikra::FieldSet do
         expect(leaves[3]).to eql(['f1', 1, 4])
         expect(leaves[4]).to eql(['f2', 5])
       end
+
+      it 'does not return leaves with keys nil' do
+        leaves = Norikra::FieldSet.leaves({'f1' => [{'fz1' => 1, nil => {'fz3' => 2, 'fz4' => 3}}, 4], nil => 5})
+        expect(leaves.size).to eql(2)
+        expect(leaves[0]).to eql(['f1', 0, 'fz1', 1])
+        expect(leaves[1]).to eql(['f1', 1, 4])
+      end
+
+      it 'return leaves with values nil' do
+        leaves = Norikra::FieldSet.leaves({'f1' => [{'fz1' => 1}, nil, 4], 'f2' => 5, 'f3' => nil})
+        expect(leaves.size).to eql(5)
+        expect(leaves[0]).to eql(['f1', 0, 'fz1', 1])
+        expect(leaves[1]).to eql(['f1', 1, nil])
+        expect(leaves[2]).to eql(['f1', 2, 4])
+        expect(leaves[3]).to eql(['f2', 5])
+        expect(leaves[4]).to eql(['f3', nil])
+      end
+
+      it 'does not return leaves with empty containers' do
+        leaves = Norikra::FieldSet.leaves({'f1' => [{'fz1' => 1, 'fz2' => {}}, 4], 'f2' => 5, 'f3' => []})
+        expect(leaves.size).to eql(3)
+        expect(leaves[0]).to eql(['f1', 0, 'fz1', 1])
+        expect(leaves[1]).to eql(['f1', 1, 4])
+        expect(leaves[2]).to eql(['f2', 5])
+      end
     end
 
     describe '.field_names_key' do

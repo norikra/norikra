@@ -52,8 +52,14 @@ module Norikra
           ary
         else # Hash
           obj.map {|k,v|
-            if v.is_a?(Hash) || v.is_a?(Array)
-              dig.call(v).map{|chain| [k] + chain}
+            if k.nil?
+              []
+            elsif v.is_a?(Hash) || v.is_a?(Array)
+              if v.empty?
+                []
+              else
+                dig.call(v).map{|chain| [k] + chain}
+              end
             else
               [[k, v]]
             end
