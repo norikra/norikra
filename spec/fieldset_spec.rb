@@ -50,6 +50,17 @@ describe Norikra::FieldSet do
     end
 
     describe '.leaves' do
+      it 'raises ArgumentError for non-container values' do
+        expect { Norikra::FieldSet.leaves('value') }.to raise_error(ArgumentError)
+        expect { Norikra::FieldSet.leaves('') }.to raise_error(ArgumentError)
+        expect { Norikra::FieldSet.leaves(1024) }.to raise_error(ArgumentError)
+        expect { Norikra::FieldSet.leaves(nil) }.to raise_error(ArgumentError)
+      end
+      it 'returns blank array for empty container' do
+        expect( Norikra::FieldSet.leaves({}) ).to eql([])
+        expect( Norikra::FieldSet.leaves([]) ).to eql([])
+      end
+
       it 'returns field access chains to all keys of 1-depth Hash container' do
         leaves = Norikra::FieldSet.leaves({'field1' => 1, 'field2' => 2})
         expect(leaves.size).to eql(2)

@@ -378,6 +378,24 @@ describe Norikra::Typedef do
         expect(r['key4$f2$$0']).to eql('long')
         expect(r['key5']).to eql('string')
       end
+
+      it 'ignores empty container fieldss' do
+        typedef = Norikra::Typedef.new({'key1' => 'boolean', 'key2' => 'long', 'key3.$0.key4' => 'string'})
+        typedef.waiting_fields = ['key4.f1', 'key4.f2.$0', 'key5']
+
+        t = typedef.simple_guess({
+            'key1' => true,
+            'key2' => 10,
+            'key3' => [],
+            'key4' => {},
+            'key5' => 'foobar'
+          }, true, true)
+        r = t.definition
+        expect(r.size).to eql(3)
+        expect(r['key1']).to eql('boolean')
+        expect(r['key2']).to eql('long')
+        expect(r['key5']).to eql('string')
+      end
     end
 
     describe '#refer' do

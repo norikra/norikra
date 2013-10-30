@@ -38,6 +38,11 @@ module Norikra
     end
 
     def self.leaves(container)
+      unless container.is_a?(Array) || container.is_a?(Hash)
+        raise ::ArgumentError, "FieldSet#leaves accepts Array or Hash only"
+      end
+      return [] if container.empty?
+
       # returns list of [ [key-chain-items-flatten-list, value] ]
       dig = Proc.new do |obj|
         if obj.is_a?(Array)
