@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["tagomoris@gmail.com"]
   spec.summary       = %q{CEP engine/server with Esper and JRuby}
   spec.description   = %q{CEP: Complex Event Processor with Esper EPL qeury language, messagepack rpc for inbound event data}
-  spec.homepage      = "https://github.com/tagomoris/norikra"
+  spec.homepage      = "http://norikra.github.io/"
   spec.license       = "GPLv2"
   spec.platform      = "java"
 
@@ -23,7 +23,7 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency "rack"
   spec.add_runtime_dependency "thor"
   spec.add_runtime_dependency "msgpack-rpc-over-http-jruby", ">= 0.0.5"
-  spec.add_runtime_dependency "norikra-client-jruby", ">= 0.0.7"
+  spec.add_runtime_dependency "norikra-client-jruby", "~> 0.1.0"
   spec.add_runtime_dependency "sinatra"
   spec.add_runtime_dependency "sinatra-contrib"
   spec.add_runtime_dependency "erubis"

@@ -1,17 +1,12 @@
 # Norikra
 
-'Norikra' is a CEP server implementation, based on Esper Java CEP Library, and have RPC handler over http.
-
-'Norikra' provides basic features of Esper over RPC, and more flexible fields definition of event streams.
-
-* 2 or more different field sets with one abstract stream name (called 'target' in norikra)
-* query against 'target', not streams
-  * queries will be executed with events in target, that have fields required for query
-* output event pool
-  * you can fetch events when you want
-  * streaming fetch connection (in future)
-
-And, easy to install/execute dramatically, and more, fully open source software.
+Norikra is a open-source Stream Processing Server with SQL.
+ * Schema-less event streams (called as 'target')
+ * SQL processing with window specifier supports, and JOINs, SubQueries
+ * Complex input/output events with nested Hashes and Arrays, and Query supports
+ * Dynamic query registration/removing, without any restarts
+ * Ultra fast bootstrap and small start
+ * UDF plugins
 
 ## Install and Execute
 
@@ -21,7 +16,7 @@ On JRuby environment, do these command (and, that all):
 
 To execute:
 
-    norikra
+    norikra start
 
 For JRuby installation, you can use `rbenv`, `rvm` and `xbuild`, or install JRuby directly.
 
@@ -32,21 +27,42 @@ For JRuby installation, you can use `rbenv`, `rvm` and `xbuild`, or install JRub
 
 ### Command line options
 
-To start norikra server:
+To start norikra server in foreground:
 
     norikra start
 
-JVM options like `-Xmx` are available before norikra subcommand:
+Norikra server doesn't save targets/queries in default.
+Specify `--stats STATS_FILE_PATH` option to save these runtime configuration automatically.
 
-    norikra -Xmx500m start
+    norikra start --stats /path/to/data/norikra.stats.json
 
-TBD (you can use `norikra -h`)
+JVM options like `-Xmx` are available:
+
+    norikra start -Xmx2g
+
+To daemonize:
+
+    norikra start -Xmx2g --daemonize --logdir=/var/log/norikra
+    norikra start -Xmx2g --daemonize --pidfile /var/run/norikra.pid --logdir=/var/log/norikra
+    # To stop
+    norikra stop
+
+Performance options about threadings:
+
+    norikra start --micro     # or --small, --middle, --large
+
+For other options, see help:
+
+    norikra help start
 
 ## Clients
 
 Use `Norikra::Client` and `norikra-client` cli command. These are available on both of JRuby and CRuby.
 
-https://github.com/tagomoris/norikra-client
+https://github.com/norikra/norikra-client-ruby
+
+For other languages:
+ * Perl: https://github.com/norikra/norikra-client-perl
 
 ## Events and Queries
 
@@ -54,6 +70,8 @@ For example, think about event streams related with one web service (ex: 'www').
 
     norikra-client target add www path:string status:integer referer:string agent:string userid:integer
     norikra-client target list
+
+Supported types are `string`, `boolean`, `int`, `long`, `float`, `double` and `hash`, `array`.
 
 You can register queries when you want.
 
@@ -88,7 +106,7 @@ Query 'www.search' matches the last event automatically.
 
 ## User Defined Functions
 
-UDF as plugins over rubygems are available. For example, see 'norikra-udf-mock' repository.
+UDFs/UDAFs can be loaded as plugin gems over rubygems or as private plugins. For example, see 'norikra-udf-mock' repository.
 
 TBD
 
@@ -100,15 +118,11 @@ TBD
 
 ## Versions
 
-TBD
-
-## TODO
-
-* daemonize
-* performance parameters
+* v0.1.0:
+ * First release for production
 
 ## Copyright
 
 * Copyright (c) 2013- TAGOMORI Satoshi (tagomoris)
 * License
-  * GPL v2
+  * GPLv2
