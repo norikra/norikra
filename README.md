@@ -1,6 +1,6 @@
 # Norikra
 
-Norikra is a open-source Stream Processing Server with SQL.
+Norikra is an open-source Stream Processing Server with SQL.
  * Schema-less event streams (called as 'target')
  * SQL processing with window specifier supports, and JOINs, SubQueries
  * Complex input/output events with nested Hashes and Arrays, and Query supports
