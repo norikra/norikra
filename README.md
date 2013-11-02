@@ -68,7 +68,7 @@ For other languages:
 
 For example, think about event streams related with one web service (ex: 'www'). At first, define `target` with mandantory fields (in other words, minimal fields set for variations of 'www' events).
 
-    norikra-client target add www path:string status:integer referer:string agent:string userid:integer
+    norikra-client target open www path:string status:int referer:string agent:string userid:int
     norikra-client target list
 
 Supported types are `string`, `boolean`, `int`, `long`, `float`, `double` and `hash`, `array`.
