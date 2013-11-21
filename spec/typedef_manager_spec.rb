@@ -51,7 +51,7 @@ describe Norikra::TypedefManager do
       expect(manager.typedefs['sample'].fields['a'].optional?).to be_false
       expect(manager.typedefs['sample'].fields['b'].type).to eql('string')
       expect(manager.typedefs['sample'].fields['b'].optional?).to be_false
-      expect(manager.typedefs['sample'].fields['c'].type).to eql('double')
+      expect(manager.typedefs['sample'].fields['c'].type).to eql('float')
       expect(manager.typedefs['sample'].fields['c'].optional?).to be_false
     end
 
@@ -63,7 +63,7 @@ describe Norikra::TypedefManager do
     describe '#reserve' do
       it 'does not fail' do
         manager.reserve('sample', 'x', 'long')
-        expect(manager.typedefs['sample'].fields['x'].type).to eql('long')
+        expect(manager.typedefs['sample'].fields['x'].type).to eql('integer')
         expect(manager.typedefs['sample'].fields['x'].optional?).to be_true
       end
     end
@@ -220,7 +220,7 @@ describe Norikra::TypedefManager do
       it 'returns fieldset instance with all required(non-optional) fields of target, and fields of query requires' do
         r = manager.generate_query_fieldset('sample', ['a', 'b','f'])
         expect(r.fields.size).to eql(4) # a,b,c,f
-        expect(r.summary).to eql('a:string,b:string,c:double,f:boolean')
+        expect(r.summary).to eql('a:string,b:string,c:float,f:boolean')
       end
     end
 
@@ -235,7 +235,7 @@ describe Norikra::TypedefManager do
         expect(r).to eql({
             a: {name: 'a', type: 'string', optional: false},
             b: {name: 'b', type: 'string', optional: false},
-            c: {name: 'c', type: 'double', optional: false},
+            c: {name: 'c', type: 'float', optional: false},
             z: {name: 'z', type: 'boolean', optional: true},
           })
 
@@ -243,8 +243,8 @@ describe Norikra::TypedefManager do
         expect(r).to eql({
             a: {name: 'a', type: 'string', optional: false},
             b: {name: 'b', type: 'string', optional: false},
-            c: {name: 'c', type: 'double', optional: false},
-            d: {name: 'd', type: 'double', optional: false},
+            c: {name: 'c', type: 'float', optional: false},
+            d: {name: 'd', type: 'float', optional: false},
           })
       end
     end

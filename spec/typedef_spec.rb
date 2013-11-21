@@ -36,7 +36,7 @@ describe Norikra::Typedef do
         expect(t.fields['k'].optional?).to be_true
 
         t.reserve('l', 'long', false)
-        expect(t.fields['l'].type).to eql('long')
+        expect(t.fields['l'].type).to eql('integer')
         expect(t.fields['l'].optional?).to be_false
       end
 
@@ -107,7 +107,7 @@ describe Norikra::Typedef do
       expect(t.fields['a'].type).to eql('string')
       expect(t.fields['a'].optional?).to be_false
 
-      expect(t.fields['b'].type).to eql('long')
+      expect(t.fields['b'].type).to eql('integer')
       expect(t.fields['b'].optional?).to be_false
     end
 
@@ -152,7 +152,7 @@ describe Norikra::Typedef do
 
         t.reserve('c', 'double', true)
         expect(t.fields.size).to eql(3)
-        expect(t.fields['c'].type).to eql('double')
+        expect(t.fields['c'].type).to eql('float')
         expect(t.fields['c'].optional?).to be_true
       end
     end
@@ -169,7 +169,7 @@ describe Norikra::Typedef do
           expect(t.consistent?(set)).to be_true
 
           set = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int'})
-          expect(t.consistent?(set)).to be_false
+          expect(t.consistent?(set)).to be_true
 
           set = Norikra::FieldSet.new({'a' => 'string'})
           expect(t.consistent?(set)).to be_false
@@ -203,7 +203,7 @@ describe Norikra::Typedef do
     describe '#push' do
       it 'does not accepts fieldset which conflicts pre-defined fields' do
         t = Norikra::Typedef.new({'a' => 'string', 'b' => 'long'})
-        expect { t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'int'})) }.to raise_error(Norikra::ArgumentError)
+        expect { t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'float'})) }.to raise_error(Norikra::ArgumentError)
         expect { t.push(:data, Norikra::FieldSet.new({'a'=>'string'})) }.to raise_error(Norikra::ArgumentError)
       end
 
@@ -219,7 +219,7 @@ describe Norikra::Typedef do
         set_a = Norikra::FieldSet.new({'a'=>'string','b'=>'long','c'=>'double'})
         t.push(:data, set_a)
         expect(t.fields.size).to eql(3)
-        expect(t.fields['c'].type).to eql('double')
+        expect(t.fields['c'].type).to eql('float')
         expect(t.fields['c'].optional?).to be_true
 
         t.push(:query, Norikra::FieldSet.new({'a'=>'string','b'=>'long','d'=>'string'}))
@@ -420,10 +420,10 @@ describe Norikra::Typedef do
           expect(t.datafieldsets.include?(r)).to be_false
 
           expect(r.fields['a'].type).to eql('string')
-          expect(r.fields['b'].type).to eql('long')
+          expect(r.fields['b'].type).to eql('integer')
           expect(r.fields['c'].type).to eql('boolean')
-          expect(r.fields['d'].type).to eql('double')
-          expect(r.summary).to eql('a:string,b:long,c:boolean,d:double')
+          expect(r.fields['d'].type).to eql('float')
+          expect(r.summary).to eql('a:string,b:integer,c:boolean,d:float')
         end
 
         it 'returns fieldset that contains fields as string for unknowns for event with some unknown fields' do
@@ -433,10 +433,10 @@ describe Norikra::Typedef do
           expect(t.datafieldsets.include?(r)).to be_false
 
           expect(r.fields['a'].type).to eql('string')
-          expect(r.fields['b'].type).to eql('long')
+          expect(r.fields['b'].type).to eql('integer')
           expect(r.fields['c'].type).to eql('string')
           expect(r.fields['d'].type).to eql('string')
-          expect(r.summary).to eql('a:string,b:long,c:string,d:string')
+          expect(r.summary).to eql('a:string,b:integer,c:string,d:string')
         end
       end
 
@@ -461,10 +461,10 @@ describe Norikra::Typedef do
           expect(t.datafieldsets.include?(r)).to be_false
 
           expect(r.fields['a'].type).to eql('string')
-          expect(r.fields['b'].type).to eql('long')
+          expect(r.fields['b'].type).to eql('integer')
           expect(r.fields['c'].type).to eql('boolean')
-          expect(r.fields['d'].type).to eql('double')
-          expect(r.summary).to eql('a:string,b:long,c:boolean,d:double')
+          expect(r.fields['d'].type).to eql('float')
+          expect(r.summary).to eql('a:string,b:integer,c:boolean,d:float')
         end
 
         it 'returns fieldset that contains fields already known only for event with some unknown fields' do
@@ -474,15 +474,15 @@ describe Norikra::Typedef do
           expect(t.datafieldsets.include?(r1)).to be_false
 
           expect(r1.fields['a'].type).to eql('string')
-          expect(r1.fields['b'].type).to eql('long')
-          expect(r1.summary).to eql('a:string,b:long')
+          expect(r1.fields['b'].type).to eql('integer')
+          expect(r1.summary).to eql('a:string,b:integer')
 
           r2 = t.refer({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14', 'e' => 'yeeeeeees!'}, true)
           expect(t.datafieldsets.include?(r2)).to be_false
 
           expect(r2.fields['a'].type).to eql('string')
-          expect(r2.fields['b'].type).to eql('long')
-          expect(r2.summary).to eql('a:string,b:long')
+          expect(r2.fields['b'].type).to eql('integer')
+          expect(r2.summary).to eql('a:string,b:integer')
         end
 
         it 'returns fieldset that contains fields already known or waiting fields for event with some unknown fields' do
@@ -493,17 +493,17 @@ describe Norikra::Typedef do
           expect(t.datafieldsets.include?(r1)).to be_false
 
           expect(r1.fields['a'].type).to eql('string')
-          expect(r1.fields['b'].type).to eql('long')
+          expect(r1.fields['b'].type).to eql('integer')
           expect(r1.fields['d'].type).to eql('string')
-          expect(r1.summary).to eql('a:string,b:long,d:string')
+          expect(r1.summary).to eql('a:string,b:integer,d:string')
 
           r2 = t.refer({'a'=>'hoge','b'=>'2000','c'=>'true','d'=>'3.14', 'e' => 'yeeeeeees!'}, true)
           expect(t.datafieldsets.include?(r2)).to be_false
 
           expect(r2.fields['a'].type).to eql('string')
-          expect(r2.fields['b'].type).to eql('long')
+          expect(r2.fields['b'].type).to eql('integer')
           expect(r1.fields['d'].type).to eql('string')
-          expect(r2.summary).to eql('a:string,b:long,d:string')
+          expect(r2.summary).to eql('a:string,b:integer,d:string')
         end
       end
     end
@@ -520,8 +520,8 @@ describe Norikra::Typedef do
         r = t.dump
         expect(r.keys.sort).to eql([:a, :b, :c, :d])
         expect(r[:a]).to eql({name: 'a', type: 'string', optional: false})
-        expect(r[:b]).to eql({name: 'b', type: 'long', optional: false})
-        expect(r[:c]).to eql({name: 'c', type: 'double', optional: true})
+        expect(r[:b]).to eql({name: 'b', type: 'integer', optional: false})
+        expect(r[:c]).to eql({name: 'c', type: 'float', optional: true})
         expect(r[:d]).to eql({name: 'd', type: 'string', optional: true})
 
         t2 = Norikra::Typedef.new(r)
@@ -540,8 +540,8 @@ describe Norikra::Typedef do
         r = t.dump
         expect(r.keys.sort).to eql([:a, :b, :c, :d, :e, :f])
         expect(r[:a]).to eql({name: 'a', type: 'string', optional: false})
-        expect(r[:b]).to eql({name: 'b', type: 'long', optional: false})
-        expect(r[:c]).to eql({name: 'c', type: 'double', optional: true})
+        expect(r[:b]).to eql({name: 'b', type: 'integer', optional: false})
+        expect(r[:c]).to eql({name: 'c', type: 'float', optional: true})
         expect(r[:d]).to eql({name: 'd', type: 'string', optional: true})
         expect(r[:e]).to eql({name: 'e', type: 'array', optional: true})
         expect(r[:f]).to eql({name: 'f', type: 'hash', optional: true})

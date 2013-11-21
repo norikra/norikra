@@ -76,23 +76,23 @@ describe Norikra::Field do
     end
   end
 
-  describe '.valid_type?' do
+  describe '.valid_type' do
     it 'returns normalized type strings' do
-      expect(Norikra::Field.valid_type?('String')).to eql('string')
-      expect(Norikra::Field.valid_type?('STRING')).to eql('string')
-      expect(Norikra::Field.valid_type?(:string)).to eql('string')
-      expect(Norikra::Field.valid_type?('string')).to eql('string')
+      expect(Norikra::Field.valid_type('String')).to eql('string')
+      expect(Norikra::Field.valid_type('STRING')).to eql('string')
+      expect(Norikra::Field.valid_type(:string)).to eql('string')
+      expect(Norikra::Field.valid_type('string')).to eql('string')
 
-      expect(Norikra::Field.valid_type?('boolean')).to eql('boolean')
-      expect(Norikra::Field.valid_type?('BOOLEAN')).to eql('boolean')
-      expect(Norikra::Field.valid_type?('Int')).to eql('int')
-      expect(Norikra::Field.valid_type?('lonG')).to eql('long')
-      expect(Norikra::Field.valid_type?('FLOAT')).to eql('float')
-      expect(Norikra::Field.valid_type?('Double')).to eql('double')
+      expect(Norikra::Field.valid_type('boolean')).to eql('boolean')
+      expect(Norikra::Field.valid_type('BOOLEAN')).to eql('boolean')
+      expect(Norikra::Field.valid_type('Int')).to eql('integer')
+      expect(Norikra::Field.valid_type('lonG')).to eql('integer')
+      expect(Norikra::Field.valid_type('FLOAT')).to eql('float')
+      expect(Norikra::Field.valid_type('Double')).to eql('float')
     end
 
     it 'raises ArgumentError for unknown type string' do
-      expect { Norikra::Field.valid_type?('foo') }.to raise_error()
+      expect { Norikra::Field.valid_type('foo') }.to raise_error(Norikra::ArgumentError)
     end
   end
 
@@ -103,7 +103,7 @@ describe Norikra::Field do
     end
 
     it 'value of type is normalized with .valid_type?' do
-      expect(Norikra::Field.new('foo', 'String').type).to eql(Norikra::Field.valid_type?('String'))
+      expect(Norikra::Field.new('foo', 'String').type).to eql(Norikra::Field.valid_type('String'))
     end
 
     it 'default value of optional is nil' do

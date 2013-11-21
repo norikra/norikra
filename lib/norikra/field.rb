@@ -7,7 +7,6 @@ module Norikra
     # boolean (alias: bool)
     # integer (alias: int, long)
     # float   (alias: double)
-    # byte
     # hash
     # array
 
@@ -44,11 +43,12 @@ module Norikra
       when 'boolean', 'bool' then 'boolean'
       when 'integer', 'int', 'long' then 'long'
       when 'float', 'double' then 'double'
-      when 'byte' then 'byte'
       when 'hash', 'array'
-        raise ArgumentError, "#{type} is norikra internal type, not for esper"
+        raise Norikra::ArgumentError, "#{type} is norikra internal type, not for esper"
+      when 'byte'
+        raise Norikra::ArgumentError, "byte is not supported in Norikra"
       else
-        raise ArgumentError, "unknown type:#{type}"
+        raise Norikra::ArgumentError, "unknown type:#{type}"
       end
     end
 
@@ -60,16 +60,16 @@ module Norikra
       end
     end
 
-    def self.valid_type?(type)
+    def self.valid_type(type)
       case type.to_s.downcase
       when 'string' then 'string'
-      when 'boolean' then 'boolean'
-      when 'int' then 'int'
-      when 'long' then 'long'
-      when 'float' then 'float'
-      when 'double' then 'double'
+      when 'boolean', 'bool' then 'boolean'
+      when 'integer', 'int', 'long' then 'integer'
+      when 'float', 'double' then 'float'
       when 'hash' then 'hash'
       when 'array' then 'array'
+      when 'byte'
+        raise Norikra::ArgumentError, "byte is not supported in Norikra"
       else
         raise Norikra::ArgumentError, "invalid field type '#{type}'"
       end
@@ -77,7 +77,7 @@ module Norikra
 
     def initialize(name, type, optional=nil)
       @name = name.to_s
-      @type = self.class.valid_type?(type)
+      @type = self.class.valid_type(type)
       @optional = optional
 
       @escaped_name = self.class.escape_name(@name)
@@ -178,8 +178,8 @@ module Norikra
       case @type
       when 'string'  then value.to_s
       when 'boolean' then value =~ /^(true|false)$/i ? ($1.downcase == 'true') : (!!value)
-      when 'long','int' then value.to_i
-      when 'double','float' then value.to_f
+      when 'integer' then value.to_i
+      when 'float' then value.to_f
       when 'hash', 'array'
         raise RuntimeError, "container field not permitted to access directly, maybe BUG. name:#{@name},type:#{@type}"
       else

@@ -133,7 +133,7 @@ module Norikra
     def definition
       d = {}
       @fields.each do |key, field|
-        d[field.escaped_name] = field.type
+        d[field.escaped_name] = field.esper_type
       end
       d
     end

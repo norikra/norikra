@@ -10,7 +10,7 @@ describe Norikra::FieldSet do
     it 'accepts String as type' do
       set = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long'})
       expect(set.fields['x'].type).to eql('string')
-      expect(set.fields['y'].type).to eql('long')
+      expect(set.fields['y'].type).to eql('integer')
     end
 
     it 'sets optional specification nil as defaults' do
@@ -31,15 +31,16 @@ describe Norikra::FieldSet do
 
     it 'sets summary as comma-separated labeled field-type string with sorted field order' do
       set = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long'})
-      expect(set.summary).to eql('x:string,y:long')
+      expect(set.summary).to eql('x:string,y:integer')
 
       set = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long', 'a' => 'Boolean'})
-      expect(set.summary).to eql('a:boolean,x:string,y:long')
+      expect(set.summary).to eql('a:boolean,x:string,y:integer')
     end
   end
 
   context 'initialized with some fields' do
     set = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long', 'a' => 'Boolean'})
+    set2 = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'float', 'd' => 'bool', 'e' => 'integer'})
 
     describe '#dup' do
       it 'make duplicated object with different internal instance' do
@@ -175,7 +176,7 @@ describe Norikra::FieldSet do
         x.update_summary
 
         expect(x.summary).not_to eql(oldsummary)
-        expect(x.summary).to eql('a:boolean,x:int,y:long')
+        expect(x.summary).to eql('a:boolean,x:integer,y:integer')
       end
     end
 
@@ -185,12 +186,12 @@ describe Norikra::FieldSet do
         expect(x.fields['a'].type).to eql('boolean')
         expect(x.fields['x'].type).to eql('string')
 
-        expect(x.fields['y'].type).to eql('long')
+        expect(x.fields['y'].type).to eql('integer')
         expect(x.fields['y'].optional).to be_nil
 
         x.update([Norikra::Field.new('y', 'int'), Norikra::Field.new('a','string')], false)
 
-        expect(x.fields['y'].type).to eql('int')
+        expect(x.fields['y'].type).to eql('integer')
         expect(x.fields['y'].optional).to eql(false)
 
         expect(x.fields['x'].type).to eql('string')
@@ -202,7 +203,7 @@ describe Norikra::FieldSet do
         expect(x.fields.size).to eql(3)
         x.update([Norikra::Field.new('z', 'string')], true)
         expect(x.fields.size).to eql(4)
-        expect(x.summary).to eql('a:boolean,x:string,y:long,z:string')
+        expect(x.summary).to eql('a:boolean,x:string,y:integer,z:string')
       end
     end
 
@@ -214,6 +215,16 @@ describe Norikra::FieldSet do
         expect(d['a']).to eql('boolean')
         expect(d['x']).to eql('string')
         expect(d['y']).to eql('long')
+
+        s = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'float', 'd' => 'bool', 'e' => 'integer'})
+        d = s.definition
+        expect(d).to be_instance_of(Hash)
+        expect(d.size).to eql(5)
+        expect(d['a']).to eql('string')
+        expect(d['b']).to eql('long')
+        expect(d['c']).to eql('double')
+        expect(d['d']).to eql('boolean')
+        expect(d['e']).to eql('long')
       end
     end
 
