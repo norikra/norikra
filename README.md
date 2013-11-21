@@ -68,10 +68,10 @@ For other languages:
 
 For example, think about event streams related with one web service (ex: 'www'). At first, define `target` with mandantory fields (in other words, minimal fields set for variations of 'www' events).
 
-    norikra-client target open www path:string status:int referer:string agent:string userid:int
+    norikra-client target open www path:string status:integer referer:string agent:string userid:integer
     norikra-client target list
 
-Supported types are `string`, `boolean`, `int`, `long`, `float`, `double` and `hash`, `array`.
+Supported types are `string`, `boolean`, `integer`, `float` and `hash`, `array`.
 
 You can register queries when you want.
 
@@ -120,6 +120,8 @@ TBD
 
 * v0.1.0:
  * First release for production
+* v0.1.1:
+ * Fix types more explicitly for users ('int/long' -> 'integer', 'float/double' -> 'float')
 
 ## Copyright
 
