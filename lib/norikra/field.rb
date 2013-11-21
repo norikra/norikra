@@ -2,6 +2,15 @@ require 'norikra/error'
 
 module Norikra
   class Field
+    ### norikra types
+    # string
+    # boolean (alias: bool)
+    # integer (alias: int, long)
+    # float   (alias: double)
+    # byte
+    # hash
+    # array
+
     ### esper types
     ### http://esper.codehaus.org/esper-4.9.0/doc/reference/en-US/html/epl_clauses.html#epl-syntax-datatype
     # string  A single character to an unlimited number of characters.
@@ -27,7 +36,44 @@ module Norikra
     ### expected java.lang.Class or java.util.Map or the name of a previously-declared Map or ObjectArray type
     #### Correct type name is 'int'. see and run 'junks/esper-test.rb'
 
-    attr_accessor :name, :type, :optional, :escaped_name, :container_name, :container_type
+    attr_accessor :name, :type, :esper_type, :optional, :escaped_name, :container_name, :container_type
+
+    def self.esper_type_map(type)
+      case type.to_s.downcase
+      when 'string' then 'string'
+      when 'boolean', 'bool' then 'boolean'
+      when 'integer', 'int', 'long' then 'long'
+      when 'float', 'double' then 'double'
+      when 'byte' then 'byte'
+      when 'hash', 'array'
+        raise ArgumentError, "#{type} is norikra internal type, not for esper"
+      else
+        raise ArgumentError, "unknown type:#{type}"
+      end
+    end
+
+    def self.container_type?(type)
+      case type.to_s.downcase
+      when 'hash','array' then true
+      else
+        false
+      end
+    end
+
+    def self.valid_type?(type)
+      case type.to_s.downcase
+      when 'string' then 'string'
+      when 'boolean' then 'boolean'
+      when 'int' then 'int'
+      when 'long' then 'long'
+      when 'float' then 'float'
+      when 'double' then 'double'
+      when 'hash' then 'hash'
+      when 'array' then 'array'
+      else
+        raise Norikra::ArgumentError, "invalid field type '#{type}'"
+      end
+    end
 
     def initialize(name, type, optional=nil)
       @name = name.to_s
@@ -49,12 +95,16 @@ module Norikra
       define_value_accessor(@name, @chained_access)
     end
 
-    def container_field?
-      @type == 'hash' || @type == 'array'
-    end
-
     def chained_access?
       @chained_access
+    end
+
+    def container_field?
+      self.class.container_type?(@type)
+    end
+
+    def esper_type
+      self.class.esper_type_map(@type)
     end
 
     def self.escape_name(name)
@@ -120,30 +170,6 @@ module Norikra
 
     def optional? # used outside of FieldSet
       @optional
-    end
-
-    def self.container_type?(type)
-      case type.to_s.downcase
-      when 'hash' then true
-      when 'array' then true
-      else
-        false
-      end
-    end
-
-    def self.valid_type?(type)
-      case type.to_s.downcase
-      when 'string' then 'string'
-      when 'boolean' then 'boolean'
-      when 'int' then 'int'
-      when 'long' then 'long'
-      when 'float' then 'float'
-      when 'double' then 'double'
-      when 'hash' then 'hash'
-      when 'array' then 'array'
-      else
-        raise Norikra::ArgumentError, "invalid field type '#{type}'"
-      end
     end
 
     # def value(event) # by define_value_accessor
