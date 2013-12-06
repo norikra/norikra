@@ -2,6 +2,8 @@ require 'norikra/server'
 require 'norikra/error'
 require 'thor'
 
+require 'rbconfig'
+
 module Norikra
   DEFAULT_PID_PATH = '/var/run/norikra/norikra.pid'
 
@@ -90,6 +92,8 @@ module Norikra
 
       # norikra/lib/norikra
       binpath = File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'bin', 'norikra'))
+
+      jruby_path = RbConfig.ruby
       args = jruby_options + [binpath] + argv
 
       if options[:daemonize]
@@ -103,7 +107,7 @@ module Norikra
         File.open(outfile, 'w'){|file| file.write 'write test on parent process'}
 
         pidfile = File.open(options[:pidfile], 'w')
-        pid = spawn('jruby', *args, :pgroup => 0)
+        pid = spawn(jruby_path, *args, :pgroup => 0)
         pidfile.write(pid.to_s)
         pidfile.close
         waiting_child = true
@@ -113,7 +117,7 @@ module Norikra
         end
         Process.detach(pid)
       else
-        exec('jruby', *args)
+        exec(jruby_path, *args)
       end
     end
 
