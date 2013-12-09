@@ -42,6 +42,9 @@ module Norikra
         option :'outbound-threads', :type => :numeric, :default => nil, :desc => 'number of threads for outbound data'
         option :'route-threads',    :type => :numeric, :default => nil, :desc => 'number of threads for events routing for query execution'
         option :'timer-threads',    :type => :numeric, :default => nil, :desc => 'number of threads for internal timers for query execution'
+        ### about capacity options of esper's capacity-bound queue processing, see Esper's thread reference.
+        # http://esper.codehaus.org/esper-4.10.0/doc/reference/en-US/html/configuration.html#config-engine-threading-advanced
+        # default nil: unbound queueing
         option :'inbound-thread-capacity',  :type => :numeric, :default => nil
         option :'outbound-thread-capacity', :type => :numeric, :default => nil
         option :'route-thread-capacity',    :type => :numeric, :default => nil

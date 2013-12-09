@@ -104,24 +104,69 @@ And send more events:
 
 Query 'www.search' matches the last event automatically.
 
+## Performance
+
+Threads option available with `norikra start`. Simple specifiers for performance with threadings:
+
+    norikra start --micro     # or --small, --middle, --large (default: 'micro')
+
+Norikra server has 3 types of threads:
+
+* engine: 4 query engine thread types on Esper
+  * inbound: input data handler for queries
+  * outbound: output data handler for queries
+  * router: event handler which decides which query needs that events
+  * timer: executer for queries with time_batches and other timing events
+* rpc: data input/output rpc handler threads on Jetty
+* web: web ui request handler threads on Jetty
+
+In many cases, norikra server handling high rate events needs large number of rpc threads to handle input/output rpc requests. WebUI don't need threads rather than default in almost all of cases.
+
+Engine threads depends on queries running on norikra, input/output event data rate and target numbers. For more details, see Esper's API Documents: http://esper.codehaus.org/esper-4.10.0/doc/reference/en-US/html/api.html#api-threading
+
+Norikra's simple specifiers details of threadings are:
+
+* micro: development and testing
+  * engine: all processings on single threads
+  * rpc: 2 threads
+  * web: 2 threads
+* small: low rate events on virtual servers
+  * engine: inbound 1, outbound 1, route 1, timer 1 threads
+  * rpc: 2 threads
+  * web: 2 threads
+* middle: high rate events on physical servers
+  * engine: inbound 4, outbound 2, route 2, timer 2 threads
+  * rpc: 4 threads
+  * web: 2 threads
+* large: inbound heavy traffic and huge amount of queries
+  * engine: inbound 6, outbound 6, route 4, timer 4 threads
+  * rpc: 8 threads
+  * web: 2 threads
+
+To specify sizes of each threads, use `--*-threads=NUM` options. For more details, see: `norikra help start`.
+
 ## User Defined Functions
 
 UDFs/UDAFs can be loaded as plugin gems over rubygems or as private plugins. For example, see 'norikra-udf-mock' repository.
 
 TBD
 
-## Performance
+## Tips
 
-Threads option available with command line options.
+We need to write this document on http://norikra.github.io
 
-TBD
+### Esper query syntax
 
-## Versions
+* String concatination operator: `||`
 
-* v0.1.0:
- * First release for production
+## Changes
+
+* v0.1.2:
+ * Fix CLI start command to detect jruby path collectly (behind rbenv/rvm and others)
 * v0.1.1:
  * Fix types more explicitly for users ('int/long' -> 'integer', 'float/double' -> 'float')
+* v0.1.0:
+ * First release for production
 
 ## Copyright
 
