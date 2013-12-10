@@ -22,7 +22,6 @@ For JRuby installation, you can use `rbenv`, `rvm` and `xbuild`, or install JRub
 
 * JRuby: http://jruby.org/
 * rbenv: https://github.com/sstephenson/rbenv/
-* rvm: https://rvm.io/rvm/install/
 * xbuild: https://github.com/tagomoris/xbuild
 
 ### Command line options
@@ -54,6 +53,27 @@ Performance options about threadings:
 For other options, see help:
 
     norikra help start
+
+### How to execute norikra server and tests in development
+
+Fix code and tests:
+
+1. clone this repository
+1. run `bundle install` w/ jruby
+1. add/fix spec in `spec/*_spec.rb`
+1. fix code in `lib`
+1. run `bundle exec rake`
+
+Run tests faster than 2 or more times:
+
+1. execute `spork`
+1. execute `script/spec_server_pry` in another terminal
+1. run `rspec` in pry console (executed fastly after second times)
+
+Execute norikra server with target/query continuation:
+
+1. `bundle exec rake devserver`
+1. `Ctrl-C` and re-execute for updated code
 
 ## Clients
 
@@ -147,9 +167,11 @@ To specify sizes of each threads, use `--*-threads=NUM` options. For more detail
 
 ## User Defined Functions
 
-UDFs/UDAFs can be loaded as plugin gems over rubygems or as private plugins. For example, see 'norikra-udf-mock' repository.
+UDFs/UDAFs can be loaded as plugin gems over rubygems or as private plugins.
+In fact, Norikra's UDFs/UDAFs are Esper's plugin with a JRuby class to indicate plugin metadata.
 
-TBD
+For details how to write your own UDF/UDAF for norikra and to release it as gem, see README of `norikra-udf-mock`.
+https://github.com/norikra/norikra-udf-mock
 
 ## Tips
 
