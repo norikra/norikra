@@ -105,7 +105,7 @@ And send events into norikra (multi line events [json-per-line] and LTSV events 
     echo '{"path":"/content", "status":200, "referer":"/login", "agent":"MSIE", "userid":3}' | norikra-client event send www
     echo '{"path":"/page/1", "status":200, "referer":"/content", "agent":"MSIE", "userid":3}' | norikra-client event send www
 
-Finally, you can get query outputs:
+Finally, you can get query outputs: (make sure this is run less than 10 seconds after the previous four events are pushed)
 
     norikra-client event fetch www.toppageviews
 	{"time":"2013/05/15 15:10:35","cnt":1}
