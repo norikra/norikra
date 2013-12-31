@@ -42,11 +42,26 @@ describe Norikra::FieldSet do
     set = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long', 'a' => 'Boolean'})
     set2 = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'float', 'd' => 'bool', 'e' => 'integer'})
 
+    q_set1 = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long'}, nil, 0, ['set1', 'g1'])
+    q_set2 = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long'}, nil, 0, ['set2', nil])
+    q_set3 = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long'}, nil, 0, ['set3', nil])
+
     describe '#dup' do
       it 'make duplicated object with different internal instance' do
         x = set.dup
         expect(x.fields.object_id).not_to eql(set.fields.object_id)
         expect(x.fields).to eq(set.fields)
+      end
+
+      it 'make duplicated object with query name and group' do
+        expect(q_set1.dup.instance_eval{ @query_unique_keys }).to eql(['set1', 'g1'])
+        expect(q_set2.dup.instance_eval{ @query_unique_keys }).to eql(['set2', nil])
+
+        expect(q_set2 == q_set3).to be_false
+
+        expect(q_set1 == q_set1.dup).to be_true
+        expect(q_set2 == q_set2.dup).to be_true
+        expect(q_set3 == q_set3.dup).to be_true
       end
     end
 
@@ -251,6 +266,18 @@ describe Norikra::FieldSet do
 
         expect(x.instance_eval{ @event_type_name }).not_to be_nil
         expect(x.instance_eval{ @event_type_name }).to match(/q_[0-9a-f]{32}/) # MD5 hexdump
+      end
+
+      it 'sets different event_type_name for different query names and groups for query fieldsets w/ same field set' do
+        x = q_set1.dup
+        y = q_set2.dup
+        z = q_set3.dup
+        x.bind('TargetExample', :query)
+        y.bind('TargetExample', :query)
+        z.bind('TargetExample', :query)
+
+        expect(x.instance_eval{ @event_type_name }).not_to eql(y.instance_eval{ @event_type_name })
+        expect(x.instance_eval{ @event_type_name }).not_to eql(z.instance_eval{ @event_type_name })
       end
     end
 

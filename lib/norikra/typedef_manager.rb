@@ -82,7 +82,7 @@ module Norikra
 
       mapping = {}
       fields_set.each do |target,fields|
-        mapping[target] = generate_query_fieldset(target, fields.sort.uniq)
+        mapping[target] = generate_query_fieldset(target, fields.sort.uniq, query.name, query.group)
       end
       mapping
     end
@@ -106,7 +106,7 @@ module Norikra
       guessed
     end
 
-    def generate_query_fieldset(target, field_name_list)
+    def generate_query_fieldset(target, field_name_list, query_name, query_group)
       # all fields of field_name_list should exists in definitions of typedef fields
       # for this premise, call 'bind_fieldset' for data fieldset before this method.
       required_fields = {}
@@ -117,7 +117,7 @@ module Norikra
           end
         end
       end
-      Norikra::FieldSet.new(required_fields)
+      Norikra::FieldSet.new(required_fields, nil, 0, [query_name, (query_group || '')])
     end
 
     def base_fieldset(target)

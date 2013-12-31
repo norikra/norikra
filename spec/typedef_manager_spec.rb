@@ -218,7 +218,7 @@ describe Norikra::TypedefManager do
 
     describe '#generate_query_fieldset' do
       it 'returns fieldset instance with all required(non-optional) fields of target, and fields of query requires' do
-        r = manager.generate_query_fieldset('sample', ['a', 'b','f'])
+        r = manager.generate_query_fieldset('sample', ['a', 'b','f'], 'qname1', nil)
         expect(r.fields.size).to eql(4) # a,b,c,f
         expect(r.summary).to eql('a:string,b:string,c:float,f:boolean')
       end

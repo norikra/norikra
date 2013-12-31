@@ -4,10 +4,10 @@ require 'norikra/field'
 module Norikra
   class FieldSet
     attr_accessor :summary, :fields
-    attr_accessor :target, :level
+    attr_accessor :target, :level, :query_unique_keys
 
     # fieldset doesn't have container fields
-    def initialize(fields, default_optional=nil, rebounds=0)
+    def initialize(fields, default_optional=nil, rebounds=0, query_unique_keys=[])
       @fields = {}
       # fields.keys are raw key for container access chains
       fields.keys.each do |key|
@@ -29,12 +29,13 @@ module Norikra
       @target = nil
       @level = nil
       @rebounds = rebounds
+      @query_unique_keys = query_unique_keys
       @event_type_name = nil
     end
 
     def dup
       fields = Hash[@fields.map{|key,field| [key, {:type => field.type, :optional => field.optional}]}]
-      self.class.new(fields, nil, @rebounds)
+      self.class.new(fields, nil, @rebounds, @query_unique_keys)
     end
 
     def self.leaves(container)
@@ -127,7 +128,7 @@ module Norikra
     #TODO: have a bug?
     def ==(other)
       return false if self.class != other.class
-      self.summary == other.summary
+      self.summary == other.summary && self.query_unique_keys == other.query_unique_keys
     end
 
     def definition
@@ -157,8 +158,9 @@ module Norikra
                  raise ArgumentError, "unknown fieldset bind level: #{level}, for target #{target}"
                end
       @rebounds += 1 if update_type_name
+      query_unique_key = @query_unique_keys ? @query_unique_keys.join("\t") : ''
 
-      @event_type_name = prefix + Digest::MD5.hexdigest([target, level.to_s, @rebounds.to_s, @summary].join("\t"))
+      @event_type_name = prefix + Digest::MD5.hexdigest([target, level.to_s, @rebounds.to_s, query_unique_key, @summary].join("\t"))
       self
     end
 
