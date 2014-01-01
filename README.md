@@ -24,35 +24,9 @@ For JRuby installation, you can use `rbenv`, `rvm` and `xbuild`, or install JRub
 * rbenv: https://github.com/sstephenson/rbenv/
 * xbuild: https://github.com/tagomoris/xbuild
 
-### Command line options
+### Install and launch
 
-To start norikra server in foreground:
-
-    norikra start
-
-Norikra server doesn't save targets/queries in default.
-Specify `--stats STATS_FILE_PATH` option to save these runtime configuration automatically.
-
-    norikra start --stats /path/to/data/norikra.stats.json
-
-JVM options like `-Xmx` are available:
-
-    norikra start -Xmx2g
-
-To daemonize:
-
-    norikra start -Xmx2g --daemonize --logdir=/var/log/norikra
-    norikra start -Xmx2g --daemonize --pidfile /var/run/norikra.pid --logdir=/var/log/norikra
-    # To stop
-    norikra stop
-
-Performance options about threadings:
-
-    norikra start --micro     # or --small, --middle, --large
-
-For other options, see help:
-
-    norikra help start
+See: http://norikra.github.io/
 
 ### How to execute norikra server and tests in development
 
@@ -77,7 +51,12 @@ Execute norikra server with target/query continuation:
 
 ## Clients
 
-Use `Norikra::Client` and `norikra-client` cli command. These are available on both of JRuby and CRuby.
+Use `norikra-client` cli command. These are available on both of JRuby and CRuby.
+
+https://rubygems.org/gems/norikra-client
+https://rubygems.org/gems/norikra-client-jruby
+
+And the client library for application developers are also included in these gems.
 
 https://github.com/norikra/norikra-client-ruby
 
@@ -86,92 +65,7 @@ For other languages:
 
 ## Events and Queries
 
-For example, think about event streams related with one web service (ex: 'www'). At first, define `target` with mandantory fields (in other words, minimal fields set for variations of 'www' events).
-
-    norikra-client target open www path:string status:integer referer:string agent:string userid:integer
-    norikra-client target list
-
-Supported types are `string`, `boolean`, `integer`, `float` and `hash`, `array`.
-
-You can register queries when you want.
-
-    # norikra-client query add QUERY_NAME  QUERY_EXPRESSION
-    norikra-client query add www.toppageviews 'SELECT count(*) AS cnt FROM www.win:time_batch(10 sec) WHERE path="/" AND status=200'
-
-And send events into norikra (multi line events [json-per-line] and LTSV events are also allowed).
-
-    echo '{"path":"/", "status":200, "referer":"", "agent":"MSIE", "userid":3}' | norikra-client event send www
-    echo '{"path":"/login", "status":301, "referer":"/", "agent":"MSIE", "userid":3}' | norikra-client event send www
-    echo '{"path":"/content", "status":200, "referer":"/login", "agent":"MSIE", "userid":3}' | norikra-client event send www
-    echo '{"path":"/page/1", "status":200, "referer":"/content", "agent":"MSIE", "userid":3}' | norikra-client event send www
-
-Finally, you can get query outputs:
-
-    norikra-client event fetch www.toppageviews
-	{"time":"2013/05/15 15:10:35","cnt":1}
-	{"time":"2013/05/15 15:10:45","cnt":0}
-
-You can just add queries with optional fields:
-
-    norikra-client query add www.search 'SELECT count(*) AS cnt FROM www.win:time_batch(10 sec) WHERE path="/content" AND search_param.length() > 0'
-
-And send more events:
-
-    echo '{"path":"/", "status":200, "referer":"", "agent":"MSIE", "userid":3}' | norikra-client event send www
-    echo '{"path":"/", "status":200, "referer":"", "agent":"Firefox", "userid":4}' | norikra-client event send www
-    echo '{"path":"/content", "status":200, "referer":"/login", "agent":"MSIE", "userid":3}' | norikra-client event send www
-    echo '{"path":"/content", "status":200, "referer":"/login", "agent":"Firefox", "userid":4, "search_param":"news worldwide"}' | norikra-client event send www
-
-Query 'www.search' matches the last event automatically.
-
-## Performance
-
-Threads option available with `norikra start`. Simple specifiers for performance with threadings:
-
-    norikra start --micro     # or --small, --middle, --large (default: 'micro')
-
-Norikra server has 3 types of threads:
-
-* engine: 4 query engine thread types on Esper
-  * inbound: input data handler for queries
-  * outbound: output data handler for queries
-  * router: event handler which decides which query needs that events
-  * timer: executer for queries with time_batches and other timing events
-* rpc: data input/output rpc handler threads on Jetty
-* web: web ui request handler threads on Jetty
-
-In many cases, norikra server handling high rate events needs large number of rpc threads to handle input/output rpc requests. WebUI don't need threads rather than default in almost all of cases.
-
-Engine threads depends on queries running on norikra, input/output event data rate and target numbers. For more details, see Esper's API Documents: http://esper.codehaus.org/esper-4.10.0/doc/reference/en-US/html/api.html#api-threading
-
-Norikra's simple specifiers details of threadings are:
-
-* micro: development and testing
-  * engine: all processings on single threads
-  * rpc: 2 threads
-  * web: 2 threads
-* small: low rate events on virtual servers
-  * engine: inbound 1, outbound 1, route 1, timer 1 threads
-  * rpc: 2 threads
-  * web: 2 threads
-* middle: high rate events on physical servers
-  * engine: inbound 4, outbound 2, route 2, timer 2 threads
-  * rpc: 4 threads
-  * web: 2 threads
-* large: inbound heavy traffic and huge amount of queries
-  * engine: inbound 6, outbound 6, route 4, timer 4 threads
-  * rpc: 8 threads
-  * web: 2 threads
-
-To specify sizes of each threads, use `--*-threads=NUM` options. For more details, see: `norikra help start`.
-
-## User Defined Functions
-
-UDFs/UDAFs can be loaded as plugin gems over rubygems or as private plugins.
-In fact, Norikra's UDFs/UDAFs are Esper's plugin with a JRuby class to indicate plugin metadata.
-
-For details how to write your own UDF/UDAF for norikra and to release it as gem, see README of `norikra-udf-mock`.
-https://github.com/norikra/norikra-udf-mock
+See: http://norikra.github.io/
 
 ## Changes
 
