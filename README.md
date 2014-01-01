@@ -173,16 +173,10 @@ In fact, Norikra's UDFs/UDAFs are Esper's plugin with a JRuby class to indicate 
 For details how to write your own UDF/UDAF for norikra and to release it as gem, see README of `norikra-udf-mock`.
 https://github.com/norikra/norikra-udf-mock
 
-## Tips
-
-We need to write this document on http://norikra.github.io
-
-### Esper query syntax
-
-* String concatination operator: `||`
-
 ## Changes
 
+* v0.1.3:
+ * Fix critical bug about query de-registration
 * v0.1.2:
  * Fix CLI start command to detect jruby path collectly (behind rbenv/rvm and others)
 * v0.1.1:
