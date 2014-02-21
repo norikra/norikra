@@ -66,7 +66,7 @@
 <% if queries.size > 0 %>
 <table class="table">
   <tr><th>Group</th><th>Query name</th><th>Targets</th><th>Query</th><th style="text-align:right;">Events</th><th></th><th></th></tr>
-  <% queries.each do |query| %>
+  <% queries.each_with_index do |query, index| %>
   <tr>
     <td><%= query.group || "(default)" %></td>
     <td><%= query.name %></td>
@@ -83,12 +83,12 @@
       <% end %>
     </td>
     <td>
-      <a class="btn btn-danger btn-xs" data-toggle="modal" href="#removeQuery<%= query.name %>">
+      <a class="btn btn-danger btn-xs" data-toggle="modal" href="#removeQuery<%= index %>">
         <span class="glyphicon glyphicon-trash"></span>
       </a>
       <div class="modal fade"
-        id="removeQuery<%= query.name %>"
-        tabindex="-1" role="dialog" aria-labelledby="removeQueryLabel<%= query.name %>" aria-hidden="true">
+        id="removeQuery<%= index %>"
+        tabindex="-1" role="dialog" aria-labelledby="removeQueryLabel<%= index %>" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
