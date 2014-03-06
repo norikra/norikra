@@ -103,6 +103,12 @@ class Norikra::RPC::Handler
     }
   end
 
+  def see(query_name)
+    logging(:show, :see, [query_name]){
+      @engine.output_pool.fetch(query_name)
+    }
+  end
+
   def sweep(query_group=nil)
     logging(:show, :sweep){
       @engine.output_pool.sweep(query_group)
