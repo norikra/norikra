@@ -82,6 +82,7 @@ module Norikra
 
       @stats_path = conf[:stats][:path]
       @stats_suppress_dump = conf[:stats][:suppress]
+      @stats_dump_interval = conf[:stats][:interval]
       @stats = if @stats_path && test(?r, @stats_path)
                  Norikra::Stats.load(@stats_path)
                else
@@ -147,11 +148,42 @@ module Norikra
       [:INT, :TERM].each do |s|
         Signal.trap(s, shutdown_proc)
       end
-      #TODO: SIGHUP? SIGUSR1? SIGUSR2? (dumps of query/fields? or other handler?)
+
+      @dump_stats = false
+      @dump_next_time = if @stats_dump_interval
+                          Time.now + @stats_dump_interval
+                        else
+                          nil
+                        end
+      Signal.trap(:USR1, ->{ @dump_stats = true })
+
+      #TODO: SIGHUP?(dynamic plugin loading?) SIGUSR2?
 
       while @running
         sleep 0.3
+
+        if @stats && !@stats_suppress_dump
+          if @dump_stats || (@dump_next_time && Time.now > @dump_next_time)
+            dump_stats
+            @dump_stats = false
+            @dump_next_time = Time.now + @stats_dump_interval if @dump_next_time
+          end
+        end
       end
+    end
+
+    def shutdown
+      info "Norikra server shutting down."
+      @webserver.stop
+      @rpcserver.stop
+      @engine.stop
+      info "Norikra server stopped."
+
+      if @stats_path && !@stats_suppress_dump
+        dump_stats
+      end
+
+      info "Norikra server shutdown complete."
     end
 
     def load_plugins
@@ -170,33 +202,23 @@ module Norikra
       end
     end
 
-    def shutdown
-      info "Norikra server shutting down."
-      @webserver.stop
-      @rpcserver.stop
-      @engine.stop
-      info "Norikra server stopped."
-
-      if @stats_path && !@stats_suppress_dump
-        stats = Norikra::Stats.new(
-          host: @host,
-          port: @port,
-          threads: @thread_conf,
-          log: @log_conf,
-          targets: @engine.targets.map{|t|
-            {
-              :name => t.name,
-              :fields => @engine.typedef_manager.dump_target(t.name),
-              :auto_field => t.auto_field
-            }
-          },
-          queries: @engine.queries.map(&:dump)
-        )
-        stats.dump(@stats_path)
-        info "Current status saved", :path => @stats_path
-      end
-
-      info "Norikra server shutdown complete."
+    def dump_stats
+      stats = Norikra::Stats.new(
+        host: @host,
+        port: @port,
+        threads: @thread_conf,
+        log: @log_conf,
+        targets: @engine.targets.map{|t|
+          {
+            :name => t.name,
+            :fields => @engine.typedef_manager.dump_target(t.name),
+            :auto_field => t.auto_field
+          }
+        },
+        queries: @engine.queries.map(&:dump)
+      )
+      stats.dump(@stats_path)
+      info "Current status saved", :path => @stats_path
     end
   end
 end

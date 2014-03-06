@@ -18,6 +18,8 @@ module Norikra
                        :desc => 'status file path to load/dump targets, queries and server configurations [none]'
         option :'suppress-dump-stat', :type => :boolean, :default => false, \
                        :desc => 'specify not to update stat file with updated targets/queries/configurations on runtime [false]'
+        option :'dump-stat-interval', :type => :numeric, :default => nil, \
+                       :desc => 'interval(seconds) of status file dumps on runtime [none (on shutdown only)]'
 
         ### Daemonize options
         option :daemonize, :type => :boolean, :default => false, :aliases => "-d", \
@@ -135,7 +137,7 @@ module Norikra
 
       ### stat file
       conf[:stats] = {
-        path: options[:stats], suppress: options[:'suppress-dump-stat'],
+        path: options[:stats], suppress: options[:'suppress-dump-stat'], interval: options[:'dump-stat-interval'],
       }
 
       ### threads
