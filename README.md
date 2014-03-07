@@ -69,6 +69,11 @@ See: http://norikra.github.io/
 
 ## Changes
 
+* v0.1.4:
+ * Stat dump option on runtime per specified intervals (`--dump-stat-interval`)
+ * Stat dump on demand by SIGUSR1
+ * `norikra-client event see` command (and API call) to get query results, but not remove it
+ * Last modified time for each target on WebUI
 * v0.1.3:
  * Fix critical bug about query de-registration
 * v0.1.2:
