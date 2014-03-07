@@ -68,7 +68,14 @@ class Norikra::WebUI::Handler < Sinatra::Base
       pooled_events = Hash[* queries.map{|q| [q.name, engine.output_pool.pool.fetch(q.name, []).size.to_s]}.flatten]
 
       engine_targets = engine.targets.sort
-      targets = engine_targets.map{|t| {name: t.name, auto_field: t.auto_field, fields: engine.typedef_manager.field_list(t.name) }}
+      targets = engine_targets.map{|t|
+        {
+          name: t.name,
+          auto_field: t.auto_field,
+          fields: engine.typedef_manager.field_list(t.name),
+          modified: t.last_modified.to_s,
+        }
+      }
 
       erb :index, :layout => :base, :locals => {
         input_data: input_data,

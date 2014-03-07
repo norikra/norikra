@@ -230,6 +230,7 @@ module Norikra
         trace "sendEvent", :data => formed
         @runtime.sendEvent(formed.to_java, fieldset.event_type_name)
       end
+      target.update!
       @statistics[:events][:processed] += events.size
       nil
     end

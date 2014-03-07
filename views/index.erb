@@ -151,7 +151,7 @@
 
 <% if targets.size > 0 %>
 <table class="table">
-  <tr><th>Target</th><th>Auto field</th><th>Fields</th><th></th></tr>
+  <tr><th>Target</th><th>Auto field</th><th>Fields</th><th></th><th>modified</th></tr>
   <% targets.each do |target| %>
   <tr>
     <td><%= target[:name] %></td>
@@ -164,6 +164,7 @@
       <% end %>
     </td>
     <td style="font-size: small; color: #c0c0c0;">TODO: change auto_fields, reserve fields, remove targets</td>
+    <td style="text-align: right;"><%= target[:modified] %></td>
   </tr>
   <% end %>
 </table>
