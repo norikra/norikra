@@ -3,6 +3,7 @@ require 'rack/builder'
 require 'msgpack-rpc-over-http-jruby'
 
 require_relative 'handler'
+require_relative 'gatekeeper'
 
 require 'norikra/logger'
 include Norikra::Log
@@ -25,6 +26,7 @@ module Norikra::RPC
       @threads = opts[:threads] || DEFAULT_THREADS
       handler = Norikra::RPC::Handler.new(@engine)
       @app = Rack::Builder.new {
+        use Norikra::RPC::Gatekeeper
         run MessagePack::RPCOverHTTP::Server.app(handler)
       }
     end
