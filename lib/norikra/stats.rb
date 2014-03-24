@@ -20,9 +20,11 @@ module Norikra
     end
 
     def dump(path)
-      File.open(path, 'w') do |file|
+      tmp_path = path + '.tmp'
+      File.open(tmp_path, 'w') do |file|
         file.write(JSON.pretty_generate(self.to_hash))
       end
+      File.rename(tmp_path, path)
     end
 
     def self.load(path)
