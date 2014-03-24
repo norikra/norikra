@@ -13,11 +13,12 @@ module Norikra
         ### Server options
         option :host, :type => :string, :default => nil, :aliases => "-H", :desc => 'host address that server listen [0.0.0.0]'
         option :port, :type => :numeric, :default => nil, :aliases => "-P", :desc => 'port that server uses [26571]'
+        option :'ui-port', :type => :numeric, :default => nil, :desc => 'port that Web UI server uses [26578]'
 
         option :stats, :type => :string, :default => nil, :aliases => "-s", \
-                       :desc => 'status file path to load/dump targets, queries and server configurations [none]'
+                       :desc => 'status file path to load/dump targets and queries [none]'
         option :'suppress-dump-stat', :type => :boolean, :default => false, \
-                       :desc => 'specify not to update stat file with updated targets/queries/configurations on runtime [false]'
+                       :desc => 'specify not to update stat file with updated targets/queries on runtime [false]'
         option :'dump-stat-interval', :type => :numeric, :default => nil, \
                        :desc => 'interval(seconds) of status file dumps on runtime [none (on shutdown only)]'
 
@@ -171,7 +172,13 @@ module Norikra
         level: loglevel, dir: options[:logdir], filesize: options[:'log-filesize'], backups: options[:'log-backups'],
       }
 
-      server = Norikra::Server.new( options[:host], options[:port], conf )
+      server_options = {
+        host: options[:host],
+        port: options[:port],
+        ui_port: options[:'ui-port'],
+      }
+
+      server = Norikra::Server.new( server_options, conf )
       server.run
       server.shutdown
     end

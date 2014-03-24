@@ -2,21 +2,15 @@ require 'json'
 
 module Norikra
   class Stats
-    attr_accessor :host, :port, :ui_port, :threads, :log
     attr_accessor :targets, :queries
 
     def initialize(opts={})
-      @host = opts[:host]
-      @port = opts[:port]
-      @ui_port = opts[:ui_port]
-      @threads = opts[:threads]
-      @log = opts[:log]
       @targets = opts[:targets] || []
       @queries = opts[:queries] || []
     end
 
     def to_hash
-      {host: @host, port: @port, ui_port: @ui_port, threads: @threads, log: @log, targets: @targets, queries: @queries}
+      {targets: @targets, queries: @queries}
     end
 
     def dump(path)

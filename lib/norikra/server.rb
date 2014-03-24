@@ -43,13 +43,13 @@ module Norikra
       :web => { threads: 2 },
     }
 
-    def self.threading_configuration(conf, stats)
+    def self.threading_configuration(conf)
       threads = case conf[:predefined]
                 when :micro then MICRO_PREDEFINED
                 when :small then SMALL_PREDEFINED
                 when :middle then MIDDLE_PREDEFINED
                 when :large then LARGE_PREDEFINED
-                else (stats ? stats.threads : MICRO_PREDEFINED)
+                else MICRO_PREDEFINED
                 end
       [:inbound, :outbound, :route_exec, :timer_exec].each do |type|
         [:threads, :capacity].each do |item|
@@ -61,15 +61,15 @@ module Norikra
       threads
     end
 
-    def self.log_configuration(conf, stats)
-      logconf = stats ? stats.log : { level: nil, dir: nil, filesize: nil, backups: nil }
+    def self.log_configuration(conf)
+      logconf = { level: nil, dir: nil, filesize: nil, backups: nil }
       [:level, :dir, :filesize, :backups].each do |sym|
         logconf[sym] = conf[sym] if conf[sym]
       end
       logconf
     end
 
-    def initialize(host, port, conf={})
+    def initialize(server_options, conf={})
       if conf[:daemonize]
         outfile_path = conf[:daemonize][:outfile] || File.join(conf[:log][:dir], 'norikra.out')
         Dir.chdir("/")
@@ -89,12 +89,12 @@ module Norikra
                  nil
                end
 
-      @host = host || (@stats ? @stats.host : nil)
-      @port = port || (@stats ? @stats.port : nil)
-      @ui_port = @stats ? @stats.ui_port : nil
+      @host = server_options[:host] || Norikra::RPC::HTTP::DEFAULT_LISTEN_HOST
+      @port = server_options[:port] || Norikra::RPC::HTTP::DEFAULT_LISTEN_PORT
+      @ui_port = server_options[:ui_port] || Norikra::WebUI::HTTP::DEFAULT_LISTEN_PORT
 
-      @thread_conf = self.class.threading_configuration(conf[:thread], @stats)
-      @log_conf = self.class.log_configuration(conf[:log], @stats)
+      @thread_conf = self.class.threading_configuration(conf[:thread])
+      @log_conf = self.class.log_configuration(conf[:log])
 
       Norikra::Log.init(@log_conf[:level], @log_conf[:dir], {:filesize => @log_conf[:filesize], :backups => @log_conf[:backups]})
 
@@ -204,10 +204,6 @@ module Norikra
 
     def dump_stats
       stats = Norikra::Stats.new(
-        host: @host,
-        port: @port,
-        threads: @thread_conf,
-        log: @log_conf,
         targets: @engine.targets.map{|t|
           {
             :name => t.name,
