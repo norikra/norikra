@@ -144,7 +144,7 @@ module Norikra
       info "Norikra server started."
 
       shutdown_proc = ->{ @running = false }
-      # JVM uses SIGQUIT for thread/heap state dumping
+      # JVM uses SIGQUIT / SIGUSR1 for thread/heap state dumping
       [:INT, :TERM].each do |s|
         Signal.trap(s, shutdown_proc)
       end
@@ -155,9 +155,9 @@ module Norikra
                         else
                           nil
                         end
-      Signal.trap(:USR1, ->{ @dump_stats = true })
+      Signal.trap(:USR2, ->{ @dump_stats = true })
 
-      #TODO: SIGHUP?(dynamic plugin loading?) SIGUSR2?
+      #TODO: SIGHUP?(dynamic plugin loading?)
 
       while @running
         sleep 0.3
