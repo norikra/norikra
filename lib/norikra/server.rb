@@ -162,7 +162,7 @@ module Norikra
       while @running
         sleep 0.3
 
-        if @stats && !@stats_suppress_dump
+        if @stats_path && !@stats_suppress_dump
           if @dump_stats || (@dump_next_time && Time.now > @dump_next_time)
             dump_stats
             @dump_stats = false
