@@ -9,11 +9,6 @@ describe Norikra::Stats do
   describe '#to_hash' do
     it 'returns internal stats as hash with symbolized keys' do
       args = {
-        host: nil,
-        port: nil,
-        ui_port: nil,
-        threads: Norikra::Server::SMALL_PREDEFINED,
-        log: {level: nil, dir: nil, filesize: nil, backups: nil},
         targets: [],
         queries: [],
       }
@@ -27,11 +22,6 @@ describe Norikra::Stats do
       Dir.mktmpdir do |dir|
         File.open("#{dir}/stats.json", 'w') do |file|
           args = {
-            host: nil,
-            port: nil,
-            ui_port: nil,
-            threads: Norikra::Server::LARGE_PREDEFINED,
-            log: {level: 'WARN', dir: '/var/log/norikra', filesize: '50MB', backups: 300},
             targets: [
               { name: 'test1', fields: { id: { name: 'id', type: 'int', optional: false}, data: { name: 'data', type: 'string', optional: true } } },
             ],
