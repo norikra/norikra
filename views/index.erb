@@ -14,7 +14,7 @@
       <div class="progress-bar progress-bar-<%= usage_bar_color %>" style="width: <%= used_p.to_i %>%;">
         <span class="sr-only"><%= used_p %> % used</span>
       </div>
-      <div class="progress-bar progress-bar-success" style="width: <%= committed_p.to_i %>%;">
+      <div class="progress-bar progress-bar-success" style="width: <%= (committed_p - used_p).to_i %>%;">
         <span class="sr-only"><%= committed_p %> % used</span>
       </div>
     </div>
