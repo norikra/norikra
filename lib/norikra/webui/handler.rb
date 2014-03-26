@@ -4,6 +4,8 @@ require 'norikra/logger'
 
 require 'norikra/webui'
 
+require 'norikra/stats'
+
 require 'sinatra/base'
 require 'sinatra/json'
 require 'erubis'
@@ -125,6 +127,15 @@ class Norikra::WebUI::Handler < Sinatra::Base
     logging(:manage, :deregister, [query_name]) do
       engine.deregister(query_name)
       redirect '/#queries'
+    end
+  end
+
+  get '/stat/dump' do
+    logging(:show, :stat_dump) do
+      stats = Norikra::Stats.generate(engine)
+      date = Time.now.strftime('%Y-%m-%d')
+      attachment "stats.dump.#{date}.json"
+      stats.to_json
     end
   end
 
