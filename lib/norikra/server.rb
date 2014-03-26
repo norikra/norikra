@@ -203,17 +203,7 @@ module Norikra
     end
 
     def dump_stats
-      stats = Norikra::Stats.new(
-        targets: @engine.targets.map{|t|
-          {
-            :name => t.name,
-            :fields => @engine.typedef_manager.dump_target(t.name),
-            :auto_field => t.auto_field
-          }
-        },
-        queries: @engine.queries.map(&:dump)
-      )
-      stats.dump(@stats_path)
+      Norikra::Stats.generate(@engine).dump(@stats_path)
       info "Current status saved", :path => @stats_path
     end
   end

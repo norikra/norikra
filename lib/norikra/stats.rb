@@ -4,6 +4,19 @@ module Norikra
   class Stats
     attr_accessor :targets, :queries
 
+    def self.generate(engine)
+      Norikra::Stats.new(
+        targets: engine.targets.map{|t|
+          {
+            :name => t.name,
+            :fields => engine.typedef_manager.dump_target(t.name),
+            :auto_field => t.auto_field
+          }
+        },
+        queries: engine.queries.map(&:dump)
+      )
+    end
+
     def initialize(opts={})
       @targets = opts[:targets] || []
       @queries = opts[:queries] || []
@@ -13,10 +26,14 @@ module Norikra
       {targets: @targets, queries: @queries}
     end
 
+    def to_json
+      JSON.pretty_generate(self.to_hash)
+    end
+
     def dump(path)
       tmp_path = path + '.tmp'
       File.open(tmp_path, 'w') do |file|
-        file.write(JSON.pretty_generate(self.to_hash))
+        file.write(self.to_json)
       end
       File.rename(tmp_path, path)
     end
