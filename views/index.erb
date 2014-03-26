@@ -151,7 +151,7 @@
 
 <% if targets.size > 0 %>
 <table class="table">
-  <tr><th>Target</th><th>Auto field</th><th>Fields</th><th></th><th>modified</th></tr>
+  <tr><th>Target</th><th>Auto field</th><th>Fields</th><th>modified</th><th></th></tr>
   <% targets.each_with_index do |target, index| %>
   <tr>
     <td><%= target[:name] %></td>
@@ -163,6 +163,7 @@
         (lazy target)
       <% end %>
     </td>
+    <td style="text-align: right;"><%= target[:modified] %></td>
     <td style="font-size: small; color: #c0c0c0;">
       <a class="btn btn-danger btn-xs" data-toggle="modal" href="#removeTarget<%= index %>">
       <span class="glyphicon glyphicon-trash"></span>
@@ -191,7 +192,6 @@
         </div><!-- /.modal-dialog -->
       </div><!-- /.modal -->
     </td>
-    <td style="text-align: right;"><%= target[:modified] %></td>
   </tr>
   <% end %>
 </table>
