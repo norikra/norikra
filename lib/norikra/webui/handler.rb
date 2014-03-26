@@ -87,6 +87,14 @@ class Norikra::WebUI::Handler < Sinatra::Base
     end
   end
 
+  post '/close' do
+    target_name = params[:target]
+    logging(:manage, :close, [target_name]) do
+      engine.close(target_name)
+      redirect '/'
+    end
+  end
+
   post '/register' do
     query_name,query_group,expression = params[:query_name], params[:query_group], params[:expression]
 

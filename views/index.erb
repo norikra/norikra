@@ -152,7 +152,7 @@
 <% if targets.size > 0 %>
 <table class="table">
   <tr><th>Target</th><th>Auto field</th><th>Fields</th><th></th><th>modified</th></tr>
-  <% targets.each do |target| %>
+  <% targets.each_with_index do |target, index| %>
   <tr>
     <td><%= target[:name] %></td>
     <td><%= target[:auto_field] %></td>
@@ -163,7 +163,34 @@
         (lazy target)
       <% end %>
     </td>
-    <td style="font-size: small; color: #c0c0c0;">TODO: change auto_fields, reserve fields, remove targets</td>
+    <td style="font-size: small; color: #c0c0c0;">
+      <a class="btn btn-danger btn-xs" data-toggle="modal" href="#removeTarget<%= index %>">
+      <span class="glyphicon glyphicon-trash"></span>
+      </a>
+      <div class="modal fade"
+        id="removeTarget<%= index %>"
+        tabindex="-1" role="dialog" aria-labelledby="removeTargetLabel<%= index %>" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title">Remove Target <%= target[:name] %></h4>
+            </div>
+            <div class="modal-body">
+              <p>Remove all definitions and queries?</p>
+              <p>name: <%= target[:name] %></p>
+            </div>
+            <div class="modal-footer">
+              <form class="form-inline" action="/close" method="POST">
+                <input type="hidden" name="target" value="<%= target[:name] %>" />
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">Remove</button>
+              </form>
+            </div>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+    </td>
     <td style="text-align: right;"><%= target[:modified] %></td>
   </tr>
   <% end %>
