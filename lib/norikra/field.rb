@@ -218,7 +218,23 @@ module Norikra
             raise ArgumentError, "container_accessor must be a String or Interger, but #{accessor.class.to_s}"
           end
           if v.is_a?(Hash)
-            v[accessor] || v[accessor.to_s] # hash[string] is valid, and hash[int] is also valid, and hash["int"] is valid too.
+            # v[accessor] || v[accessor.to_s]
+            if v.has_key?(accessor)
+              v[accessor]
+            elsif v.has_key?(accessor.to_s)
+              v[accessor.to_s]
+            elsif accessor.is_a?(String)
+              val = v.keys.reduce(nil) do |r, key|
+                if key.is_a?(String)
+                  r || ( key.gsub(/[^$_a-zA-Z0-9]/, '_') == accessor.to_s ? v[key] : nil )
+                else
+                  r
+                end
+              end
+              val # valid value or nil
+            else # v does not have key "#{accessor}" and accessor is Fixnum
+              nil
+            end
           elsif v.is_a?(Array)
             if accessor.is_a?(Fixnum)
               v[accessor]

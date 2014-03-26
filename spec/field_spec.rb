@@ -275,5 +275,18 @@ describe Norikra::Field do
       f.define_value_accessor('foo.bar.1.baz', true)
       expect(f.value({'foo' => {'bar' => [{'baz' => 'value1'}, {'baz' => 'value2'}]}})).to eql('value2')
     end
+
+    it 'defines chain value accessor with field name including escaped field' do
+      f = Norikra::Field.new('foo', 'hash')
+      f.define_value_accessor('foo.bar_baz.bar_baz', true)
+      data = {
+        'foo' => {
+          'bar baz' => {
+            'bar/baz' => 'ichi',
+          }
+        }
+      }
+      expect(f.value(data)).to eql('ichi')
+    end
   end
 end
