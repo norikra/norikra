@@ -87,26 +87,27 @@ module Norikra
                  end
       case tree.text
       when 'EVENT_PROP_EXPR'
-        ASTEventPropNode.new(tree.text, children)
+        ASTEventPropNode.new(tree.text, children, tree)
       when 'SELECTION_ELEMENT_EXPR'
-        ASTSelectionElementNode.new(tree.text, children)
+        ASTSelectionElementNode.new(tree.text, children, tree)
       when 'LIB_FUNCTION'
-        ASTLibFunctionNode.new(tree.text, children)
+        ASTLibFunctionNode.new(tree.text, children, tree)
       when 'STREAM_EXPR'
-        ASTStreamNode.new(tree.text, children)
+        ASTStreamNode.new(tree.text, children, tree)
       when 'SUBSELECT_EXPR'
-        ASTSubSelectNode.new(tree.text, children)
+        ASTSubSelectNode.new(tree.text, children, tree)
       else
-        ASTNode.new(tree.text, children)
+        ASTNode.new(tree.text, children, tree)
       end
     end
 
     class ASTNode
-      attr_accessor :name, :children
+      attr_accessor :name, :children, :tree
 
-      def initialize(name, children)
+      def initialize(name, children, tree)
         @name = name
         @children = children
+        @tree = tree
       end
 
       def nodetype?(*sym)
@@ -184,15 +185,22 @@ module Norikra
     end
 
     class ASTLibFunctionNode < ASTNode # LIB_FUNCTION
-      # "now()"            => ["LIB_FUNCTION", "now", "("]
-      # "hoge.length()"    => ["LIB_FUNCTION", "hoge", "length", "("]
-      # "hoge.substr(0)"   => ["LIB_FUNCTION", "hoge", "substr", "0", "("]
-      # "substr(10,0)"     => ["LIB_FUNCTION", "substr", "10", "0", "("]
-      # "hoge.substr(0,8)" => ["LIB_FUNCTION", "hoge", "substr", "0", "8", "("]
+      ### foo is function
+      # "foo()"     => ["LIB_FUNCTION", "foo", "("]
+      # "foo(10)"   => ["LIB_FUNCTION", "foo", "10", "("]
+      # "foo(10,0)" => ["LIB_FUNCTION", "foo", "10", "0", "("]
+      # "foo(bar)"  => ["LIB_FUNCTION", "foo", ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "bar"]], "("]
 
-      # "opts.num.$0.length()" => ["LIB_FUNCTION", "opts.num.$0", "length", "("]
+      ### foo is property
+      # "foo.bar()"    => ["LIB_FUNCTION", "foo", "bar", "("]
+      # "foo.bar(0)"   => ["LIB_FUNCTION", "foo", "bar", "0", "("]
+      # "foo.bar(0,8)" => ["LIB_FUNCTION", "foo", "bar", "0", "8", "("]
 
-      # "max(size)"             => ["LIB_FUNCTION", "max", ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "size"]], "("]
+      ### nested field access
+      # "foo.bar.$0.baz()" => ["LIB_FUNCTION", "foo.bar.$0", "baz", "("]
+
+      # 2nd child is bare-word (like [a-z][a-z0-9]*) -> this is function -> 1st child is receiver -> property
+      # 2nd child is literal or property or none -> 1st child is built-in function
 
       def nodetype?(*sym)
         sym.include?(:lib) || sym.include?(:libfunc)
@@ -207,7 +215,7 @@ module Norikra
           # first element should be func name if second element is property, library call or subqueries
           self.listup('EVENT_PROP_EXPR').map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
 
-        elsif @children[1].name =~ /^(-)?\d+(\.\d+)$/ || @children[1].name =~ /^'[^']*'$/ || @children[1].name =~ /^"[^"]*"$/
+        elsif @children[1].name =~ /^(-)?\d+(\.\d+)?$/ || @children[1].name =~ /^'[^']*'$/ || @children[1].name =~ /^"[^"]*"$/
           # first element should be func name if secod element is number/string literal
           self.listup('EVENT_PROP_EXPR').map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
 
@@ -216,7 +224,7 @@ module Norikra
           self.listup('EVENT_PROP_EXPR').map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
 
         else
-          # first element may be property
+          # first element may be property ########## or function
           #  * simple 'fieldname.funcname()'
           #  * fully qualified 'target.fieldname.funcname()'
           #  * simple/fully-qualified container field access 'fieldname.key.$0.funcname()' or 'target.fieldname.$1.funcname()'

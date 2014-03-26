@@ -24,6 +24,23 @@ describe Norikra::Query do
         end
       end
 
+      context 'with top-level built-in functions' do
+        it 'returns query instances collectly parsed' do
+          expression = 'SELECT rate(10) FROM TestTable output snapshot every 2 sec'
+          q = Norikra::Query.new(
+            :name => 'TestTable query1', :expression => expression
+          )
+          expect(q.name).to eql('TestTable query1')
+          expect(q.group).to be_nil
+          expect(q.expression).to eql(expression)
+          expect(q.targets).to eql(['TestTable'])
+
+          expect(q.fields).to eql([])
+          expect(q.fields('TestTable')).to eql([])
+          expect(q.fields(nil)).to eql([])
+        end
+      end
+
       context 'with order by' do
         it 'returns query instances, collectly parsed, without AS_names for fields' do
           expression = 'SELECT name.string, count(*) AS cnt FROM TestTable.win:time_batch(10 sec) WHERE path="/" AND size > 100 and param.length() > 0 GROUP BY name.string ORDER BY cnt'
