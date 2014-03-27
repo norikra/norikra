@@ -176,6 +176,24 @@ describe Norikra::Query do
           expect(q.fields(nil)).to eql([])
         end
       end
+
+      context 'with query with patterns' do
+        it 'returns query instances collectly parsed' do
+
+          expression = "select a.name, a.content, b.content from pattern [every a=EventA -> b=EventA(name = a.name, type = 'TYPE') where timer:within(1 min)].win:time(2 hour) where a.source in ('A', 'B')"
+          q = Norikra::Query.new(
+            :name => 'TestTable query9', :expression => expression
+          )
+          expect(q.name).to eql('TestTable query9')
+          expect(q.group).to be_nil
+          expect(q.expression).to eql(expression)
+          expect(q.targets).to eql(['EventA'])
+          expect(q.aliases).to eql(['a', 'b'])
+          expect(q.fields).to eql(['name', 'content', 'type', 'source'].sort)
+          expect(q.fields('EventA')).to eql(['name', 'content', 'type', 'source'].sort)
+          expect(q.fields(nil)).to eql([])
+        end
+      end
     end
 
     describe '#dup' do

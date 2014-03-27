@@ -58,13 +58,13 @@ module Norikra
 
     def targets
       return @targets if @targets
-      @targets = (self.ast.listup(:stream).map(&:target) + self.subqueries.map(&:targets).flatten).sort.uniq
+      @targets = (self.ast.listup(:stream).map(&:targets).flatten + self.subqueries.map(&:targets).flatten).sort.uniq
       @targets
     end
 
     def aliases
       return @aliases if @aliases
-      @aliases = (self.ast.listup(:stream).map(&:alias) + self.subqueries.map(&:aliases).flatten).sort.uniq
+      @aliases = (self.ast.listup(:stream).map{|s| s.aliases.map(&:first) }.flatten + self.subqueries.map(&:aliases).flatten).sort.uniq
       @aliases
     end
 
@@ -81,10 +81,12 @@ module Norikra
       all = []
       unknowns = []
       self.ast.listup(:stream).each do |node|
-        if node.alias
-          alias_map[node.alias] = node.target
+        node.aliases.each do |alias_name, target|
+          alias_map[alias_name] = target
         end
-        fields[node.target] = []
+        node.targets.each do |target|
+          fields[target] ||= []
+        end
       end
 
       dup_aliases = (alias_map.keys & fields.keys)

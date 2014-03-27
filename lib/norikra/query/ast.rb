@@ -79,25 +79,74 @@ module Norikra
     #     ["LIB_FUNC_CHAIN", ["LIB_FUNCTION", "opts.num.seq", "length", "("]],
     #     "0"]]]]
 
+    ### SELECT a.name, a.content, b.content
+    ### FROM pattern[every a=EventA -> b=EventA(name = a.name, type = 'TYPE') WHERE timer:within(1 min)].win:time(2 hour)
+    ### WHERE a.source in ('A', 'B')
+
+    # ["EPL_EXPR",
+    #   ["SELECTION_EXPR",
+    #     ["SELECTION_ELEMENT_EXPR",
+    #       ["EVENT_PROP_EXPR",
+    #         ["EVENT_PROP_SIMPLE", "a"],
+    #         ["EVENT_PROP_SIMPLE", "name"]]],
+    #     ["SELECTION_ELEMENT_EXPR",
+    #       ["EVENT_PROP_EXPR",
+    #         ["EVENT_PROP_SIMPLE", "a"],
+    #         ["EVENT_PROP_SIMPLE", "content"]]],
+    #     ["SELECTION_ELEMENT_EXPR",
+    #       ["EVENT_PROP_EXPR",
+    #         ["EVENT_PROP_SIMPLE", "b"],
+    #         ["EVENT_PROP_SIMPLE", "content"]]]],
+    #   ["STREAM_EXPR",
+    #     ["PATTERN_INCL_EXPR",
+    #       ["FOLLOWED_BY_EXPR",
+    #         ["FOLLOWED_BY_ITEM", ["every", ["PATTERN_FILTER_EXPR", "a", "EventA"]]],
+    #         ["FOLLOWED_BY_ITEM",
+    #           ["GUARD_EXPR",
+    #             ["PATTERN_FILTER_EXPR",
+    #               "b",
+    #               "EventA",
+    #               ["EVAL_EQUALS_EXPR",
+    #                 ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "name"]],
+    #                 ["EVENT_PROP_EXPR",
+    #                   ["EVENT_PROP_SIMPLE", "a"],
+    #                   ["EVENT_PROP_SIMPLE", "name"]]],
+    #               ["EVAL_EQUALS_EXPR",
+    #                 ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "type"]],
+    #                 "'TYPE'"]],
+    #             "timer",
+    #             "within",
+    #             ["TIME_PERIOD", ["MINUTE_PART", "1"]]]]]],
+    #     ["VIEW_EXPR", "win", "time", ["TIME_PERIOD", ["HOUR_PART", "2"]]]],
+    #   ["WHERE_EXPR",
+    #     ["in",
+    #       ["EVENT_PROP_EXPR",
+    #         ["EVENT_PROP_SIMPLE", "a"],
+    #         ["EVENT_PROP_SIMPLE", "source"]],
+    #       "(",
+    #       "'A'",
+    #       "'B'",
+    #       ")"]]]
+
     def astnode(tree)
       children = if tree.children
                    tree.children.map{|c| astnode(c)}
                  else
                    []
                  end
-      case tree.text
-      when 'EVENT_PROP_EXPR'
-        ASTEventPropNode.new(tree.text, children, tree)
-      when 'SELECTION_ELEMENT_EXPR'
-        ASTSelectionElementNode.new(tree.text, children, tree)
-      when 'LIB_FUNCTION'
-        ASTLibFunctionNode.new(tree.text, children, tree)
-      when 'STREAM_EXPR'
-        ASTStreamNode.new(tree.text, children, tree)
-      when 'SUBSELECT_EXPR'
-        ASTSubSelectNode.new(tree.text, children, tree)
+      cls = case tree.text
+            when 'EVENT_PROP_EXPR' then ASTEventPropNode
+            when 'SELECTION_ELEMENT_EXPR' then ASTSelectionElementNode
+            when 'LIB_FUNCTION' then ASTLibFunctionNode
+            when 'STREAM_EXPR' then ASTStreamNode
+            when 'PATTERN_FILTER_EXPR' then ASTPatternNode
+            when 'SUBSELECT_EXPR' then ASTSubSelectNode
+            else ASTNode
+            end
+      if cls.respond_to?(:generate)
+        cls.generate(tree.text, children, tree)
       else
-        ASTNode.new(tree.text, children, tree)
+        cls.new(tree.text, children, tree)
       end
     end
 
@@ -133,7 +182,12 @@ module Norikra
         nil
       end
 
-      def listup(type) # search all nodes that has 'type'
+      def listup(*type) # search all nodes that has 'type'
+        if type.size > 1
+          return type.map{|t| self.listup(t) }.reduce(&:+)
+        end
+        type = type.first
+
         result = []
         result.push(self) if type.is_a?(String) && @name == type || nodetype?(type)
 
@@ -245,31 +299,146 @@ module Norikra
     end
 
     class ASTStreamNode < ASTNode # STREAM_EXPR
+      def self.generate(name, children, tree)
+        if children.first.name == 'EVENT_FILTER_EXPR'
+          ASTStreamEventNode.new(name, children, tree)
+        elsif children.first.name == 'PATTERN_INCL_EXPR'
+          ASTStreamPatternNode.new(name, children, tree)
+        else
+          raise "unexpected stream node type! report to norikra developer!: #{children.map(&:name).join(',')}"
+        end
+      end
+
+      def nodetype?(*sym)
+        sym.include?(:stream)
+      end
+
+      def targets
+        # ["TARGET_NAME"]
+        raise NotImplementedError, "ASTStreamNode#targets MUST be overridden by subclass"
+      end
+
+      def aliases
+        # [ [ "ALIAS_NAME", "TARGET_NAME" ], ... ]
+        raise NotImplementedError, "ASTStreamNode#aliases MUST be overridden by subclass"
+      end
+
+      def fields(default_target=nil, known_targets_aliases=[])
+        raise NotImplementedError, "ASTStreamNode#fields MUST be overridden by subclass"
+      end
+    end
+
+    class ASTStreamEventNode < ASTStreamNode
+      ##### from stream_def [as name] [unidirectional] [retain-union | retain-intersection],
+      #####      [ stream_def ... ]
+      #
+      # single Event stream name ( ex: FROM events.win:time(...) AS e )
+      #
       #  ["STREAM_EXPR",
       #   ["EVENT_FILTER_EXPR", "FraudWarningEvent"],
       #   ["VIEW_EXPR", "win", "keepall"],
       #   "fraud"],
+      #
       #  ["STREAM_EXPR",
       #   ["EVENT_FILTER_EXPR",
       #    "PINChangeEvent",
       #    [">", ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "size"]], "10"]],
       #   ["VIEW_EXPR", "win", "time", ["TIME_PERIOD", ["SECOND_PART", "20"]]]],
 
+      NON_ALIAS_NODES = ['EVENT_FILTER_EXPR','VIEW_EXPR','unidirectional','retain-union','retain-intersection']
+
+      def targets
+        [self.find('EVENT_FILTER_EXPR').child.name]
+      end
+
+      def aliases
+        alias_nodes = children.select{|n| not NON_ALIAS_NODES.include?(n.name) }
+        if alias_nodes.size < 1
+          []
+        elsif alias_nodes.size > 1
+          raise "unexpected FROM clause (includes 2 or more alias words): #{alias_nodes.map(&:name).join(',')}"
+        else
+          [ [ alias_nodes.first.name, self.targets.first ] ]
+        end
+      end
+
+      def fields(default_target=nil, known_targets_aliases=[])
+        this_target = self.targets.first
+        self.listup('EVENT_PROP_EXPR').map{|p| p.fields(this_target,known_targets_aliases)}.reduce(&:+) || []
+      end
+    end
+
+    class ASTStreamPatternNode < ASTStreamNode
+      ## MEMO: Pattern itself can have alias name, but it makes no sense. So we ignore it.
+      ##       ('x' is ignored): pattern [... ] AS x
+      #
+      # pattern ( ex: FROM pattern[ every a=events1 -> b=Events1(name=a.name, type='T') where timer:within(1 min) ].win:time(2 hour) )
+      #
+      # ["STREAM_EXPR",
+      #   ["PATTERN_INCL_EXPR",
+      #     ["FOLLOWED_BY_EXPR",
+      #       ["FOLLOWED_BY_ITEM", ["every", ["PATTERN_FILTER_EXPR", "a", "EventA"]]],
+      #       ["FOLLOWED_BY_ITEM",
+      #         ["GUARD_EXPR",
+      #           ["PATTERN_FILTER_EXPR",
+      #             "b",
+      #             "EventA",
+      #             ["EVAL_EQUALS_EXPR",
+      #               ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "name"]],
+      #               ["EVENT_PROP_EXPR",
+      #                 ["EVENT_PROP_SIMPLE", "a"],
+      #                 ["EVENT_PROP_SIMPLE", "name"]]],
+      #             ["EVAL_EQUALS_EXPR",
+      #               ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "type"]],
+      #               "'TYPE'"]],
+      #           "timer",
+      #           "within",
+      #           ["TIME_PERIOD", ["MINUTE_PART", "1"]]]]]],
+      #   ["VIEW_EXPR", "win", "time", ["TIME_PERIOD", ["HOUR_PART", "2"]]]],
+
+      def targets
+        self.listup(:pattern).map(&:target)
+      end
+
+      def aliases
+        self.listup(:pattern).map{|p| [ p.alias, p.target ] }
+      end
+
+      def fields(default_target=nil, known_targets_aliases=[])
+        self.listup(:pattern).map{|p| p.fields(default_target, known_targets_aliases) }.reduce(&:+) || []
+      end
+    end
+
+    class ASTPatternNode < ASTNode
+      # ["PATTERN_FILTER_EXPR", "a", "EventA"]
+      #
+      # ["PATTERN_FILTER_EXPR",
+      #   "b",
+      #   "EventA",
+      #   ["EVAL_EQUALS_EXPR",
+      #     ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "name"]],
+      #     ["EVENT_PROP_EXPR",
+      #       ["EVENT_PROP_SIMPLE", "a"],
+      #       ["EVENT_PROP_SIMPLE", "name"]]],
+      #   ["EVAL_EQUALS_EXPR",
+      #     ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "type"]],
+      #     "'TYPE'"]],
+
       def nodetype?(*sym)
-        sym.include?(:stream)
+        sym.include?(:pattern)
       end
 
       def target
-        self.find('EVENT_FILTER_EXPR').child.name
+        children[1].name
       end
 
       def alias
-        @children.last.children.size < 1 ? @children.last.name : nil
+        children[0].name
       end
 
       def fields(default_target=nil, known_targets_aliases=[])
         this_target = self.target
-        self.listup('EVENT_PROP_EXPR').map{|p| p.fields(this_target,known_targets_aliases)}.reduce(&:+) || []
+        self.listup('EVENT_PROP_EXPR').map{|p| p.fields(this_target, known_targets_aliases) }.reduce(&:+) || []
       end
     end
 
