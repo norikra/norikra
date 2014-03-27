@@ -91,6 +91,8 @@ module Norikra
       ARGV.each do |arg|
         if arg =~ /^-X(.+)$/
           jruby_options.push('-J-X' + $1)
+        elsif arg =~ /^-verbose:gc$/
+          jruby_options.push('-J-verbose:gc')
         else
           argv.push(arg)
         end
