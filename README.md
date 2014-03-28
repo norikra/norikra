@@ -69,6 +69,24 @@ See: http://norikra.github.io/
 
 ## Changes
 
+* v0.1.5:
+ * Add RPC port monitoring handler (GET /)
+ * Add `Pattern` support
+ * Changes for GC/JVM
+   * Server starts with default(recommended) JVM options for GC configurations
+   * Add option not to use default JVM options
+   * Add option to configure JVM to print GC logs
+ * Stats file changes
+   * Changed to use SIGUSR2 (SIGUSR1 is used by JVM on linux platform)
+   * Changed no to contain server process configurations (ports, threads, logs ...)
+ * WebUI improvements
+   * Add button to close target on WebUI
+   * Add link to download stats file
+ * Fix bugs
+   * Fieldname handlings about names with non-alphabetic chars
+   * Query parser bug for some built-in functions (ex: `rate(10)`)
+   * Write stats file in more safe way
+   * WebUI: Incorrect memory bar
 * v0.1.4:
  * Stat dump option on runtime per specified intervals (`--dump-stat-interval`)
  * Stat dump on demand by SIGUSR1
