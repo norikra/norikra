@@ -30,6 +30,10 @@ module Norikra
         option :outfile, :type => :string, :default => nil, \
                          :desc => "stdout redirect file when daemonized [${logdir}/norikra.out]"
 
+        ### JVM options
+        option :'bare-jvm', :type => :boolean, :default => false, :desc => "use JVM without any recommended options"
+        option :'gc-log', :type => :string, :default => nil, :desc => "output gc logs on specified file path"
+
         ### Performance options
         # performance predefined configuration sets
         option :micro, :type => :boolean, :default => false, \
@@ -72,6 +76,40 @@ module Norikra
   end
 
   class CLI < Thor
+    # JVM defaults w/ ConcurrentGC:
+    #    java -XX:+UseConcMarkSweepGC -XX:+PrintFlagsFinal -version
+    #    (jruby does not modify flags)
+    #
+    #   CMSIncrementalMode: not recommended in Java8
+    #
+    #   CMSInitiatingOccupancyFraction: CMS threshold
+    #   CMSInitiatingOccupancyFraction = 100 - MinHeapFreeRatio + CMSTriggerRatio * MinHeapFreeRatio / 100
+    #     default: MinHeapFreeRatio=40 CMSTriggerRatio=80 -> CMSInitiatingOccupancyFraction=92
+    #
+    #   NewRatio=7 (New:Old = 1:7)
+    #   InitialSurvivorRatio=8     MinSurvivorRatio=3     SurvivorRatio=8 (Eden:Survivor0:survivor1 = 8:1:1)
+    #
+    #   MaxTenuringThreshold=4
+    #   TargetSurvivorRatio=50
+    #    (InitialTenuringThreshold=7 is for Parallel GC/UseAdaptiveSizePolicy)
+    #
+    #   SoftRefLRUPolicyMSPerMB=1000
+    #    ( gc_interval > free_heap * ms_per_mb : clear softref )
+
+    JVM_OPTIONS = [
+      '-XX:-UseGCOverheadLimit',
+      '-XX:+UseConcMarkSweepGC', '-XX:+UseCompressedOops',
+      '-XX:CMSInitiatingOccupancyFraction=70', '-XX:+UseCMSInitiatingOccupancyOnly',
+      '-XX:NewRatio=1',
+      '-XX:SurvivorRatio=2', '-XX:MaxTenuringThreshold=15', '-XX:TargetSurvivorRatio=80',
+      '-XX:SoftRefLRUPolicyMSPerMB=200',
+    ]
+
+    JVM_GC_OPTIONS = [
+      '-verbose:gc', '-XX:+PrintGCDetails', '-XX:+PrintGCDateStamps',
+      '-XX:+HeapDumpOnOutOfMemoryError',
+    ]
+
     ### 'start' and 'serverprocess' have almost same option set (for parse/help)
     ### DIFF: jvm options (-X)
     Norikra::CLIUtil.register_common_start_options(self)
@@ -86,7 +124,16 @@ module Norikra
       ARGV.shift # shift head "start"
 
       argv = ["serverproc"]
-      jruby_options = ['-J-server', '-J-XX:-UseGCOverheadLimit']
+      jruby_options = ['-J-server']
+
+      unless options[:'bare-jvm']
+        jruby_options += JVM_OPTIONS.map{|opt| '-J' + opt }
+      end
+
+      if options[:'gc-log']
+        jruby_options += JVM_GC_OPTIONS.map{|opt| '-J' + opt }
+        jruby_options.push "-J-Xloggc:#{options[:'gc-log']}"
+      end
 
       ARGV.each do |arg|
         if arg =~ /^-X(.+)$/
