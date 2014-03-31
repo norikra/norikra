@@ -215,7 +215,24 @@ module Norikra
           else
             raise Norikra::QueryError, "target cannot be determined for field '#{name}'"
           end
-          encoded = (prefix ? "#{prefix}." : "") + Norikra::Field.escape_name(body)
+          #### 'field.javaMethod("args")' MUST NOT be escaped....
+          # 'getPropertyName' returns a String "path.index(\".\")" for java method calling,
+          #  and other optional informations are not provided.
+          # We seems that '.camelCase(ANYTHING)' should be a method calling, not nested field accesses.
+          # This is ugly, but works.
+          #
+          # 'path.substring(0, path.indexOf(path.substring(1,1)))' is parsed as 3-times-nested LIB_FUNCTION_CHAIN,
+          #  so does not make errors.
+          #
+          method_chains = []
+          body_chains = body.split('.')
+          while body_chains.size > 0
+            break unless body_chains.last =~ /^[a-z][a-zA-Z]*\(.*\)$/
+            method_chains.unshift body_chains.pop
+          end
+
+          escaped_body = Norikra::Field.escape_name(body_chains.join('.'))
+          encoded = (prefix ? "#{prefix}." : "") + escaped_body + (method_chains.size > 0 ? '.' + method_chains.join('.') : '' )
           node.send(setter, encoded)
         end
       }

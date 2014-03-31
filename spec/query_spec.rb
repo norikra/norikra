@@ -175,6 +175,18 @@ describe Norikra::Query do
           expect(q.fields('TestTable')).to eql(['params.$$path.$1', 'size.$0.bytes', 'opts.num.$0'].sort)
           expect(q.fields(nil)).to eql([])
         end
+
+        it 'can parse with nested function calls correctly' do
+          expression = 'SELECT path.substring(0, path.index("?")) AS urlpath, COUNT(*) AS count FROM TestTable.win:time_batch(60 seconds) GROUP BY path.substring(0, path.index("?"))'
+          q = Norikra::Query.new(:name => 'TestTable query8.1', :expression => expression)
+          expect(q.fields).to eql(['path'])
+        end
+
+        it 'can parse with nested function calls w/ nested fields correctly' do
+          expression = 'SELECT path.f1.substring(0, path.f1.index("?")) AS urlpath, COUNT(*) AS count FROM TestTable.win:time_batch(60 seconds) GROUP BY path.f1.substring(0, path.f1.index("?"))'
+          q = Norikra::Query.new(:name => 'TestTable query8.2', :expression => expression)
+          expect(q.fields).to eql(['path.f1'])
+        end
       end
 
       context 'with query with patterns' do
@@ -333,60 +345,85 @@ describe Norikra::Query do
     describe '.rewrite_query' do
       it 'rewrites all of targets and container-field-accesses' do
         with_engine do
+          # single simple query
           e1 = 'select count(*) as cnt from TestTable.win:time_batch(10 seconds) where path = "/" and size > 100 and (param.length()) > 0'
           x1 = 'select count(*) as cnt from T1.win:time_batch(10 seconds) where path = "/" and size > 100 and (param.length()) > 0'
           model = administrator.compileEPL(e1)
           mapping = {'TestTable' => 'T1'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x1)
 
+          # nested container field access
           e2 = 'select max(result.$0.size) as cnt from TestTable.win:time_batch(10 seconds) where req.path = "/" and result.$0.size > 100 and (req.param.length()) > 0'
           x2 = 'select max(result$$0$size) as cnt from T1.win:time_batch(10 seconds) where req$path = "/" and result$$0$size > 100 and (req$param.length()) > 0'
           model = administrator.compileEPL(e2)
           mapping = {'TestTable' => 'T1'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x2)
 
+          # nested container field access w/ function call and alias
           e3 = 'select product, max(sta.param.size) as maxsize from StreamA.win:keepall() as sta, StreamB(size > 10).win:time(20 seconds) as stb where (sta.data.$0.$$body.substr(0, 8)) = stb.header and (Math.abs(sta.size)) > 3'
           x3 = 'select product, max(sta.param$size) as maxsize from S1.win:keepall() as sta, S2(size > 10).win:time(20 seconds) as stb where (sta.data$$0$$$body.substr(0, 8)) = stb.header and (Math.abs(sta.size)) > 3'
           model = administrator.compileEPL(e3)
           mapping = {'StreamA' => 'S1', 'StreamB' => 'S2'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x3)
 
+          # nested function call
+          e3a = 'select path.substring(0, path.index("?")) as urlpath, count(*) as count from TestTable.win:time_batch(60 seconds) group by path.substring(0, path.index("?"))'
+          x3a = 'select path.substring(0, path.index("?")) as urlpath, count(*) as count from T1.win:time_batch(60 seconds) group by path.substring(0, path.index("?"))'
+          model = administrator.compileEPL(e3a)
+          mapping = {'TestTable' => 'T1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x3a)
+
+          # nested function call w/ container field access
+          e3b = 'select path.f1.substring(0, path.f1.index("?")) as urlpath, count(*) as count from TestTable.win:time_batch(60 seconds) group by path.f1.substring(0, path.f1.index("?"))'
+          x3b = 'select path$f1.substring(0, path$f1.index("?")) as urlpath, count(*) as count from T1.win:time_batch(60 seconds) group by path$f1.substring(0, path$f1.index("?"))'
+          model = administrator.compileEPL(e3b)
+          mapping = {'TestTable' => 'T1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x3b)
+
+
+          # Fully-qualified field access
           e4 = 'select count(*) as cnt from TestTable.win:time_batch(10 seconds) where path = "/" and TestTable.size > 100 and (param.length()) > 0'
           x4 = 'select count(*) as cnt from T1.win:time_batch(10 seconds) where path = "/" and T1.size > 100 and (param.length()) > 0'
           model = administrator.compileEPL(e4)
           mapping = {'TestTable' => 'T1'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x4)
 
+          # Fully-qualified field access w/ container field access
           e5 = 'select RfidEvent.zoneId.$0, (select name.x from Zones.std:unique(zoneName) where zoneId = RfidEvent.zoneId.$0) as name from RfidEvent'
           x5 = 'select R1.zoneId$$0, (select name$x from Z1.std:unique(zoneName) where zoneId = R1.zoneId$$0) as name from R1'
           model = administrator.compileEPL(e5)
           mapping = {'RfidEvent' => 'R1', 'Zones' => 'Z1'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x5)
 
+          # Fully-qualified field access w/ container field access and function calls, JOINs
           e6 = 'select StreamA.product, max(sta.param.size) as maxsize from StreamA.win:keepall() as sta, StreamB(size > 10).win:time(20 seconds) as stb where (sta.data.$0.$$body.substr(0, 8)) = StreamB.header.$0 and (Math.abs(StreamA.size.$0.$$abs)) > 3'
           x6 = 'select S1.product, max(sta.param$size) as maxsize from S1.win:keepall() as sta, S2(size > 10).win:time(20 seconds) as stb where (sta.data$$0$$$body.substr(0, 8)) = S2.header$$0 and (Math.abs(S1.size$$0$$$abs)) > 3'
           model = administrator.compileEPL(e6)
           mapping = {'StreamA' => 'S1', 'StreamB' => 'S2'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x6)
 
+          # ??? simple query
           e7 = 'select count(*) as cnt from TestTable.win:time_batch(10 seconds) where path = "/" and size > 100 and (param.length()) > 0'
           x7 = 'select count(*) as cnt from T1.win:time_batch(10 seconds) where path = "/" and size > 100 and (param.length()) > 0'
           model = administrator.compileEPL(e7)
           mapping = {'TestTable' => 'T1'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x7)
 
+          # subquery
           e8 = 'select RfidEvent.zoneId.$0, (select name.x from Zones.std:unique(zoneName) where zoneId = RfidEvent.zoneId.$0) as name from RfidEvent'
           x8 = 'select R1.zoneId$$0, (select name$x from Z1.std:unique(zoneName) where zoneId = R1.zoneId$$0) as name from R1'
           model = administrator.compileEPL(e8)
           mapping = {'Zones' => 'Z1', 'RfidEvent' => 'R1'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x8)
 
+          # filters and subquery
           e9 = 'select * from BarData(ticker = "MSFT" and (sub(closePrice, (select movAgv from SMA20Stream(ticker = "MSFT").std:lastevent())) > 0))'
           x9 = 'select * from B1(ticker = "MSFT" and (sub(closePrice, (select movAgv from S1(ticker = "MSFT").std:lastevent()))) > 0)'
           model = administrator.compileEPL(e9)
           mapping = {'BarData' => 'B1', 'SMA20Stream' => 'S1'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x9)
 
+          # JOINs
           e10 = 'select product, max(sta.size) as maxsize from StreamA.win:keepall() as sta, StreamB(size > 10).win:time(20 seconds) as stb where (sta.data.substr(0, 8)) = stb.header and (Math.abs(sta.size)) > 3'
           x10 = 'select product, max(sta.size) as maxsize from S1.win:keepall() as sta, S2(size > 10).win:time(20 seconds) as stb where (sta.data.substr(0, 8)) = stb.header and (Math.abs(sta.size)) > 3'
           model = administrator.compileEPL(e10)

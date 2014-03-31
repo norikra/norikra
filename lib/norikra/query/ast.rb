@@ -207,6 +207,8 @@ module Norikra
       # "bbb"           => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "bbb"]]
       # "fraud.aaa"     => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "fraud"], ["EVENT_PROP_SIMPLE", "aaa"]]
       # "size.$0.bytes" => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "size"],  ["EVENT_PROP_SIMPLE", "$0"], ["EVENT_PROP_SIMPLE", "bytes"]]
+      # "field.index("?")" => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "path"], ["EVENT_PROP_MAPPED", "index", "\"?\""]]
+      # "field.f1.index(".")" => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "path"], ["EVENT_PROP_SIMPLE", "q1"], ["EVENT_PROP_MAPPED", "index", "\".\""]]
 
       def nodetype?(*sym)
         sym.include?(:prop) || sym.include?(:property)
@@ -214,7 +216,7 @@ module Norikra
 
       def fields(default_target=nil, known_targets_aliases=[])
         props = self.listup('EVENT_PROP_SIMPLE')
-        if props.size > 1 # alias.fieldname or container_fieldname.key.$1
+        if props.size > 1 # alias.fieldname or container_fieldname.key.$1 or fieldname.method(...)
           if known_targets_aliases.include?(props[0].child.name)
             [ {:f => props[1..-1].map{|n| n.child.name}.join("."), :t => props[0].child.name} ]
           else
