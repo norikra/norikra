@@ -69,6 +69,8 @@ See: http://norikra.github.io/
 
 ## Changes
 
+* v0.1.6:
+  * Fix bug: Wrong escape for java instance method calls
 * v0.1.5:
   * Add RPC port monitoring handler (GET /)
   * Add `Pattern` support
