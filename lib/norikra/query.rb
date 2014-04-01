@@ -267,15 +267,6 @@ module Norikra
       # model.getSelectClause.getSelectList[1].getExpression.getModel.getFromClause.getStreams[0].getFilter.getEventTypeName
       # model.getWhereClause.getChildren[1]                 .getModel.getFromClause.getStreams[0].getFilter.getEventTypeName
 
-      ###
-      # statement_model.getFromClause.getStreams.each do |stream|
-      #   target_name = stream.getFilter.getEventTypeName
-      #   unless mapping[target_name]
-      #     raise RuntimeError, "target missing in mapping, maybe BUG: #{target_name}"
-      #   end
-      #   stream.getFilter.setEventTypeName(mapping[target_name])
-      # end
-
       rewriter = lambda {|node|
         if node.respond_to?(:getEventTypeName)
           target_name = node.getEventTypeName
