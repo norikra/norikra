@@ -32,8 +32,8 @@ def administrator
   $administrator ||= service.getEPAdministrator
 end
 
-def compileEPL(query_str)
-  administrator.compileEPL(query_str)
+def compileEPL(query)
+  administrator.compileEPL(query.expression)
 end
 
 def query_string(model)
@@ -43,7 +43,11 @@ def query_string(model)
     model.toEPLElement(writer)
     writer.toString
   elsif model.respond_to?(:toPrecedenceFreeEPL)
-    model.toPrecedenceFreeEPL(writer)
+    begin
+      model.toPrecedenceFreeEPL(writer)
+    rescue ArgumentError
+      model.toPrecedenceFreeEPL(writer, formatter)
+    end
     writer.toString
   elsif model.is_a?(Java::ComEspertechEsperClientSoda::EPStatementObjectModel)
     model.toEPL
@@ -51,6 +55,16 @@ def query_string(model)
     model.toEPL(writer, formatter)
     writer.toString
   end
+end
+
+def compiledExpression(query)
+  model = compileEPL(query)
+  mapping = {}
+  query.targets.each do |target|
+    mapping[target] = target
+  end
+  Norikra::Query.rewrite_query(model, mapping)
+  query_string(model)
 end
 
 puts <<DESC
