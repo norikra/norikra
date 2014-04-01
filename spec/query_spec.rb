@@ -450,6 +450,13 @@ describe Norikra::Query do
           model = administrator.compileEPL(e13)
           mapping = {'logs' => 'L111'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x13)
+
+          # Pattern
+          e14 = 'select a.type from pattern [every a=TestTable -> b=TestTable(type = a.type)]'
+          x14 = 'select a.type from pattern [every a=T1 -> b=T1(type = a.type)]'
+          model = administrator.compileEPL(e14)
+          mapping = {'TestTable' => 'T1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x14)
         end
       end
     end

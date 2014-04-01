@@ -260,22 +260,31 @@ module Norikra
       # Subqueries can only consist of a select clause, a from clause and a where clause.
       # The group by and having clauses, as well as joins, outer-joins and output rate limiting are not permitted within subqueries.
 
-      # model.getFromClause.getStreams[0].getFilter.setEventTypeName("hoge")
+      # model.getFromClause.getStreams[0].getFilter.setEventTypeName("hoge") # normal Stream
+      # model.getFromClause.getStreams[1].getExpression.getChildren[0].getChildren[0].getFilter.getEventTypeName # pattern
 
       # model.getSelectClause.getSelectList[1].getExpression => #<Java::ComEspertechEsperClientSoda::SubqueryExpression:0x3344c133>
       # model.getSelectClause.getSelectList[1].getExpression.getModel.getFromClause.getStreams[0].getFilter.getEventTypeName
       # model.getWhereClause.getChildren[1]                 .getModel.getFromClause.getStreams[0].getFilter.getEventTypeName
 
-      statement_model.getFromClause.getStreams.each do |stream|
-        target_name = stream.getFilter.getEventTypeName
-        unless mapping[target_name]
-          raise RuntimeError, "target missing in mapping, maybe BUG"
-        end
-        stream.getFilter.setEventTypeName(mapping[target_name])
-      end
+      ###
+      # statement_model.getFromClause.getStreams.each do |stream|
+      #   target_name = stream.getFilter.getEventTypeName
+      #   unless mapping[target_name]
+      #     raise RuntimeError, "target missing in mapping, maybe BUG: #{target_name}"
+      #   end
+      #   stream.getFilter.setEventTypeName(mapping[target_name])
+      # end
 
       rewriter = lambda {|node|
-        # nothing for query expression clauses
+        if node.respond_to?(:getEventTypeName)
+          target_name = node.getEventTypeName
+          rewrite_name = mapping[ target_name ]
+          unless rewrite_name
+            raise RuntimeError, "target missing in mapping, maybe BUG: #{target_name}"
+          end
+          node.setEventTypeName(rewrite_name)
+        end
       }
       recaller = lambda {|node|
         Norikra::Query.rewrite_event_type_name(node.getModel, mapping)
@@ -314,6 +323,7 @@ module Norikra
     def self.traverse_fields(rewriter, recaller, statement_model)
       #NOTICE: SQLStream is not supported yet.
       dig = lambda {|node|
+        return unless node
         rewriter.call(node)
 
         if node.is_a?(Java::ComEspertechEsperClientSoda::SubqueryExpression)
@@ -344,7 +354,7 @@ module Norikra
           dig.call(stream.getExpression)
         end
         if stream.respond_to?(:getFilter) # Filter < ProjectedStream
-          dig.call(stream.getFilter.getFilter) #=> Expression
+          dig.call(stream.getFilter)
         end
         if stream.respond_to?(:getParameterExpressions) # MethodInvocationStream
           dig.call(stream.getParameterExpressions)
