@@ -210,6 +210,11 @@ module Norikra
       # "field.index("?")" => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "path"], ["EVENT_PROP_MAPPED", "index", "\"?\""]]
       # "field.f1.index(".")" => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "path"], ["EVENT_PROP_SIMPLE", "q1"], ["EVENT_PROP_MAPPED", "index", "\".\""]]
 
+      #### escapes: Oops!!!! unsupported yet.
+      # "`path name`" => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "`path name`"]]
+      # "`T Table`.`path name`" => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "`T Testing`"], ["EVENT_PROP_SIMPLE", "`path name`"]]
+      # "`size.num`" => ["EVENT_PROP_EXPR", ["EVENT_PROP_SIMPLE", "`size.num`"]]
+
       def nodetype?(*sym)
         sym.include?(:prop) || sym.include?(:property)
       end
@@ -257,6 +262,10 @@ module Norikra
 
       # 2nd child is bare-word (like [a-z][a-z0-9]*) -> this is function -> 1st child is receiver -> property
       # 2nd child is literal or property or none -> 1st child is built-in function
+
+      ### escaped name access
+      # "`T Table`.param.length()" => ["LIB_FUNC_CHAIN", ["LIB_FUNCTION", "TestTable Testing.param", "length", "("]]
+      ## Oops! we CANNOT support this syntax
 
       def nodetype?(*sym)
         sym.include?(:lib) || sym.include?(:libfunc)

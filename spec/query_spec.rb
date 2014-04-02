@@ -24,6 +24,54 @@ describe Norikra::Query do
         end
       end
 
+      ### Escaped target/field names are not supported yet!
+      # context 'with escaped abnormal field name' do
+      #   it 'returns instance wrongly parsed for field with instance method call' do
+      #     expression = 'SELECT count(*) AS cnt FROM `TestTable Testing`.win:time_batch(10 sec) WHERE `path name`="/" AND size > 100 and `param string`.length() > 0'
+      #     q = Norikra::Query.new(
+      #       :name => 'TestTable query1.1', :expression => expression
+      #     )
+      #     expect(q.name).to eql('TestTable query1.1')
+      #     expect(q.group).to be_nil
+      #     expect(q.expression).to eql(expression)
+      #     expect(q.targets).to eql(['TestTable Testing'])
+
+      #     expect(q.fields).to eql(['param string', '`path name`', 'size'].sort)
+      #     expect(q.fields('TestTable Testing')).to eql(['param string','`path name`','size'].sort) # 'param string' is not escaped!
+      #     expect(q.fields(nil)).to eql([])
+      #   end
+
+      #   it 'returns instance correctly parsed w/ fully-qualified escaped name fields' do
+      #     expression = 'SELECT count(*) AS cnt FROM `TestTable Testing`.win:time_batch(10 sec) WHERE `TestTable Testing`.`path name`="/" AND `size.num` > 100 and `TestTable Testing`.param.length() > 0'
+      #     q = Norikra::Query.new(
+      #       :name => 'TestTable query1.2', :expression => expression
+      #     )
+      #     expect(q.name).to eql('TestTable query1.2')
+      #     expect(q.group).to be_nil
+      #     expect(q.expression).to eql(expression)
+      #     expect(q.targets).to eql(['TestTable Testing'])
+
+      #     expect(q.fields).to eql(['param', '`path name`', '`size.num`'].sort)
+      #     expect(q.fields('TestTable Testing')).to eql(['param','`path name`','`size.num`'].sort)
+      #     expect(q.fields(nil)).to eql([])
+      #   end
+
+      #   it 'returns instance correctly parsed w/ fully-qualified escaped name fields' do
+      #     expression = 'SELECT count(*) AS cnt FROM `TestTable Testing`.win:time_batch(10 sec) WHERE path\.name="/" AND size\.num > 100 and `TestTable Testing`.param\.name.length() > 0'
+      #     q = Norikra::Query.new(
+      #       :name => 'TestTable query1.3', :expression => expression
+      #     )
+      #     expect(q.name).to eql('TestTable query1.3')
+      #     expect(q.group).to be_nil
+      #     expect(q.expression).to eql(expression)
+      #     expect(q.targets).to eql(['TestTable Testing'])
+
+      #     expect(q.fields).to eql(['param\.name', 'path\.name', 'size\.num'].sort)
+      #     expect(q.fields('TestTable Testing')).to eql(['param\.name', 'path\.name', 'size\.num'].sort)
+      #     expect(q.fields(nil)).to eql([])
+      #   end
+      # end
+
       context 'with top-level built-in functions' do
         it 'returns query instances collectly parsed' do
           expression = 'SELECT rate(10) FROM TestTable output snapshot every 2 sec'
@@ -376,6 +424,20 @@ describe Norikra::Query do
           model = administrator.compileEPL(e1)
           mapping = {'TestTable' => 'T1'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x1)
+
+          ## not supported yet!
+          # # escaped abnormal field name / target name
+          # e1a = 'select count(*) as cnt from `TestTable Testing`.win:time_batch(10 sec) where `TestTable testing`.`path name`="/" and size > 100 and param.length() > 0'
+          # x1a = 'select count(*) as cnt from T2.win:time_batch(10 seconds) where T2.`path name`="/" and size > 100 and (param.length()) > 0'
+          # model = administrator.compileEPL(e1a)
+          # mapping = {'TestTable Testing' => 'T2'}
+          # expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x1a)
+
+          # e1b = 'select count(*) as cnt from `TestTable Testing`.win:time_batch(10 sec) where path\.name="/" and size\.num > 100 and `testtable testing`.param\.name.length() > 0'
+          # x1b = 'select count(*) as cnt from T2.win:time_batch(10 seconcds) where path\.name="/" and size\.num > 100 and T2.param\.name.length() > 0'
+          # model = administrator.compileEPL(e1b)
+          # mapping = {'TestTable Testing' => 'T2'}
+          # expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x1b)
 
           # nested container field access
           e2 = 'select max(result.$0.size) as cnt from TestTable.win:time_batch(10 seconds) where req.path = "/" and result.$0.size > 100 and (req.param.length()) > 0'
