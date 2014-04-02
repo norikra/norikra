@@ -90,6 +90,21 @@ describe Norikra::Query do
           expect(q.fields('StreamB')).to eql(['size','header'].sort)
           expect(q.fields(nil)).to eql(['product'])
         end
+
+        it 'returns query instances collectly parsed, with field accessing views' do
+          expression = 'select product, max(sta.size) as maxsize from StreamA.win:ext_timed_batch(ts1, 1 hours, 0L) as sta, StreamB(size > 10).win:ext_timed_batch(ts2, 20 sec) as stb where sta.data.substr(0,8) = stb.header AND Math.abs(sta.size) > 3'
+          q = Norikra::Query.new(
+            :name => 'TestTable query3.1', :expression => expression
+          )
+          expect(q.name).to eql('TestTable query3.1')
+          expect(q.expression).to eql(expression)
+          expect(q.targets).to eql(['StreamA', 'StreamB'])
+
+          expect(q.fields).to eql(['product', 'size', 'ts1', 'data', 'header', 'ts2'].sort)
+          expect(q.fields('StreamA')).to eql(['size','data','ts1'].sort)
+          expect(q.fields('StreamB')).to eql(['size','header','ts2'].sort)
+          expect(q.fields(nil)).to eql(['product'])
+        end
       end
 
       context 'with query with subquery (where clause)' do
@@ -186,6 +201,16 @@ describe Norikra::Query do
           expression = 'SELECT path.f1.substring(0, path.f1.index("?")) AS urlpath, COUNT(*) AS count FROM TestTable.win:time_batch(60 seconds) GROUP BY path.f1.substring(0, path.f1.index("?"))'
           q = Norikra::Query.new(:name => 'TestTable query8.2', :expression => expression)
           expect(q.fields).to eql(['path.f1'])
+        end
+      end
+
+      context 'with simple query and views with field reference' do
+        it 'returns query instances collectly parsed' do
+          expression = 'SELECT count(*) AS c FROM TestTable.win:ext_timed_batch(ts, 1 min, 0L) WHERE path.source.length() > 0'
+          q = Norikra::Query.new(:name => 'TestTable query8.3', :expression => expression)
+          expect(q.fields).to eql(['path.source', 'ts'].sort)
+          expect(q.fields('TestTable')).to eql(['path.source', 'ts'].sort)
+          expect(q.fields(nil)).to eql([])
         end
       end
 
@@ -380,6 +405,12 @@ describe Norikra::Query do
           mapping = {'TestTable' => 'T1'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x3b)
 
+          # views w/ field access
+          e3c = 'select count(*) as c from TestTable.win:ext_timed_batch(TestTable.ts, 1 min, 0L) where path.source.length() > 0'
+          x3c = 'select count(*) as c from T1.win:ext_timed_batch(T1.ts, 1 minutes, 0L) where (path$source.length()) > 0'
+          model = administrator.compileEPL(e3c)
+          mapping = {'TestTable' => 'T1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x3c)
 
           # Fully-qualified field access
           e4 = 'select count(*) as cnt from TestTable.win:time_batch(10 seconds) where path = "/" and TestTable.size > 100 and (param.length()) > 0'
