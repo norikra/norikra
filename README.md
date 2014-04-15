@@ -62,6 +62,7 @@ https://github.com/norikra/norikra-client-ruby
 
 For other languages:
  * Perl: https://github.com/norikra/norikra-client-perl
+ * Python: https://github.com/norikra/norikra-client-python
 
 ## Events and Queries
 
