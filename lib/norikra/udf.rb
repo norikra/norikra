@@ -94,14 +94,23 @@ module Norikra
     def self.listup
       return unless defined? Gem
 
-      #TODO: CHECK: same name files of different versions?
-      plugins = Gem.find_files('norikra/udf/*.rb')
+      plugins = Gem.find_latest_files('norikra/udf/*.rb')
       plugins.each do |plugin|
         begin
           debug "plugin file found!", :file => plugin
+          rbpath = plugin.dup
+          4.times do
+            rbpath = File.dirname( rbpath )
+          end
+          files = Dir.entries( rbpath )
+          gemname = files.select{|f| f=~ /\.gemspec$/ }.first.sub(/\.gemspec$/, '')
+          require gemname
           load plugin
         rescue => e
           warn "Failed to load norikra UDF plugin", :plugin => plugin.to_s, :error_class => e.class, :error => e.message
+          e.backtrace.each do |t|
+            warn "  " + t
+          end
         end
       end
 
