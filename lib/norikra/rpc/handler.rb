@@ -115,5 +115,11 @@ class Norikra::RPC::Handler
     }
   end
 
+  def logs
+    logging(:show, :logs){
+      Norikra::Log.logger.buffer
+    }
+  end
+
   # post('/listen') # get all events as stream, during connection keepaliving
 end
