@@ -130,6 +130,12 @@ class Norikra::WebUI::Handler < Sinatra::Base
     end
   end
 
+  get '/logs' do
+    logging(:show, :json_logs) do
+      json Norikra::Log.logger.buffer
+    end
+  end
+
   get '/stat/dump' do
     logging(:show, :stat_dump) do
       stats = Norikra::Stats.generate(engine)
@@ -187,5 +193,4 @@ class Norikra::WebUI::Handler < Sinatra::Base
       end
     end
   end
-
 end

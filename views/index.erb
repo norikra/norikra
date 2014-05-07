@@ -204,3 +204,15 @@
 </div>
 
 <a href="/stat/dump" class="btn btn-info btn-lg" role="button">Download JSON</a>
+
+<div class="page-header">
+  <h1 id="logs">Server logs</h1>
+</div>
+
+<button id="show_server_logs" class="btn btn-info btn-lg" data-url="/logs">Show server logs</button>
+
+<div id="logsection" style="display: none;">
+  <table id="logtable" class="table logs">
+    <tr><th width="240px">Time</th><th>Level</th><th>message</th></tr>
+  </table>
+</div>

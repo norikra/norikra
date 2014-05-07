@@ -12,3 +12,23 @@ body {
 .theme-showcase > p > .btn {
   margin: 5px 0;
 }
+
+tr.logline.trace > td {
+  color: silver;
+}
+tr.logline.debug > td {
+  color: gray;
+}
+tr.logline.info > td {
+  color: black;
+}
+tr.logline.warn > td {
+  color: orange;
+}
+tr.logline.error > td {
+  color: red;
+}
+tr.logline.fatal > td {
+  color: red;
+  font-weight: bold;
+}

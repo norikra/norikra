@@ -70,5 +70,16 @@ $(function(){
   });
 
   $('#query_add_editor_toggle').click(function(e){ $('#query_add_editor').toggle(); });
-});
 
+  $('#show_server_logs').click(function(e){
+    var url = $(e.target).data('url');
+    var logtable = $('#logtable');
+    logtable.remove('tr.logline');
+    $.get(url, function(data){
+      data.forEach(function(log){
+        logtable.append('<tr class="logline ' + log[1] + '"><td>' + log[0] + '</td><td>' + log[1] + '</td><td>' + log[2] + '</td>');
+      });
+    });
+    $('#logsection').show();
+  });
+});
