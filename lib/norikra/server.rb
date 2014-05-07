@@ -62,8 +62,8 @@ module Norikra
     end
 
     def self.log_configuration(conf)
-      logconf = { level: nil, dir: nil, filesize: nil, backups: nil }
-      [:level, :dir, :filesize, :backups].each do |sym|
+      logconf = { level: nil, dir: nil, filesize: nil, backups: nil, bufferlines: nil }
+      [:level, :dir, :filesize, :backups, :bufferlines].each do |sym|
         logconf[sym] = conf[sym] if conf[sym]
       end
       logconf
@@ -96,7 +96,7 @@ module Norikra
       @thread_conf = self.class.threading_configuration(conf[:thread])
       @log_conf = self.class.log_configuration(conf[:log])
 
-      Norikra::Log.init(@log_conf[:level], @log_conf[:dir], {:filesize => @log_conf[:filesize], :backups => @log_conf[:backups]})
+      Norikra::Log.init(@log_conf[:level], @log_conf[:dir], {filesize: @log_conf[:filesize], backups: @log_conf[:backups], bufferlines: @log_conf[:bufferlines]})
 
       info "thread configurations", @thread_conf
       info "logging configurations", @log_conf

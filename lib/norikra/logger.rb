@@ -96,7 +96,7 @@ module Norikra
         p.setProperty('log4j.rootLogger', "#{@@level},default")
         org.apache.log4j.PropertyConfigurator.configure(p)
 
-        @@logger = Logger.new('norikra.log')
+        @@logger = Logger.new('norikra.log', opts)
 
       else # for test(rspec)
         p.setProperty('log4j.appender.default', 'org.apache.log4j.varia.NullAppender')
@@ -156,32 +156,59 @@ module Norikra
   end
 
   class Logger
-    def initialize(name)
+    attr_reader :buffer
+
+    DEFAULT_MEMORY_BUFFER_LINES = 1000
+    TIME_FORMAT = '%Y-%m-%d %H:%M:%S %z'
+
+    def initialize(name, opts={})
+      p opts
       @log4j = org.apache.commons.logging.LogFactory.getLog(name)
+      @buffer = Array.new
+      @buffer_lines = opts[:bufferlines] || DEFAULT_MEMORY_BUFFER_LINES
+    end
+
+    def push(level, line)
+      if @buffer.size == @buffer_lines
+        @buffer.shift
+      end
+      @buffer << [Time.now.strftime(TIME_FORMAT), level, line]
     end
 
     def trace(message, data=nil, from=nil)
-      @log4j.trace(format(from, message, data))
+      line = format(from, message, data)
+      push('trace', line)
+      @log4j.trace(line)
     end
 
     def debug(message, data=nil, from=nil)
-      @log4j.debug(format(from, message, data))
+      line = format(from, message, data)
+      push('debug', line)
+      @log4j.debug(line)
     end
 
     def info(message, data=nil, from=nil)
-      @log4j.info(format(from, message, data))
+      line = format(from, message, data)
+      push('info', line)
+      @log4j.info(line)
     end
 
     def warn(message, data=nil, from=nil)
-      @log4j.warn(format(from, message, data))
+      line = format(from, message, data)
+      push('warn', line)
+      @log4j.warn(line)
     end
 
     def error(message, data=nil, from=nil)
-      @log4j.error(format(from, message, data))
+      line = format(from, message, data)
+      push('error', line)
+      @log4j.error(line)
     end
 
     def fatal(message, data=nil, from=nil)
-      @log4j.fatal(format(from, message, data))
+      line = format(from, message, data)
+      push('fatal', line)
+      @log4j.fatal(line)
     end
 
     def format_location(locations)
@@ -213,7 +240,6 @@ module Norikra
     # LOG_LOG4J_FORMAT = '%d{yyyy-MM-dd HH:mm:ss Z} [%p] %m%n'
     # LOG_FORMAT = '%s: %s%s'
     FORMAT_SIMULATED = "%s [%s] %s\n"
-    FORMAT_SIMULATED_TIME = '%Y-%m-%d %H:%M:%S %z'
     attr_accessor :logs, :output
     def initialize
       @logs = { :TRACE => [], :DEBUG => [], :INFO => [], :WARN => [], :ERROR => [], :FATAL => [] }
@@ -221,7 +247,7 @@ module Norikra
     end
     def log(level, message, data, from)
       @logs[level].push({:message => message, :data => data, :from => from})
-      formatted = sprintf(FORMAT_SIMULATED, Time.now.strftime(FORMAT_SIMULATED_TIME), level.to_s, format(from, message, data))
+      formatted = sprintf(FORMAT_SIMULATED, Time.now.strftime(TIME_FORMAT), level.to_s, format(from, message, data))
       @output.push(formatted)
     end
     def trace(m,d,f); self.log(:TRACE,m,d,f); end

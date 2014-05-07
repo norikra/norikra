@@ -65,6 +65,7 @@ module Norikra
                :desc => "directory path of logfiles when daemonized [nil (console for foreground)]"
         option :'log-filesize', :type => :string, :default => nil, :desc => 'log rotation size [10MB]'
         option :'log-backups' , :type => :numeric, :default => nil, :desc => 'log rotation backups [10]'
+        option :'log-buffer-lines', :type => :numeric, :default => nil, :desc => 'log lines to fetch from API [1000]'
 
         ### Loglevel options
         option :'more-quiet',   :type => :boolean, :default => false,                   :desc => 'set loglevel as ERROR'
@@ -218,7 +219,9 @@ module Norikra
                  else nil # for default (assumed as 'INFO')
                  end
       conf[:log] = {
-        level: loglevel, dir: options[:logdir], filesize: options[:'log-filesize'], backups: options[:'log-backups'],
+        level: loglevel, dir: options[:logdir],
+        filesize: options[:'log-filesize'], backups: options[:'log-backups'],
+        bufferlines: options[:'log-buffer-lines'],
       }
 
       server_options = {
