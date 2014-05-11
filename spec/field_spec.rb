@@ -145,9 +145,10 @@ describe Norikra::Field do
         expect(f.format(' ')).to eql(' ')
         expect(f.format(true)).to eql('true')
         expect(f.format(false)).to eql('false')
-        expect(f.format(nil)).to eql('')
-        expect(f.format({})).to eql('{}')
-        expect(f.format([])).to eql('[]')
+
+        expect(f.format(nil)).to be_nil
+        expect(f.format({})).to be_nil
+        expect(f.format([])).to be_nil
       end
     end
   end
@@ -158,11 +159,14 @@ describe Norikra::Field do
         f = Norikra::Field.new('x', 'boolean')
         expect(f.format(true)).to eql(true)
         expect(f.format(false)).to eql(false)
-        expect(f.format(nil)).to eql(false)
         expect(f.format('')).to eql(true)
 
         expect(f.format('true')).to eql(true)
         expect(f.format('false')).to eql(false)
+
+        expect(f.format(nil)).to be_nil
+        expect(f.format({})).to be_nil
+        expect(f.format([])).to be_nil
       end
     end
   end
@@ -177,7 +181,9 @@ describe Norikra::Field do
         expect(f.format('.1')).to eql(0)
         expect(f.format('')).to eql(0)
         expect(f.format(' ')).to eql(0)
-        expect(f.format(nil)).to eql(0)
+        expect(f.format(nil)).to be_nil
+        expect(f.format({})).to be_nil
+        expect(f.format([])).to be_nil
 
         f = Norikra::Field.new('x', 'long')
         expect(f.format('1')).to eql(1)
@@ -186,7 +192,9 @@ describe Norikra::Field do
         expect(f.format('.1')).to eql(0)
         expect(f.format('')).to eql(0)
         expect(f.format(' ')).to eql(0)
-        expect(f.format(nil)).to eql(0)
+        expect(f.format(nil)).to be_nil
+        expect(f.format({})).to be_nil
+        expect(f.format([])).to be_nil
 
         f = Norikra::Field.new('x', 'float')
         expect(f.format('1')).to eql(1.0)
@@ -195,7 +203,9 @@ describe Norikra::Field do
         expect(f.format('.1')).to eql(0.1)
         expect(f.format('')).to eql(0.0)
         expect(f.format(' ')).to eql(0.0)
-        expect(f.format(nil)).to eql(0.0)
+        expect(f.format(nil)).to be_nil
+        expect(f.format({})).to be_nil
+        expect(f.format([])).to be_nil
 
         f = Norikra::Field.new('x', 'double')
         expect(f.format('1')).to eql(1.0)
@@ -204,7 +214,9 @@ describe Norikra::Field do
         expect(f.format('.1')).to eql(0.1)
         expect(f.format('')).to eql(0.0)
         expect(f.format(' ')).to eql(0.0)
-        expect(f.format(nil)).to eql(0.0)
+        expect(f.format(nil)).to be_nil
+        expect(f.format({})).to be_nil
+        expect(f.format([])).to be_nil
       end
     end
   end

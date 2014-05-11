@@ -175,6 +175,8 @@ module Norikra
     # def value(event) # by define_value_accessor
 
     def format(value, element_path=nil) #element_path ex: 'fname.fchild', 'fname.$0', 'f.fchild.$2'
+      return nil if value.nil? || value.is_a?(Hash) || value.is_a?(Array)
+
       case @type
       when 'string'  then value.to_s
       when 'boolean'

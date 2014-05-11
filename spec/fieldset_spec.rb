@@ -350,6 +350,17 @@ describe Norikra::FieldSet do
         expect(d['f$foo$$$0']).to be_instance_of(String)
         expect(d['f$foo$$$0']).to eql('zero')
       end
+
+      it 'returns nil for value field but events has nested record' do
+        t = Norikra::FieldSet.new({'a' => 'string', 'b' => 'boolean', 'c' => 'long', 'd.$0' => 'double'})
+
+        d = t.format({'a'=>{'a1'=>"1"}, 'b'=>[1,2,3], 'c'=>{'cc'=>0.01}, 'd' => [ {'value'=>0.1} ]})
+        expect(d.size).to eql(4)
+        expect(d['a']).to be_nil
+        expect(d['b']).to be_nil
+        expect(d['c']).to be_nil
+        expect(d['d$$0']).to be_nil
+      end
     end
   end
 end
