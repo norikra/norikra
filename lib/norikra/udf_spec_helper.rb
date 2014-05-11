@@ -14,7 +14,9 @@ module Norikra
     #         required keys: :valueType, :windowed, :distinct, :parameters
     #           :parameters => [[parameterType, constant?, contantValue], ... ]
     def udf_function(mojule, params={})
-      require 'esper-4.9.0.jar'
+      esper_jars_dir = File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'esper'))
+      esper_jar = Dir.entries(esper_jars_dir).select{|f| f =~ /^esper-\d+\.\d+\.\d+\.jar$/}.first
+      require esper_jar
 
       unless mojule.is_a?(Class)
         mojule.init if mojule.respond_to?(:init)
