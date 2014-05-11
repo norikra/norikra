@@ -255,7 +255,9 @@ module Norikra
         event.keys.each do |key|
           trace "event content key:#{key}, value:#{event[key]}, value class:#{event[key].class}"
           unescaped_key = Norikra::Field.unescape_name(key)
-          if event[key].respond_to?(:to_hash)
+          if event[key].nil?
+            converted[unescaped_key] = nil
+          elsif event[key].respond_to?(:to_hash)
             converted[unescaped_key] = event[key].to_hash
           elsif event[key].respond_to?(:to_a)
             converted[unescaped_key] = event[key].to_a
