@@ -67,24 +67,38 @@ def compiledExpression(query)
   query_string(model)
 end
 
-puts <<DESC
-
-Example:
-  > rspec 'spec/xxx_spec.rb'
-  or (for all tests)
-  > rspec
-
-DESC
-
 $LOAD_PATH.push './lib'
 $LOAD_PATH.push './esper'
 
 require 'norikra'
 
 require 'java'
-require 'esper-4.9.0.jar'
-require 'esper/lib/commons-logging-1.1.1.jar'
-require 'esper/lib/antlr-runtime-3.2.jar'
-require 'esper/lib/cglib-nodep-2.2.jar'
+
+esper_dir = File.expand_path(File.join(File.dirname(__FILE__), '..', 'esper'))
+
+Dir.entries(esper_dir).each do |f|
+  next unless f =~ /^esper-\d+\.\d+\.\d+\.jar$/
+  require f
+end
+
+Dir.entries(File.join(esper_dir, 'esper', 'lib')).each do |f|
+  if f =~ /^commons-logging-\d+\.\d+\.\d+\.jar$/ || f =~ /^antlr-runtime-\d+\.\d+\.jar/ || f =~ /^cglib-nodep-\d+\.\d+\.jar$/
+    require File.join('esper', 'lib', f)
+  end
+end
+
+puts <<DESC
+
+Example:
+  > # execute 'spork' on other terminal
+  > rspec 'spec/xxx_spec.rb'
+  > rspec # for all tests
+
+  > query = Norikra::Query.new(name:'test1', expression:'SELECT ...')
+  >
+  > query.ast.to_a            # dump query AST
+  > compiledExpression(query) # show parsed and compiled query
+
+DESC
 
 Pry.start
