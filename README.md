@@ -70,6 +70,8 @@ See: http://norikra.github.io/
 
 ## Changes
 
+* v0.1.7:
+  * Fix `Pattern` support bug
 * v0.1.6:
   * Fix bug: Wrong escape for java instance method calls
 * v0.1.5:
