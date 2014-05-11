@@ -81,6 +81,7 @@ module Norikra
       end
 
       @stats_path = conf[:stats][:path]
+      @stats_secondary_path = conf[:stats][:secondary_path]
       @stats_suppress_dump = conf[:stats][:suppress]
       @stats_dump_interval = conf[:stats][:interval]
       @stats = if @stats_path && test(?r, @stats_path)
@@ -203,7 +204,7 @@ module Norikra
     end
 
     def dump_stats
-      Norikra::Stats.generate(@engine).dump(@stats_path)
+      Norikra::Stats.generate(@engine).dump(@stats_path, @stats_secondary_path)
       info "Current status saved", :path => @stats_path
     end
   end

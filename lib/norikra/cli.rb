@@ -17,6 +17,8 @@ module Norikra
 
         option :stats, :type => :string, :default => nil, :aliases => "-s", \
                        :desc => 'status file path to load/dump targets and queries [none]'
+        option :'stats-secondary', :type => :string, :default => nil, \
+                       :desc => 'status file secondary path, to dump stats with date/time, like "stats.%Y%m%d.json" [none]'
         option :'suppress-dump-stat', :type => :boolean, :default => false, \
                        :desc => 'specify not to update stat file with updated targets/queries on runtime [false]'
         option :'dump-stat-interval', :type => :numeric, :default => nil, \
@@ -188,7 +190,8 @@ module Norikra
 
       ### stat file
       conf[:stats] = {
-        path: options[:stats], suppress: options[:'suppress-dump-stat'], interval: options[:'dump-stat-interval'],
+        path: options[:stats], secondary_path: options[:'stats-secondary'],
+        suppress: options[:'suppress-dump-stat'], interval: options[:'dump-stat-interval'],
       }
 
       ### threads

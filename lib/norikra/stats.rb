@@ -30,12 +30,18 @@ module Norikra
       JSON.pretty_generate(self.to_hash)
     end
 
-    def dump(path)
+    def dump(path, secondary_path)
       tmp_path = path + '.tmp'
       File.open(tmp_path, 'w') do |file|
         file.write(self.to_json)
       end
       File.rename(tmp_path, path)
+
+      if secondary_path
+        require 'fileutils'
+        secondary_actual_path = Time.now.strftime(secondary_path)
+        FileUtils.copy(path, secondary_actual_path)
+      end
     end
 
     def self.load(path)
