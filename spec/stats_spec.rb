@@ -33,11 +33,16 @@ describe Norikra::Stats do
           s1 = Norikra::Stats.new(args)
           expect(s1.to_hash).to eql(args)
 
-          s1.dump(file.path)
+          s1.dump(file.path, nil)
 
           s2 = Norikra::Stats.load(file.path)
           expect(s2.to_hash).to eql(s1.to_hash)
           expect(s2.to_hash).to eql(args)
+
+          s1.dump(file.path, "#{file.path}.secondary")
+
+          s3 = Norikra::Stats.load("#{file.path}.secondary")
+          expect(s3.to_hash).to eql(s1.to_hash)
         end
       end
     end
