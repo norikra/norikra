@@ -177,7 +177,18 @@ module Norikra
     def format(value, element_path=nil) #element_path ex: 'fname.fchild', 'fname.$0', 'f.fchild.$2'
       case @type
       when 'string'  then value.to_s
-      when 'boolean' then value =~ /^(true|false)$/i ? ($1.downcase == 'true') : (!!value)
+      when 'boolean'
+        if value.is_a?(TrueClass) || value.is_a?(FalseClass)
+          value
+        elsif value.is_a?(String)
+          if value =~ /^(true|false)$/i
+            value.downcase == 'true'
+          else
+            !!value
+          end
+        else
+          !!value
+        end
       when 'integer' then value.to_i
       when 'float' then value.to_f
       when 'hash', 'array'
