@@ -2,6 +2,7 @@ require 'mizuno/server'
 require 'rack/builder'
 
 require_relative 'handler'
+require_relative 'api'
 
 require 'norikra/logger'
 include Norikra::Log
@@ -23,7 +24,11 @@ module Norikra::WebUI
       @port = opts[:port] || DEFAULT_LISTEN_PORT
       @threads = opts[:threads] || DEFAULT_THREADS
       Norikra::WebUI::Handler.engine = @engine
+      Norikra::WebUI::API.engine = @engine
       @app = Rack::Builder.new {
+        map '/api' do
+          run Norikra::WebUI::API
+        end
         run Norikra::WebUI::Handler
       }
     end
