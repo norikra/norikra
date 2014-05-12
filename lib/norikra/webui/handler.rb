@@ -131,7 +131,7 @@ class Norikra::WebUI::Handler < Sinatra::Base
   end
 
   get '/logs' do
-    logging(:show, :json_logs) do
+    logging(:show, :logs) do
       json Norikra::Log.logger.buffer
     end
   end
