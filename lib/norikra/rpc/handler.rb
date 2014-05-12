@@ -4,6 +4,8 @@ include Norikra::Log
 
 require 'norikra/rpc'
 
+require 'norikra/query'
+
 class Norikra::RPC::Handler
   def initialize(engine)
     @engine = engine
