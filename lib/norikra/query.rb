@@ -398,9 +398,7 @@ module Norikra
 
       if statement_model.getSelectClause
         statement_model.getSelectClause.getSelectList.each do |item|
-          if item.respond_to?(:getExpression)
-            dig.call(item.getExpression)
-          end
+          dig.call(item)
         end
       end
 
@@ -412,19 +410,13 @@ module Norikra
 
       if statement_model.getGroupByClause
         statement_model.getGroupByClause.getGroupByExpressions.each do |item|
-          # GroupByClauseExpressionSingle
-          # GroupByClauseExpressionRollupOrCube
-          # GroupByClauseExpressionGroupingSet
-          # GroupByClauseExpressionCombination
           dig.call(item)
         end
       end
 
       if statement_model.getOrderByClause
         statement_model.getOrderByClause.getOrderByExpressions.each do |item|
-          if item.respond_to?(:getExpression)
-            dig.call(item.getExpression)
-          end
+          dig.call(item)
         end
       end
 
