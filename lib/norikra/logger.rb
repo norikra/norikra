@@ -1,5 +1,5 @@
 require 'java'
-require 'esper/lib/commons-logging-1.1.1.jar'
+require 'esper/lib/commons-logging-1.1.3.jar'
 
 require 'monitor'
 

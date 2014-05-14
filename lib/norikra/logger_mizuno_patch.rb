@@ -1,5 +1,5 @@
 require 'java'
-require 'esper/lib/log4j-1.2.16.jar'
+require 'esper/lib/log4j-1.2.17.jar'
 require 'mizuno/logger'
 
 module Mizuno

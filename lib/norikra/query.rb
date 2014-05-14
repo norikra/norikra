@@ -1,8 +1,8 @@
 require 'java'
-require 'esper-4.9.0.jar'
-require 'esper/lib/commons-logging-1.1.1.jar'
-require 'esper/lib/antlr-runtime-3.2.jar'
-require 'esper/lib/cglib-nodep-2.2.jar'
+require 'esper-5.0.0.jar'
+require 'esper/lib/commons-logging-1.1.3.jar'
+require 'esper/lib/antlr-runtime-4.1.jar'
+require 'esper/lib/cglib-nodep-3.1.jar'
 
 require 'norikra/error'
 require 'norikra/query/ast'
@@ -16,7 +16,8 @@ module Norikra
       @name = param[:name]
       raise Norikra::ArgumentError, "Query name MUST NOT be blank" if @name.nil? || @name.empty?
       @group = param[:group] # default nil
-      @expression = param[:expression]
+      #TODO: ad-hoc query rewriting for https://jira.codehaus.org/browse/ESPER-788
+      @expression = param[:expression].gsub(/([ ,])(MIN|MAX)\(/){ $1 + $2.downcase + '(' }
       raise Norikra::ArgumentError, "Query expression MUST NOT be blank" if @expression.nil? || @expression.empty?
 
       @statement_name = nil
@@ -155,9 +156,9 @@ module Norikra
     end
 
     class ParseRuleSelectorImpl
-      include com.espertech.esper.epl.parse.ParseRuleSelector
+      include Java::ComEspertechEsperEplParse::ParseRuleSelector
       def invokeParseRule(parser)
-        parser.startEPLExpressionRule().getTree()
+        parser.startEPLExpressionRule()
       end
     end
 
@@ -166,10 +167,35 @@ module Norikra
       rule = ParseRuleSelectorImpl.new
       target = @expression.dup
       forerrmsg = @expression.dup
-      result = com.espertech.esper.epl.parse.ParseHelper.parse(target, forerrmsg, true, rule, false)
+      result = Java::ComEspertechEsperEplParse::ParseHelper.parse(target, forerrmsg, true, rule, false)
 
-      @ast = astnode(result.getTree)
+      # walk through AST and check syntax errors/semantic errors
+      ast = result.tree
+
+      services = Java::ComEspertechEsperClient::EPServiceProviderManager.getDefaultProvider.getServicesContext
+
+      walker = Java::ComEspertechEsperEplParse::EPLTreeWalkerListener.new(
+        result.getTokenStream,
+        services.getEngineImportService,
+        services.getVariableService,
+        services.getSchedulingService,
+        Java::ComEspertechEsperEplSpec::SelectClauseStreamSelectorEnum.mapFromSODA(
+          services.getConfigSnapshot.getEngineDefaults.getStreamSelection.getDefaultStreamSelector
+        ),
+        services.getEngineURI,
+        services.getConfigSnapshot,
+        services.getPatternNodeFactory,
+        services.getContextManagementService,
+        result.getScripts,
+        services.getExprDeclaredService
+      )
+
+      Java::ComEspertechEsperEplParse::ParseHelper.walk(ast, walker, target, forerrmsg)
+
+      @ast = astnode(ast)
       @ast
+    rescue Java::ComEspertechEsperEplParse::ASTWalkException => e
+      raise Norikra::QueryError, e.message
     rescue Java::ComEspertechEsperClient::EPStatementSyntaxException => e
       raise Norikra::QueryError, e.message
     end
@@ -374,8 +400,10 @@ module Norikra
       end
 
       if statement_model.getGroupByClause
-        statement_model.getGroupByClause.getGroupByExpressions.each do |child|
-          dig.call(child)
+        statement_model.getGroupByClause.getGroupByExpressions.each do |item|
+          if item.respond_to?(:getExpression)
+            dig.call(item.getExpression)
+          end
         end
       end
 

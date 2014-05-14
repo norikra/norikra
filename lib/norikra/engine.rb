@@ -6,10 +6,10 @@ require 'norikra/target'
 require 'norikra/logger'
 include Norikra::Log
 
-require 'esper-4.9.0.jar'
-require 'esper/lib/commons-logging-1.1.1.jar'
-require 'esper/lib/antlr-runtime-3.2.jar'
-require 'esper/lib/cglib-nodep-2.2.jar'
+require 'esper-5.0.0.jar'
+require 'esper/lib/commons-logging-1.1.3.jar'
+require 'esper/lib/antlr-runtime-4.1.jar'
+require 'esper/lib/cglib-nodep-3.1.jar'
 
 require 'norikra/typedef_manager'
 
