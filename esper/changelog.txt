@@ -1,6 +1,109 @@
 Esper Changelog
 ===================
 
+Changes in version 5.0.0
+------------------------
+  - The following dependent jar files are upgraded:
+       - ANTLR runtime library version is now 4.1 (antlr-runtime-4.1.jar) (previously antlr-runtime-3.2.jar)
+       - CGLIB version is now 3.1 (cglib-nodep-3.1.jar) (previously cglib-nodep-2.2.jar)
+       - Commons-logging version is now 1.1.3 (commons-logging-1.1.3.jar) (previously commons-logging-1.1.1.jar)
+       - (optionally) Log4j version is now 1.2.17 (log4j-1.2.17.jar) (previously log4j-1.2.16.jar)
+  - Support for rollup and cube aggregation output. Support for SQL standard output and SQL keywords namely "rollup", "cube", "grouping sets", "grouping", "grouping_id".
+  - Support for fire-and-forget insert-into queries using the "values" keyword i.e. "insert into ... values (...)"
+  - Support for Java 8-style lambda syntax using the "->" operator the same way as "=>" as equivalent syntax
+  - Support for context partitioned variables. Use "context ... create variable ..." to create a contex partitioned variable.
+  - Support for method invocation joins to receive object-array events from application code
+  - Support for query planner expression analysis hints that provide additional control over query planning
+  - Support for the query planner for joins, subqueries, fire-and-forget and on-action queries to consider in-keyword expressions and "or"
+  - Support for filter execution planning to consider "or"
+  - Statements on unbound streams by default no longer retain the last event for use with the iterator API, and instead an application can specify @IterableUnbound or provide an engine configuration to have statements retain the last event
+  - Statement names are now always trimmed
+  - Applications that use isolated service providers must now set an engine-wide configuration flag to enable this feature
+  - The "as" keyword in the select-clause is now optional 
+  - Improved rendering of expressions by rendering parenthesis according to precedence and by removing white space in expressions. 
+    This may affect statements where the select-clause does not name columns using "as" since they may receive a different column name compared to version 4.
+  - We have changed time period expression month and year interval computation to become relative to the current time. This change disallows float-type values for year and month in a time interval.
+  - Improved formatting and content of validation messages
+  - Many performance related enhancements
+  - Removed version 4 deprecated APIs
+
+ 
+Changes in version 4.11.0
+------------------------
+  - Support for patterns to suppress and discard overlapping matches
+  - Support for match-recognize define-clause and measures-clause to use enumeration methods and array-index access for grouped variables
+  - Support for match-recognize matching upon pattern state termination when used with interval
+  - Support for overlapping context to specify "distinct"
+  - Support for group-by clause in subqueries
+  - Support for subqueries that select multiple columns to provide input to enumeration methods
+  - Support for built-in annotations to be case-insensitive
+
+Minor EPL changes
+  - When in a select-clause the "as" column name is surrounded with backticks (e.g. "select name as `somename` ...") the property name of the output event does no longer carry backticks (i.e. is "somename").
+
+Minor API changes
+  - SODA class PatternMatchUntilExpr now requires to set single-bounds as a separate expression
+
+Bug fixes and other improvements
+  - Fixed issue XIN-243-46130 Window(*) returning scalars throws NPE when used with null values
+  - Fixed issue FOT-686-75760 Context partition using for-clause with keyed-segmented context when for-clause utilizes the same key the for-clause is not grouping
+  - Fixed issue NUO-642-65913 When JMS unmarshaller receives an exception log error and continue
+  - Fixed issue LTU-232-62589 Map/oa type with nested pojo with generic-typed list not producing type fragments
+  - Fixed issue ZXU-154-59144 Context partitioned join against virtual data window throws NPE
+  - Fixed issue IOO-666-18256 EPL module with script that has brackets and semicolon throws exception on deployment
+  - Fixed issue UHA-316-24638 Fully-aggregated subquery without filter throws NPE; subquery against context-partitioned VDW throws NPE
+  - Fixed issue ESPER-754 Class that extends class triggers two events when named window declared for both child and parent class
+  - Fixed issue ESPER-756 NPE during destroy() when using inbound thread pool and when not waiting for pool to empty
+  - Fixed issue ESPER-757 VDW callback on consuming rstream events
+  - Fixed issue ESPER-758 Thread safety issue with contained-event selection
+  - Fixed issue ESPER-759 Pattern with not-operator controlled by repeat ([n]) does not turn repeat to false
+  - Fixed issue ESPER-761 On-Demand query inserting row into named window that contains an enumeration throws NPE
+  - Fixed issue ESPER-762 Keyed segmented context with match recognize and "prev" in define-clause causes first event to not evaluate
+  - Fixed issue ESPER-763 Allow on-merge assignment of event-typed property
+  - Fixed issue ESPER-765 Context declaration with @Priority causes first event to arrive twice
+  - Fixed issue ESPER-766 Allow enumeration method in pattern filter to use pattern tagged events as input
+  - Fixed issue ESPER-767 Support for tick-escape in select-clause column name
+  - Fixed issue ESPER-768 Improve standard deviation to use Knuth's
+  - Fixed issue ESPER-769 Issue evaluating nested enumeration
+  - Fixed issue ESPER-770 Improve compatibility checking when named window event gets inserted into stream of same-as type (Map and ObjectArray only)
+  - Fixed issue ESPER-771 Allow subqueries that select a single column that it itself an event to provide enumerable events and insert-into compatible prop
+  - Fixed issue ESPER-772 ClassCastException for method invocation on a property that is itself an event
+
+Changes in version 4.10.0
+------------------------
+Major API or EPL changes
+  - Support for context declarations to perform initiate or start immediately
+  - Support for mutation expressions for merge and update
+  - Support for parameterized fire-and-forget queries
+  - Support for fire-and-forget queries to consider the "in" opertator for index lookup
+  - Support for having-clause to have subquery
+  - Support for explicitly selecting eventbean instances of expressions (ESPER-732)
+  - Support for fire-and-forget queries that insert-into a named window
+
+Bug fixes
+  - Fixed Issue ESPER-733 Passing aggregate scalars to global script
+  - Fixed Issue ESPER-734 Unclear exception for invalid match_recognize
+  - Fixed Issue ESPER-735 Esper 4.9.0 OSGi bundle execution environment restricted to J2SE 1.6
+  - Fixed Issue ESPER-737 NullPointerException with grouped data window intersecting time window and last/first event
+  - Fixed Issue ESPER-738 Performance issue with 8 threads, keyed context partitioned, synchronized listener, event sequence for same partition
+  - Fixed Issue ESPER-739 All calls methods named "get" assumed to be Date-Time method
+  - Fixed Issue ESPER-740 POJO event populated by selectclause and via POJO constructor and select clause selects same type twice is created using wrong parameters
+  - Fixed Issue ESPER-741 Named window on-action with relational operator (<, <=) where-clause incorrect behavior when reversing comparison
+  - Fixed Issue ESPER-742 Static method lookup selects incorrect classstatic method lookup
+  - Fixed Issue ESPER-743 Join accross ObjectArrayEvent and MapEvent leaks data from MapEvent
+  - Fixed Issue ESPER-744 parse error in prepared statement for count(*,filter_expr)
+  - Fixed Issue ESPER-746 Self-Join between derived value streams provides incorrect result
+  - Fixed Issue ESPER-747 Cron timer is skipping months
+  - Fixed Issue ESPER-748 create schema fails with fully qualified property type name
+  - Fixed Issue ESPER-749 split stream with "output all" not working with prepared statement
+  - Fixed Issue ESPER-750 @audit miscounts pattern instances with "not"
+  - Fixed Issue ESPER-751 StackOverflow when routing new event during high volume processing
+  - Fixed Issue ESPER-752 @Drop annotation with context: First event not dropped
+  - Fixed Issue KPH-656-86796 EPL module with javascript incorrectly parsed
+  - Fixed Issue PJM-181-84952 Possible deadlock for patterns that have filters that have subqueries
+  - Fixed Issue IGC-717-55951 efficiency of group reclaim with grouped data windows
+  - Fixed Issue TBC-634-19891 use thread context class loader for default deserialize
+
 Changes in version 4.9.0
 ------------------------
 Major API or EPL changes
