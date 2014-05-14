@@ -281,6 +281,25 @@ describe Norikra::Query do
       end
     end
 
+    describe '.looback' do
+      it 'returns nil for nil group' do
+        expect(Norikra::Query.loopback(nil)).to be_nil
+      end
+
+      it 'returns nil for string group name without prefix' do
+        expect(Norikra::Query.loopback('a')).to be_nil
+        expect(Norikra::Query.loopback('group1')).to be_nil
+        expect(Norikra::Query.loopback('LOOPBACK')).to be_nil
+      end
+
+      it 'returns specified string as loopback target by parentheses' do
+        expect(Norikra::Query.loopback('LOOPBACK()')).to be_nil
+        expect(Norikra::Query.loopback('LOOPBACK(a)')).to eql('a')
+        expect(Norikra::Query.loopback('LOOPBACK(loopback_target)')).to eql('loopback_target')
+        expect(Norikra::Query.loopback('LOOPBACK(target name)')).to eql('target name') # should be invalid on 'open'
+      end
+    end
+
     describe '#dup' do
       context 'for queries without group (default group)' do
         it 'returns query object with default group' do

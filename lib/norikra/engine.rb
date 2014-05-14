@@ -276,6 +276,30 @@ module Norikra
         @events_statistics[:output] += events.size
       end
     end
+
+    class LoopbackListener < Listener
+      def initialize(engine, query_name, query_group, events_statistics)
+        @engine = engine
+        @query_name = query_name
+        @query_group = query_group
+        @events_statistics = events_statistics
+        @loopback_target = Norikra::Query.loopback(query_group)
+      end
+
+      def update(new_events, old_events)
+        t = Time.now.to_i
+        event_list = new_events.map{|e| type_convert(e) }
+        trace "loopback event", :query => @query_name, :group => @query_group, :event => event_list
+        @events_statistics[:output] += event_list.size
+        #
+        # We does NOT convert 'container.$0' into container['field'].
+        # Use escaped names like 'container__0'. That is NOT so confused.
+        #
+        #TODO: check performance and consider about loopback event threads
+        @engine.send(@loopback_target, event_list)
+      end
+    end
+
     ##### Unmatched events are simply ignored
     # class UnmatchedListener
     #   include com.espertech.esper.client.UnmatchedListener
@@ -341,8 +365,22 @@ module Norikra
     end
 
     def register_query(query)
+
+      if lo_target_name = Norikra::Query.loopback(query.group)
+        raise "Invalid loopback target name should be checked before. THIS IS BUG." unless Norikra::Target.valid?(lo_target_name)
+
+        target = Norikra::Target.new(lo_target_name)
+        unless @targets.include?(target)
+          info "opening loopback target", :target => lo_target_name
+          open_target(target)
+        end
+      end
+
       @mutex.synchronize do
         raise Norikra::ClientError, "query '#{query.name}' already exists" unless @queries.select{|q| q.name == query.name }.empty?
+        if lo_target_name = Norikra::Query.loopback(query.group)
+          raise Norikra::ClientError, "loopback target '#{lo_target_name}'" unless Norikra::Target.valid?(lo_target_name)
+        end
 
         unless @typedef_manager.ready?(query)
           @waiting_queries.push(query)
@@ -448,11 +486,20 @@ module Norikra
       statement_model = administrator.compileEPL(query.expression)
       Norikra::Query.rewrite_query(statement_model, event_type_name_map)
 
+      listener = if Norikra::Query.loopback(query.group)
+                   LoopbackListener.new(self, query.name, query.group, @statistics[:events])
+                 else
+                   Listener.new(query.name, query.group, @output_pool, @statistics[:events])
+                 end
+
       epl = administrator.create(statement_model)
-      epl.java_send :addListener, [com.espertech.esper.client.UpdateListener.java_class], Listener.new(query.name, query.group, @output_pool, @statistics[:events])
+      epl.java_send :addListener, [com.espertech.esper.client.UpdateListener.java_class], listener
+
       query.statement_name = epl.getName
+
       # epl is automatically started.
       # epl.isStarted #=> true
+      true
     end
 
     # this method should be protected with @mutex lock
