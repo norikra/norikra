@@ -310,7 +310,10 @@ module Norikra
     end
 
     ### Targets and fields re-writing supports (*) nodes
-    # model.methods.select{|m| m.to_s.start_with?('get')}
+    # model.methods.select{|m| m.to_s.start_with?('get') && !m.to_s.start_with?('get_')}.sort
+
+    # :getAnnotations,
+    # :getClass,
     # :getContextName,
     # :getCreateContext,
     # :getCreateDataFlow,
@@ -364,6 +367,14 @@ module Norikra
             dig.call(c)
           end
         end
+        if node.respond_to?(:getExpression)
+          dig.call(node.getExpression)
+        end
+        if node.respond_to?(:getExpressions)
+          node.getExpressions.each do |e|
+            dig.call(e)
+          end
+        end
       }
 
       statement_model.getFromClause.getStreams.each do |stream|
@@ -401,9 +412,11 @@ module Norikra
 
       if statement_model.getGroupByClause
         statement_model.getGroupByClause.getGroupByExpressions.each do |item|
-          if item.respond_to?(:getExpression)
-            dig.call(item.getExpression)
-          end
+          # GroupByClauseExpressionSingle
+          # GroupByClauseExpressionRollupOrCube
+          # GroupByClauseExpressionGroupingSet
+          # GroupByClauseExpressionCombination
+          dig.call(item)
         end
       end
 

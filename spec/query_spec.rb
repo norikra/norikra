@@ -552,6 +552,64 @@ describe Norikra::Query do
         end
       end
 
+      it 'rewrites targets and container field accesses with GROUP BY ROLLUP' do
+        with_engine do
+          e1 = 'select f1.$0.Symbol, StockTickEvent.data.feed, sum(f1.volume) from StockTickEvent.win:time_batch(30 seconds) as event group by rollup(f1.$0.Symbol, StockTickEvent.data.feed)'
+          x1 = 'select f1$$0$Symbol, S1.data$feed, sum(f1$volume) from S1.win:time_batch(30 seconds) as event group by rollup(f1$$0$Symbol, S1.data$feed)'
+          model = administrator.compileEPL(e1)
+          mapping = {'StockTickEvent' => 'S1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x1)
+        end
+      end
+
+      it 'rewrites targets and container field accesses with GROUP BY CUBE' do
+        with_engine do
+          e1 = 'select f1.$0.Symbol, StockTickEvent.data.feed, sum(f1.volume) from StockTickEvent.win:time_batch(30 seconds) as event group by cube(f1.$0.Symbol, StockTickEvent.data.feed)'
+          x1 = 'select f1$$0$Symbol, S1.data$feed, sum(f1$volume) from S1.win:time_batch(30 seconds) as event group by cube(f1$$0$Symbol, S1.data$feed)'
+          model = administrator.compileEPL(e1)
+          mapping = {'StockTickEvent' => 'S1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x1)
+        end
+      end
+
+      it 'rewrites targets and container field accesses with GROUP BY GROUPING SETS' do
+        with_engine do
+          e1 = 'select f1.$0.Symbol, StockTickEvent.data.feed, sum(f1.volume) from StockTickEvent.win:time_batch(30 seconds) as event group by grouping sets(f1.$0.Symbol, StockTickEvent.data.feed)'
+          x1 = 'select f1$$0$Symbol, S1.data$feed, sum(f1$volume) from S1.win:time_batch(30 seconds) as event group by grouping sets(f1$$0$Symbol, S1.data$feed)'
+          model = administrator.compileEPL(e1)
+          mapping = {'StockTickEvent' => 'S1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x1)
+        end
+      end
+
+      it 'rewrites targets and container field accesses with GROUP BY using complex combinations' do
+        with_engine do
+          e1 = 'select f1.$0.Symbol, StockTickEvent.data.feed, sum(f1.volume) from StockTickEvent.win:time_batch(30 seconds) as event group by f1.$0.Symbol, rollup(StockTickEvent.data.feed)'
+          x1 = 'select f1$$0$Symbol, S1.data$feed, sum(f1$volume) from S1.win:time_batch(30 seconds) as event group by f1$$0$Symbol, rollup(S1.data$feed)'
+          model = administrator.compileEPL(e1)
+          mapping = {'StockTickEvent' => 'S1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x1)
+
+          e2 = 'select f1.$0.Symbol, StockTickEvent.data.feed, sum(f1.volume) from StockTickEvent.win:time_batch(30 seconds) as event group by grouping sets((f1.$0.Symbol, StockTickEvent.data.feed), f1.$0.Symbol)'
+          x2 = 'select f1$$0$Symbol, S1.data$feed, sum(f1$volume) from S1.win:time_batch(30 seconds) as event group by grouping sets((f1$$0$Symbol, S1.data$feed), f1$$0$Symbol)'
+          model = administrator.compileEPL(e2)
+          mapping = {'StockTickEvent' => 'S1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x2)
+
+          e3 = 'select f1.$0.Symbol, StockTickEvent.data.feed, sum(f1.volume) from StockTickEvent.win:time_batch(30 seconds) as event group by grouping sets(f1.$0.Symbol, StockTickEvent.data.feed, ())'
+          x3 = 'select f1$$0$Symbol, S1.data$feed, sum(f1$volume) from S1.win:time_batch(30 seconds) as event group by grouping sets(f1$$0$Symbol, S1.data$feed, ())'
+          model = administrator.compileEPL(e3)
+          mapping = {'StockTickEvent' => 'S1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x3)
+
+          e4 = 'select f1.$0.Symbol, StockTickEvent.data.feed, sum(f1.volume) from StockTickEvent.win:time_batch(30 seconds) as event group by grouping sets(rollup(f1.$0.Symbol, StockTickEvent.data.feed), StockTickEvent.data.feed)'
+          x4 = 'select f1$$0$Symbol, S1.data$feed, sum(f1$volume) from S1.win:time_batch(30 seconds) as event group by grouping sets(rollup(f1$$0$Symbol, S1.data$feed), S1.data$feed)'
+          model = administrator.compileEPL(e4)
+          mapping = {'StockTickEvent' => 'S1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x4)
+        end
+      end
+
       it 'rewrites targets and container field accesses with ORDER BY' do
         with_engine do
           # ORDER BY clause
