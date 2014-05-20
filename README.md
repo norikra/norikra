@@ -70,6 +70,20 @@ See: http://norikra.github.io/
 
 ## Changes
 
+* v1.0.0:
+  * Update esper version (4.9.0 -> 5.0.0)
+    * Support Group By ROLLUP, Grouping Sets and CUBE
+    * Support Group By clause in subqueries
+    * Support subqueries that select multiple columns to provide input to enumeration methods
+    * Support Having clause to have subquery
+  * Add loopback query group to connect query output into targets directly
+  * RPC:
+    * Add JSON RPC API (/api on port 26578)
+    * Add API to fetch norikra server logs
+  * Add `--stats-secondary` option to store versioned stats files
+  * Fix bug:
+    * to return `[]` for NULL query output (fixed to `nil`)
+    * to handle container value for simple value field (exception -> NULL)
 * v0.1.7:
   * Fix `Pattern` support bug
 * v0.1.6:
