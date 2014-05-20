@@ -162,7 +162,6 @@ module Norikra
     TIME_FORMAT = '%Y-%m-%d %H:%M:%S %z'
 
     def initialize(name, opts={})
-      p opts
       @log4j = org.apache.commons.logging.LogFactory.getLog(name)
       @buffer = Array.new
       @buffer_lines = opts[:bufferlines] || DEFAULT_MEMORY_BUFFER_LINES
