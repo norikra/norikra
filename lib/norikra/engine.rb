@@ -261,6 +261,8 @@ module Norikra
             converted[unescaped_key] = event[key].to_hash
           elsif event[key].respond_to?(:to_a)
             converted[unescaped_key] = event[key].to_a
+          elsif event[key].respond_to?(:force_encoding)
+            converted[unescaped_key] = event[key].force_encoding('UTF-8')
           else
             converted[unescaped_key] = event[key]
           end
