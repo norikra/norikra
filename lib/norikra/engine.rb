@@ -294,8 +294,6 @@ module Norikra
         #
         # We does NOT convert 'container.$0' into container['field'].
         # Use escaped names like 'container__0'. That is NOT so confused.
-        #
-        #TODO: check performance and consider about loopback event threads
         @engine.send(@loopback_target, event_list)
       end
     end
