@@ -3,6 +3,13 @@ body {
   padding-bottom: 30px;
 }
 
+#navbar-norikra {
+  background-image: url(../img/banner.png);
+  background-size: auto 120px;
+  background-position: right bottom;
+  background-repeat: no-repeat;
+}
+
 .theme-dropdown .dropdown-menu {
   display: block;
   position: static;
