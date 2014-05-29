@@ -249,25 +249,22 @@ module Norikra
         @events_statistics = events_statistics
       end
 
-      def type_convert(event)
-        event = (event.respond_to?(:getUnderlying) ? event.getUnderlying : event).to_hash
-        converted = {}
-        event.keys.each do |key|
-          trace "event content key:#{key}, value:#{event[key]}, value class:#{event[key].class}"
-          unescaped_key = Norikra::Field.unescape_name(key)
-          if event[key].nil?
-            converted[unescaped_key] = nil
-          elsif event[key].respond_to?(:to_hash)
-            converted[unescaped_key] = event[key].to_hash
-          elsif event[key].respond_to?(:to_a)
-            converted[unescaped_key] = event[key].to_a
-          elsif event[key].respond_to?(:force_encoding)
-            converted[unescaped_key] = event[key].force_encoding('UTF-8')
-          else
-            converted[unescaped_key] = event[key]
-          end
+      def type_convert(value)
+        if value.respond_to?(:getUnderlying)
+          value = value.getUnderlying
         end
-        converted
+
+        trace "converting", :value => value
+
+        if value.respond_to?(:to_a)
+          value.to_a.map{|v| type_convert(v) }
+        elsif value.respond_to?(:to_hash)
+          Hash[ value.to_hash.map{|k,v| [ Norikra::Field.unescape_name(k), type_convert(v)] } ]
+        elsif value.respond_to?(:force_encoding)
+          value.force_encoding('UTF-8')
+        else
+          value
+        end
       end
 
       def update(new_events, old_events)
