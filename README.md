@@ -70,7 +70,17 @@ See: http://norikra.github.io/
 
 ## Changes
 
-See Changes.md
+* v1.0
+  * Esper-5.0 bundle
+  * Pattern support
+  * Nested object support
+  * Built-in default JVM options
+  * JSON APIs
+  * Many more features
+* v0.1
+  * First release for production usage
+
+See Changes.md for details.
 
 ## Copyright
 
