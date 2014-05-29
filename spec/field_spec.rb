@@ -150,6 +150,13 @@ describe Norikra::Field do
         expect(f.format({})).to be_nil
         expect(f.format([])).to be_nil
       end
+
+      it 'changes encoding of string values as UTF-8 forcely' do
+        f = Norikra::Field.new('x', 'string')
+        val = '乗鞍'
+        val.force_encoding('ASCII-8BIT')
+        expect(f.format(val).encoding.to_s).to eql("UTF-8")
+      end
     end
   end
 

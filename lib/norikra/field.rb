@@ -178,7 +178,7 @@ module Norikra
       return nil if value.nil? || value.is_a?(Hash) || value.is_a?(Array)
 
       case @type
-      when 'string'  then value.to_s
+      when 'string'  then value.to_s.force_encoding('UTF-8')
       when 'boolean'
         if value.is_a?(TrueClass) || value.is_a?(FalseClass)
           value
