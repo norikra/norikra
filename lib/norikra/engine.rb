@@ -508,6 +508,7 @@ module Norikra
       epl = administrator.getStatement(query.statement_name)
       return unless epl
 
+      @output_pool.remove(query.name, query.group)
       epl.stop unless epl.isStopped
       epl.destroy unless epl.isDestroyed
     end

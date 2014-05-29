@@ -45,6 +45,25 @@ describe Norikra::OutputPool do
   end
 
   context 'with events in pool' do
+    describe '#remove' do
+      it 'remove query from pool, and from group-query mapping' do
+        pool = Norikra::OutputPool.new
+        t = Time.now.to_i
+        pool.push('TestTable query1', 'group1', [[t,{'count'=>1}],[t,{'count'=>2}],[t,{'count'=>3}]])
+        pool.push('TestTable query2', 'group2', [[t,{'count'=>4}]])
+
+        pool.pop('TestTable query1')
+        pool.remove('TestTable query1', 'group1')
+
+        pool.push('TestTable query1', 'group3', [[t,{'count'=>1}],[t,{'count'=>2}],[t,{'count'=>3}]])
+
+        r1 = pool.sweep('group1') #=> {}
+        r3 = pool.sweep('group3')
+        expect(r1['TestTable query1']).to be_nil
+        expect(r3['TestTable query1'].size).to eql(3)
+      end
+    end
+
     describe '#pop' do
       it 'returns all events of specified query in pool' do
         pool = Norikra::OutputPool.new

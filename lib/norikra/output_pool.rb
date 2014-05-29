@@ -14,6 +14,18 @@ module Norikra
       @pool.keys
     end
 
+    def remove(query_name, query_group)
+      @mutex.synchronize do
+        group = @groups[query_group]
+        if group
+          group.delete(query_name)
+        end
+        @groups.delete(query_name)
+      @pool.delete(query_name)
+      end
+      nil
+    end
+
     def push(query_name, query_group, events) # events must be [time(int), event_record]
       # called with blank events for window leavings (and/or other situations)
       return if events.size < 1
