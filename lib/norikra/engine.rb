@@ -256,10 +256,10 @@ module Norikra
 
         trace "converting", :value => value
 
-        if value.respond_to?(:to_a)
-          value.to_a.map{|v| type_convert(v) }
-        elsif value.respond_to?(:to_hash)
+        if value.respond_to?(:to_hash)
           Hash[ value.to_hash.map{|k,v| [ Norikra::Field.unescape_name(k), type_convert(v)] } ]
+        elsif value.respond_to?(:to_a)
+          value.to_a.map{|v| type_convert(v) }
         elsif value.respond_to?(:force_encoding)
           value.force_encoding('UTF-8')
         else
