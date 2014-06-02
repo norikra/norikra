@@ -4,6 +4,9 @@ require 'esper/lib/commons-logging-1.1.3.jar'
 require 'esper/lib/antlr-runtime-4.1.jar'
 require 'esper/lib/cglib-nodep-3.1.jar'
 
+require 'norikra/field'
+require 'norikra/query'
+
 module Norikra
   class Listener
     include com.espertech.esper.client.UpdateListener
@@ -22,7 +25,9 @@ module Norikra
 
       trace "converting", :value => value
 
-      if value.respond_to?(:to_hash)
+      if value.nil?
+        value
+      elsif value.respond_to?(:to_hash)
         Hash[ value.to_hash.map{|k,v| [ Norikra::Field.unescape_name(k), type_convert(v)] } ]
       elsif value.respond_to?(:to_a)
         value.to_a.map{|v| type_convert(v) }
@@ -52,7 +57,6 @@ module Norikra
     end
 
     def update(new_events, old_events)
-      t = Time.now.to_i
       event_list = new_events.map{|e| type_convert(e) }
       trace "loopback event", :query => @query_name, :group => @query_group, :event => event_list
       @events_statistics[:output] += event_list.size
