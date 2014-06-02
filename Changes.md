@@ -3,6 +3,8 @@
 Changes of norikra.
 
 ## v1
+* v1.0.3:
+  * Fix bug to return Array falsey for Hash output, [] for NULL output
 * v1.0.2:
   * Fix bug:
     * to handle encoding of input strings
