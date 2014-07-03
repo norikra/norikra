@@ -102,6 +102,11 @@ module Norikra
       info "thread configurations", @thread_conf
       info "logging configurations", @log_conf
 
+      unless @stats_path
+        warn "status file path (--stats) NOT specified"
+        warn "TARGETS AND QUERIES WILL NOT BE SAVED ON SHUTDOWN !"
+      end
+
       @typedef_manager = Norikra::TypedefManager.new
       @output_pool = Norikra::OutputPool.new
 
