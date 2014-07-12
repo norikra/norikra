@@ -18,6 +18,16 @@ class Norikra::WebUI::API < Sinatra::Base
     @@engine = engine
   end
 
+  before do
+    content_type :json
+    headers 'Access-Control-Allow-Origin' => '*',
+      'Access-Control-Allow-Methods' => ['OPTIONS', 'GET', 'POST'],
+      'Access-Control-Allow-Headers' => 'Content-Type'
+    if request.request_method == 'OPTIONS'
+      halt 200
+    end
+  end
+
   def logging(type, handler, args=[], opts={})
     if type == :manage
       debug "WebAPI", :handler => handler.to_s, :args => args
