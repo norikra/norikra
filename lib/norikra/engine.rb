@@ -169,6 +169,7 @@ module Norikra
     def register(query)
       info "registering query", :name => query.name, :targets => query.targets, :expression => query.expression
       raise Norikra::ClientError, "query name '#{query.name}' already exists" if @queries.select{|q| q.name == query.name }.size > 0
+      raise Norikra::ClientError, "query '#{query.name}' is invalid query for Norikra" if query.invalid?
 
       query.targets.each do |target_name|
         open(target_name) unless @targets.any?{|t| t.name == target_name}
@@ -309,6 +310,7 @@ module Norikra
 
       @mutex.synchronize do
         raise Norikra::ClientError, "query '#{query.name}' already exists" unless @queries.select{|q| q.name == query.name }.empty?
+        raise Norikra::ClientError, "query '#{query.name}' is invalid query for Norikra" if query.invalid?
         if lo_target_name = Norikra::Query.loopback(query.group)
           raise Norikra::ClientError, "loopback target '#{lo_target_name}'" unless Norikra::Target.valid?(lo_target_name)
         end

@@ -61,6 +61,11 @@ module Norikra
       {name: @name, group: @group, expression: @expression}
     end
 
+    def invalid?
+      # check query is invalid as Norikra query or not
+      self.ast.listup('selectionListElement').any?{|node| node.children.map(&:name).any?{|name| name == '*' } }
+    end
+
     def targets
       return @targets if @targets
       @targets = (self.ast.listup(:stream).map(&:targets).flatten + self.subqueries.map(&:targets).flatten).sort.uniq

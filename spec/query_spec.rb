@@ -21,6 +21,8 @@ describe Norikra::Query do
           expect(q.fields).to eql(['param', 'path', 'size'].sort)
           expect(q.fields('TestTable')).to eql(['param','path','size'].sort)
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_false
         end
       end
 
@@ -86,6 +88,8 @@ describe Norikra::Query do
           expect(q.fields).to eql([])
           expect(q.fields('TestTable')).to eql([])
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_false
         end
       end
 
@@ -103,6 +107,8 @@ describe Norikra::Query do
           expect(q.fields).to eql(['name.string', 'param', 'path', 'size'].sort)
           expect(q.fields('TestTable')).to eql(['name.string', 'param','path','size'].sort)
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_false
         end
       end
 
@@ -120,6 +126,8 @@ describe Norikra::Query do
           expect(q.fields).to eql(['path', 'size'].sort)
           expect(q.fields('TestTable')).to eql(['path', 'size'].sort)
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_false
         end
       end
 
@@ -137,6 +145,8 @@ describe Norikra::Query do
           expect(q.fields('StreamA')).to eql(['size','data'].sort)
           expect(q.fields('StreamB')).to eql(['size','header'].sort)
           expect(q.fields(nil)).to eql(['product'])
+
+          expect(q.invalid?).to be_false
         end
 
         it 'returns query instances collectly parsed, with field accessing views' do
@@ -152,12 +162,14 @@ describe Norikra::Query do
           expect(q.fields('StreamA')).to eql(['size','data','ts1'].sort)
           expect(q.fields('StreamB')).to eql(['size','header','ts2'].sort)
           expect(q.fields(nil)).to eql(['product'])
+
+          expect(q.invalid?).to be_false
         end
       end
 
       context 'with query with subquery (where clause)' do
         it 'returns query instances collectly parsed' do
-          expression = 'select * from RfidEvent as RFID where "Dock 1" = (select name from Zones.std:unique(zoneName) where zoneId = RFID.zoneId)'
+          expression = 'select zoneId from RfidEvent as RFID where "Dock 1" = (select name from Zones.std:unique(zoneName) where zoneId = RFID.zoneId)'
           q = Norikra::Query.new(
             :name => 'TestTable query4', :expression => expression
           )
@@ -169,6 +181,8 @@ describe Norikra::Query do
           expect(q.fields('RfidEvent')).to eql(['zoneId'])
           expect(q.fields('Zones')).to eql(['name','zoneName','zoneId'].sort)
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_false
         end
       end
 
@@ -186,12 +200,14 @@ describe Norikra::Query do
           expect(q.fields('RfidEvent')).to eql(['zoneId'])
           expect(q.fields('Zones')).to eql(['name','zoneName','zoneId'].sort)
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_false
         end
       end
 
       context 'with query with subquery (from clause)' do
         it 'returns query instances collectly parsed' do
-          expression = "select * from BarData(ticker='MSFT', sub(closePrice, (select movAgv from SMA20Stream(ticker='MSFT').std:lastevent())) > 0)"
+          expression = "select ticker, closePrice from BarData(ticker='MSFT', sub(closePrice, (select movAgv from SMA20Stream(ticker='MSFT').std:lastevent())) > 0)"
           q = Norikra::Query.new(
             :name => 'TestTable query6', :expression => expression
           )
@@ -203,6 +219,8 @@ describe Norikra::Query do
           expect(q.fields('BarData')).to eql(['ticker','closePrice'].sort)
           expect(q.fields('SMA20Stream')).to eql(['movAgv','ticker'].sort)
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_false
         end
       end
 
@@ -220,6 +238,8 @@ describe Norikra::Query do
           expect(q.fields).to eql(['params.path', 'size', 'opts.$0'].sort)
           expect(q.fields('TestTable')).to eql(['params.path', 'size', 'opts.$0'].sort)
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_false
         end
       end
 
@@ -237,6 +257,8 @@ describe Norikra::Query do
           expect(q.fields).to eql(['params.$$path.$1', 'size.$0.bytes', 'opts.num.$0'].sort)
           expect(q.fields('TestTable')).to eql(['params.$$path.$1', 'size.$0.bytes', 'opts.num.$0'].sort)
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_false
         end
 
         it 'can parse with nested function calls correctly' do
@@ -249,6 +271,8 @@ describe Norikra::Query do
           expression = 'SELECT path.f1.substring(0, path.f1.index("?")) AS urlpath, COUNT(*) AS count FROM TestTable.win:time_batch(60 seconds) GROUP BY path.f1.substring(0, path.f1.index("?"))'
           q = Norikra::Query.new(:name => 'TestTable query8.2', :expression => expression)
           expect(q.fields).to eql(['path.f1'])
+
+          expect(q.invalid?).to be_false
         end
       end
 
@@ -259,6 +283,8 @@ describe Norikra::Query do
           expect(q.fields).to eql(['path.source', 'ts'].sort)
           expect(q.fields('TestTable')).to eql(['path.source', 'ts'].sort)
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_false
         end
       end
 
@@ -277,6 +303,18 @@ describe Norikra::Query do
           expect(q.fields).to eql(['name', 'content', 'type', 'source'].sort)
           expect(q.fields('EventA')).to eql(['name', 'content', 'type', 'source'].sort)
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_false
+        end
+      end
+
+      context 'with "*" selection list' do
+        it 'returns query instance which is singed as invalid for norikra query' do
+          expression = "select * from target1 where key1=1"
+          q = Norikra::Query.new(
+            name: 'Invalid query 1', expression: expression
+          )
+          expect(q.invalid?).to be_true
         end
       end
     end
