@@ -68,6 +68,7 @@ module Norikra
         option :'log-filesize', :type => :string, :default => nil, :desc => 'log rotation size [10MB]'
         option :'log-backups' , :type => :numeric, :default => nil, :desc => 'log rotation backups [10]'
         option :'log-buffer-lines', :type => :numeric, :default => nil, :desc => 'log lines to fetch from API [1000]'
+        option :'log4j-properties', :type => :string, :default => nil, :desc => 'path to log4j.properties. ignore other log* options when this option is present'
 
         ### Loglevel options
         option :'more-quiet',   :type => :boolean, :default => false,                   :desc => 'set loglevel as ERROR'
@@ -226,6 +227,7 @@ module Norikra
         filesize: options[:'log-filesize'], backups: options[:'log-backups'],
         bufferlines: options[:'log-buffer-lines'],
       }
+      conf[:log4j_properties] = options[:'log4j-properties']
 
       server_options = {
         host: options[:host],

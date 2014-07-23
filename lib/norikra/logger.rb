@@ -37,8 +37,6 @@ module Norikra
   module Log
     @@logger = nil
 
-    @@level = nil
-    @@levelnum = nil
     @@devmode = false
 
     @@test_flag = false
@@ -56,9 +54,8 @@ module Norikra
         @@test_flag = true
       end
 
-      @@level = level.upcase
-      raise ArgumentError, "unknown log level: #{@@level}" unless LOG_LEVELS.include?(@@level)
-      @@levelnum = LOG_LEVELS.index(@@level)
+      level = level.upcase
+      raise ArgumentError, "unknown log level: #{level}" unless LOG_LEVELS.include?(level)
 
       p = java.util.Properties.new
       p.setProperty('log4j.appender.default.layout', 'org.apache.log4j.PatternLayout')
@@ -93,7 +90,7 @@ module Norikra
           p.setProperty('log4j.appender.builtin.MaxFileSize', opts[:filesize] || LOGFILE_DEFAULT_MAX_SIZE)
           p.setProperty('log4j.appender.builtin.MaxBackupIndex', opts[:backups].to_s || LOGFILE_DEFAULT_MAX_BACKUP_INDEX.to_s)
         end
-        p.setProperty('log4j.rootLogger', "#{@@level},default")
+        p.setProperty('log4j.rootLogger', "#{level},default")
         org.apache.log4j.PropertyConfigurator.configure(p)
 
         @@logger = Logger.new('norikra.log', opts)
@@ -101,12 +98,18 @@ module Norikra
       else # for test(rspec)
         p.setProperty('log4j.appender.default', 'org.apache.log4j.varia.NullAppender')
         p.setProperty('log4j.appender.builtin', 'org.apache.log4j.varia.NullAppender')
-        p.setProperty('log4j.rootLogger', "#{@@level},default")
+        p.setProperty('log4j.rootLogger', "#{level},default")
         org.apache.log4j.PropertyConfigurator.configure(p)
         @@logger = opts[:logger]
       end
 
       @@devmode = devmode
+    end
+
+    def self.init_with_log4j_properties(log4j_properties)
+      org.apache.log4j.PropertyConfigurator.configure(log4j_properties)
+      @@logger = Logger.new('norikra.log')
+      @@devmode = false
     end
 
     def self.swap(logger) # for tests
@@ -120,31 +123,26 @@ module Norikra
     def self.logger; @@logger ; end
 
     def trace(message, data=nil)
-      return if LEVEL_TRACE < @@levelnum
       from = @@devmode ? caller_locations(1,1) : nil
       @@logger.trace(message, data, from)
     end
 
     def debug(message, data=nil)
-      return if LEVEL_DEBUG < @@levelnum
       from = @@devmode ? caller_locations(1,1) : nil
       @@logger.debug(message, data, from)
     end
 
     def info(message, data=nil)
-      return if LEVEL_INFO < @@levelnum
       from = @@devmode ? caller_locations(1,1) : nil
       @@logger.info(message, data, from)
     end
 
     def warn(message, data=nil)
-      return if LEVEL_WARN < @@levelnum
       from = @@devmode ? caller_locations(1,1) : nil
       @@logger.warn(message, data, from)
     end
 
     def error(message, data=nil)
-      return if LEVEL_ERROR < @@levelnum
       from = @@devmode ? caller_locations(1,1) : nil
       @@logger.error(message, data, from)
     end
@@ -175,36 +173,42 @@ module Norikra
     end
 
     def trace(message, data=nil, from=nil)
+      return unless @log4j.isTraceEnabled
       line = format(from, message, data)
       push('trace', line)
       @log4j.trace(line)
     end
 
     def debug(message, data=nil, from=nil)
+      return unless @log4j.isDebugEnabled
       line = format(from, message, data)
       push('debug', line)
       @log4j.debug(line)
     end
 
     def info(message, data=nil, from=nil)
+      return unless @log4j.isInfoEnabled
       line = format(from, message, data)
       push('info', line)
       @log4j.info(line)
     end
 
     def warn(message, data=nil, from=nil)
+      return unless @log4j.isWarnEnabled
       line = format(from, message, data)
       push('warn', line)
       @log4j.warn(line)
     end
 
     def error(message, data=nil, from=nil)
+      return unless @log4j.isErrorEnabled
       line = format(from, message, data)
       push('error', line)
       @log4j.error(line)
     end
 
     def fatal(message, data=nil, from=nil)
+      return unless @log4j.isFatalEnabled
       line = format(from, message, data)
       push('fatal', line)
       @log4j.fatal(line)

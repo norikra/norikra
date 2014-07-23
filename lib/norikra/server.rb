@@ -96,8 +96,13 @@ module Norikra
 
       @thread_conf = self.class.threading_configuration(conf[:thread])
       @log_conf = self.class.log_configuration(conf[:log])
+      @log4j_properties = conf[:log4j_properties]
 
-      Norikra::Log.init(@log_conf[:level], @log_conf[:dir], {filesize: @log_conf[:filesize], backups: @log_conf[:backups], bufferlines: @log_conf[:bufferlines]})
+      if @log4j_properties
+        Norikra::Log.init_with_log4j_properties(@log4j_properties)
+      else
+        Norikra::Log.init(@log_conf[:level], @log_conf[:dir], {filesize: @log_conf[:filesize], backups: @log_conf[:backups], bufferlines: @log_conf[:bufferlines]})
+      end
 
       info "thread configurations", @thread_conf
       info "logging configurations", @log_conf
