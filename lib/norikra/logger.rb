@@ -106,8 +106,8 @@ module Norikra
       @@devmode = devmode
     end
 
-    def self.init_with_log4j_properties(log4j_properties)
-      org.apache.log4j.PropertyConfigurator.configure(log4j_properties)
+    def self.init_with_log4j_properties_path(log4j_properties_path)
+      org.apache.log4j.PropertyConfigurator.configure(log4j_properties_path)
       @@logger = Logger.new('norikra.log')
       @@devmode = false
     end
