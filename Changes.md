@@ -3,6 +3,13 @@
 Changes of norikra.
 
 ## v1
+* v1.0.5:
+  * Add option `--log4j-properties-path` to specify logger configurations by log4j.properties file
+  * Add HTTP RPC headers to allow requests from different origins
+  * Fix to deny invalid queries:
+    * Queries like `SELECT * FROM ...` are prohibited: Norikra cannot handle these queries
+* v1.0.4:
+  * Warn if norikra server starts without `--stats` option
 * v1.0.3:
   * Fix bug to return Array falsey for Hash output, [] for NULL output
 * v1.0.2:
