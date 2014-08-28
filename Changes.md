@@ -3,6 +3,8 @@
 Changes of norikra.
 
 ## v1
+* v1.0.6:
+  * Fix bug not to receive events on '/send' of JSON API
 * v1.0.5:
   * Add option `--log4j-properties-path` to specify logger configurations by log4j.properties file
   * Add HTTP RPC headers to allow requests from different origins
