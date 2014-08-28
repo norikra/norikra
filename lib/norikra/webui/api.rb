@@ -62,7 +62,7 @@ class Norikra::WebUI::API < Sinatra::Base
   def parse_args(param_names, request)
     body = request.body.read
     parsed = begin
-               JSON.parse(body, symbolize_names: true)
+               JSON.parse(body)
              rescue JSON::ParserError => e
                info "JSON content body parse error"
                {}
@@ -79,7 +79,7 @@ class Norikra::WebUI::API < Sinatra::Base
   end
 
   post '/open' do
-    target, fields, auto_field = args = parse_args([:target, :fields, :auto_field], request)
+    target, fields, auto_field = args = parse_args(['target', 'fields', 'auto_field'], request)
     logging(:manage, :open, args){
       r = engine.open(target, fields, auto_field)
       json result: (!!r)
@@ -87,7 +87,7 @@ class Norikra::WebUI::API < Sinatra::Base
   end
 
   post '/close' do
-    target, = args = parse_args([:target], request)
+    target, = args = parse_args(['target'], request)
     logging(:manage, :close, args){
       r = engine.close(target)
       json result: (!!r)
@@ -95,7 +95,7 @@ class Norikra::WebUI::API < Sinatra::Base
   end
 
   post '/modify' do
-    target, auto_field = args = parse_args([:target, :auto_field], request)
+    target, auto_field = args = parse_args(['target', 'auto_field'], request)
     logging(:manage, :modify, args){
       r = engine.modify(target, auto_field)
       json result: (!!r)
@@ -109,7 +109,7 @@ class Norikra::WebUI::API < Sinatra::Base
   end
 
   post '/register' do
-    query_name, query_group, expression = args = parse_args([:query_name, :query_group, :expression], request)
+    query_name, query_group, expression = args = parse_args(['query_name', 'query_group', 'expression'], request)
     logging(:manage, :register, args){
       r = engine.register(Norikra::Query.new(:name => query_name, :group => query_group, :expression => expression))
       json result: (!!r)
@@ -117,7 +117,7 @@ class Norikra::WebUI::API < Sinatra::Base
   end
 
   post '/deregister' do
-    query_name, = args = parse_args([:query_name], request)
+    query_name, = args = parse_args(['query_name'], request)
     logging(:manage, :deregister, args){
       r = engine.deregister(query_name)
       json result: (!!r)
@@ -125,14 +125,14 @@ class Norikra::WebUI::API < Sinatra::Base
   end
 
   get '/fields' do
-    target, = args = parse_args([:target], request)
+    target, = args = parse_args(['target'], request)
     logging(:show, :fields, args){
       json engine.typedef_manager.field_list(target)
     }
   end
 
   post '/reserve' do
-    target, fieldname, type = args = parse_args([:target, :fieldname, :type], request)
+    target, fieldname, type = args = parse_args(['target', 'fieldname', 'type'], request)
     logging(:manage, :reserve, args){
       r = engine.reserve(target, fieldname, type)
       json result: (!!r)
@@ -140,7 +140,7 @@ class Norikra::WebUI::API < Sinatra::Base
   end
 
   post '/send' do
-    target, events = args = parse_args([:target, :events], request)
+    target, events = args = parse_args(['target', 'events'], request)
     logging(:data, :send, args){
       r = engine.send(target, events)
       json result: (!!r)
@@ -148,21 +148,21 @@ class Norikra::WebUI::API < Sinatra::Base
   end
 
   post '/event' do
-    query_name, = args = parse_args([:query_name], request)
+    query_name, = args = parse_args(['query_name'], request)
     logging(:show, :event, args){
       json engine.output_pool.pop(query_name)
     }
   end
 
   get '/see' do
-    query_name, = args = parse_args([:query_name], request)
+    query_name, = args = parse_args(['query_name'], request)
     logging(:show, :see, args){
       json engine.output_pool.fetch(query_name)
     }
   end
 
   post '/sweep' do
-    query_group, = args = parse_args([:query_group], request)
+    query_group, = args = parse_args(['query_group'], request)
     logging(:show, :sweep){
       json engine.output_pool.sweep(query_group)
     }
