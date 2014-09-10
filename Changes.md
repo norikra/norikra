@@ -3,6 +3,8 @@
 Changes of norikra.
 
 ## v1
+* v1.0.7:
+  * Fix bug to set nested values as always required if the first event includes container fields (issue #51)
 * v1.0.6:
   * Fix bug not to receive events on '/send' of JSON API
 * v1.0.5:
