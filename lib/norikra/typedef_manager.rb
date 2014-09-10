@@ -101,7 +101,7 @@ module Norikra
     end
 
     def generate_base_fieldset(target, event)
-      guessed = @typedefs[target].simple_guess(event, false, false) # all fields are non-optional
+      guessed = @typedefs[target].simple_guess(event, optional: false, strict: false, baseset: true) # all fields are non-optional
       guessed.update(@typedefs[target].fields, false)
       guessed
     end

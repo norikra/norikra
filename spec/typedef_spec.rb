@@ -334,7 +334,7 @@ describe Norikra::Typedef do
 
       it 'can guess about fields already known with strict mode' do
         typedef = Norikra::Typedef.new({'key1' => 'boolean', 'key2' => 'boolean', 'key3' => 'long'})
-        t = typedef.simple_guess({'key1' => true, 'key2' => false, 'key3' => 10, 'key4' => 3.1415, 'key5' => 'foobar'}, true, true)
+        t = typedef.simple_guess({'key1' => true, 'key2' => false, 'key3' => 10, 'key4' => 3.1415, 'key5' => 'foobar'}, optional: true, strict: true)
         r = t.definition
         expect(r['key1']).to eql('boolean')
         expect(r['key2']).to eql('boolean')
@@ -348,7 +348,7 @@ describe Norikra::Typedef do
         typedef = Norikra::Typedef.new({'key1' => 'boolean', 'key2' => 'boolean', 'key3' => 'long'})
         typedef.waiting_fields = ['key5']
 
-        t = typedef.simple_guess({'key1' => true, 'key2' => false, 'key3' => 10, 'key4' => 3.1415, 'key5' => 'foobar'}, true, true)
+        t = typedef.simple_guess({'key1' => true, 'key2' => false, 'key3' => 10, 'key4' => 3.1415, 'key5' => 'foobar'}, optional: true, strict: true)
         r = t.definition
         expect(r['key1']).to eql('boolean')
         expect(r['key2']).to eql('boolean')
@@ -368,7 +368,7 @@ describe Norikra::Typedef do
             'key3' => [{'k2' => 1, 'k3' => 'sssss', 'key4' => 'baz'}],
             'key4' => {'f1' => 'xxx', 'f2' => [30, true]},
             'key5' => 'foobar'
-          }, true, true)
+          }, optional: true, strict: true)
         r = t.definition
         expect(r.size).to eql(6)
         expect(r['key1']).to eql('boolean')
@@ -379,7 +379,7 @@ describe Norikra::Typedef do
         expect(r['key5']).to eql('string')
       end
 
-      it 'ignores empty container fieldss' do
+      it 'ignores empty container fields' do
         typedef = Norikra::Typedef.new({'key1' => 'boolean', 'key2' => 'long', 'key3.$0.key4' => 'string'})
         typedef.waiting_fields = ['key4.f1', 'key4.f2.$0', 'key5']
 
@@ -389,12 +389,33 @@ describe Norikra::Typedef do
             'key3' => [],
             'key4' => {},
             'key5' => 'foobar'
-          }, true, true)
+          }, optional: true, strict: true)
         r = t.definition
         expect(r.size).to eql(3)
         expect(r['key1']).to eql('boolean')
         expect(r['key2']).to eql('long')
         expect(r['key5']).to eql('string')
+      end
+
+      it 'ignores any container fields if baseset option specified' do
+        typedef = Norikra::Typedef.new(nil) # lazy typedef for baseset generation test
+        typedef.waiting_fields = ['key1.a1', 'key1.a2', 'key2.$0']
+
+        t = typedef.simple_guess({
+            'key1' => {'a1' => 1, 'a2' => 2},
+            'key2' => [3, 4],
+          }, optional: false, strict: false, baseset: true)
+        r = t.definition
+        expect(r.size).to eql(0)
+
+        t = typedef.simple_guess({
+            'key1' => {'a1' => 1, 'a2' => 2},
+            'key2' => [3, 4],
+            'key3' => true,
+          }, optional: false, strict: false, baseset: true)
+        r = t.definition
+        expect(r.size).to eql(1)
+        expect(r['key3']).to eql('boolean')
       end
     end
 

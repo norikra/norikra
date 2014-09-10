@@ -172,13 +172,19 @@ module Norikra
       true
     end
 
-    def simple_guess(data, optional=true, strict=false)
+    def simple_guess(data, opts={})
+      unless opts.has_key?(:optional)
+        opts[:optional] = true
+      end
+
       flatten_key_value_pairs = []
 
       data.each do |key,value|
-        next if strict && !(@fields.has_key?(key) || @waiting_fields.include?(key) || value.is_a?(Hash) || value.is_a?(Array))
+        next if opts[:strict] && !(@fields.has_key?(key) || @waiting_fields.include?(key) || value.is_a?(Hash) || value.is_a?(Array))
 
         if value.is_a?(Hash) || value.is_a?(Array)
+          next if opts[:baseset]
+
           Norikra::FieldSet.leaves(value).map{|chain| [key] + chain}.each do |chain|
             value = chain.pop
             key = Norikra::Field.regulate_key_chain(chain).join('.')
@@ -203,34 +209,14 @@ module Norikra
         }
       ]
 
-      FieldSet.new(mapping, optional)
+      FieldSet.new(mapping, opts[:optional])
     end
-
-    # def self.guess(data, optional=true)
-    #   mapping = Hash[
-    #     data.map{|key,value|
-    #       sval = value.to_s
-    #       type = case
-    #              when val.is_a?(TrueClass) || val.is_a?(FalseClass) || sval =~ /^(?:true|false)$/i
-    #                'boolean'
-    #              when val.is_a?(Integer) || sval =~ /^-?\d+[lL]?$/
-    #                'long'
-    #              when val.is_a?(Float) || sval =~ /^-?\d+\.\d+(?:[eE]-?\d+|[dDfF])?$/
-    #                'double'
-    #              else
-    #                'string'
-    #              end
-    #       [key,type]
-    #     }
-    #   ]
-    #   self.new(mapping, optional)
-    # end
 
     def refer(data, strict=false)
       field_names_key = FieldSet.field_names_key(data, self, strict, @waiting_fields)
       return @set_map[field_names_key] if @set_map.has_key?(field_names_key)
 
-      guessed = self.simple_guess(data, false, strict)
+      guessed = self.simple_guess(data, optional: false, strict: strict)
       guessed_fields = guessed.fields
       @fields.each do |key,field|
         if guessed_fields.has_key?(key)
