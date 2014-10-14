@@ -3,6 +3,8 @@
 Changes of norikra.
 
 ## v1
+* v1.0.8:
+  * Fix bug not to read command line options for time/route threads
 * v1.0.7:
   * Fix bug to set nested values as always required if the first event includes container fields (issue #51)
 * v1.0.6:
