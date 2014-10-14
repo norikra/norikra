@@ -208,8 +208,13 @@ module Norikra
         web: {},
       }
       [:inbound, :outbound, :route_exec, :timer_exec].each do |sym|
-        conf[:thread][:engine][sym][:threads] = options[:"#{sym}-threads"] if options[:"#{sym}-threads"]
-        conf[:thread][:engine][sym][:capacity] = options[:"#{sym}-thread-capacity"] if options[:"#{sym}-thread-capacity"]
+        opt_sym = case sym
+                  when :route_exec then :route
+                  when :timer_exec then :timer
+                  else sym
+                  end
+        conf[:thread][:engine][sym][:threads] = options[:"#{opt_sym}-threads"] if options[:"#{opt_sym}-threads"]
+        conf[:thread][:engine][sym][:capacity] = options[:"#{opt_sym}-thread-capacity"] if options[:"#{opt_sym}-thread-capacity"]
       end
       conf[:thread][:rpc][:threads] = options[:'rpc-threads'] if options[:'rpc-threads']
       conf[:thread][:web][:threads] = options[:'web-threads'] if options[:'web-threads']
