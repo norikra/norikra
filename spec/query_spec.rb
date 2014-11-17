@@ -338,6 +338,16 @@ describe Norikra::Query do
       end
     end
 
+    describe '.stdout?' do
+      it 'returns true if group name is "STDOUT()"' do
+        expect(Norikra::Query.stdout?(nil)).to be_false
+        expect(Norikra::Query.stdout?("")).to be_false
+        expect(Norikra::Query.stdout?("foo")).to be_false
+        expect(Norikra::Query.stdout?("STDOUT")).to be_false
+        expect(Norikra::Query.stdout?("STDOUT()")).to be_true
+      end
+    end
+
     describe '#dup' do
       context 'for queries without group (default group)' do
         it 'returns query object with default group' do

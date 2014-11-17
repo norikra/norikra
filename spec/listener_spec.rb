@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 require_relative './spec_helper'
 
+require 'json'
 require 'norikra/listener'
 
 class DummyOutputPool
@@ -158,6 +159,40 @@ describe Norikra::LoopbackListener do
       listener.update([{"n1" => 102, "s" => "string three"}], [])
       expect(statistics[:output]).to eql(3)
       expect(dummy_engine.events['target1'].size).to eql(3)
+    end
+  end
+end
+
+describe Norikra::StdoutListener do
+  it 'should be initialized' do
+    dummy_engine = DummyEngine.new
+    statistics = {output: 0}
+    expect { Norikra::StdoutListener.new(dummy_engine, 'name', 'STDOUT()', statistics) }.not_to raise_error
+  end
+
+  describe '#update' do
+    dummy_engine = DummyEngine.new
+    statistics = {output: 0}
+    listener = Norikra::StdoutListener.new(dummy_engine, 'name', 'STDOUT()', statistics)
+    dummyio = StringIO.new
+    listener.instance_eval{ @stdout = dummyio }
+
+    it 'sends events into engine with target name' do
+      dummyio.truncate(0)
+
+      events1 = [{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}]
+      listener.update(events1, [])
+      expect(statistics[:output]).to eql(2)
+
+      events2 = [{"n1" => 102, "s" => "string three"}]
+      listener.update(events2, [])
+      expect(statistics[:output]).to eql(3)
+
+      results = []
+      dummyio.string.split("\n").each do |line|
+        results << JSON.parse(line) if line != ''
+      end
+      expect(results).to eql(events1 + events2)
     end
   end
 end

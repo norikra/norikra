@@ -421,6 +421,8 @@ module Norikra
 
       listener = if Norikra::Query.loopback(query.group)
                    Norikra::LoopbackListener.new(self, query.name, query.group, @statistics[:events])
+                 elsif Norikra::Query.stdout?(query.group)
+                   Norikra::StdoutListener.new(self, query.name, query.group, @statistics[:events])
                  else
                    Norikra::Listener.new(query.name, query.group, @output_pool, @statistics[:events])
                  end

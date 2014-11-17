@@ -7,6 +7,8 @@ require 'esper/lib/cglib-nodep-3.1.jar'
 require 'norikra/field'
 require 'norikra/query'
 
+require 'json'
+
 module Norikra
   class Listener
     include com.espertech.esper.client.UpdateListener
@@ -64,6 +66,29 @@ module Norikra
       # We does NOT convert 'container.$0' into container['field'].
       # Use escaped names like 'container__0'. That is NOT so confused.
       @engine.send(@loopback_target, event_list)
+    end
+  end
+
+  class StdoutListener < Listener
+    def initialize(engine, query_name, query_group, events_statistics)
+      raise "BUG: query group is not 'STDOUT()'" unless query_group == 'STDOUT()'
+
+      @engine = engine
+      @query_name = query_name
+      @query_group = query_group
+      @events_statistics = events_statistics
+
+      @stdout = STDOUT
+    end
+
+    def update(new_events, old_events)
+      event_list = new_events.map{|e| type_convert(e) }
+      trace "stdout event", :query => @query_name, :event => event_list
+      @events_statistics[:output] += event_list.size
+
+      event_list.each do |e|
+        @stdout.puts JSON.dump(e)
+      end
     end
   end
 
