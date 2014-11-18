@@ -372,6 +372,14 @@ describe Norikra::Query do
       end
     end
 
+    describe '#suspended?' do
+      it 'returns false, always' do
+        e1 = 'SELECT max(num) AS max FROM TestTable1.win:time(5 sec)'
+        q1 = Norikra::Query.new(:name => 'q1', :group => nil, :expression => e1)
+        expect(q1.suspended?).to be_false
+      end
+    end
+
     describe '.rewrite_event_field_name' do
       context 'without any container field access' do
         expression = 'select count(*) as cnt from TestTable.win:time_batch(10 seconds) where path="/" and size>100 and (param.length())>0'
@@ -752,3 +760,5 @@ describe Norikra::Query do
     end
   end
 end
+
+#TODO: write specs about Norikra::SuspendedQuery

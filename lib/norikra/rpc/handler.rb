@@ -61,7 +61,7 @@ class Norikra::RPC::Handler
 
   def queries
     logging(:show, :queries){
-      @engine.queries.map(&:to_hash)
+      @engine.queries.map(&:to_hash) + @engine.suspended_queries.map(&:to_hash)
     }
   end
 
@@ -75,6 +75,20 @@ class Norikra::RPC::Handler
   def deregister(query_name)
     logging(:manage, :deregister, [query_name]){
       r = @engine.deregister(query_name)
+      !!r
+    }
+  end
+
+  def suspend(query_name)
+    logging(:manage, :suspend, [query_name]){
+      r = @engine.suspend(query_name)
+      !!r
+    }
+  end
+
+  def resume(query_name)
+    logging(:manage, :suspend, [query_name]){
+      r = @engine.resume(query_name)
       !!r
     }
   end

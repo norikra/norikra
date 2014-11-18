@@ -66,7 +66,7 @@ class Norikra::WebUI::Handler < Sinatra::Base
 
       input_data,session[:input_data] = session[:input_data],nil
 
-      queries = engine.queries.sort
+      queries = engine.queries.sort + engine.suspended_queries.sort
       pooled_events = Hash[* queries.map{|q| [q.name, engine.output_pool.pool.fetch(q.name, []).size.to_s]}.flatten]
 
       engine_targets = engine.targets.sort
@@ -130,6 +130,22 @@ class Norikra::WebUI::Handler < Sinatra::Base
     end
   end
 
+  post '/suspend' do
+    query_name = params[:query_name]
+    logging(:manage, :suspend, [query_name]) do
+      engine.suspend(query_name)
+      redirect '/#queries'
+    end
+  end
+
+  post '/resume' do
+    query_name = params[:query_name]
+    logging(:manage, :resume, [query_name]) do
+      engine.resume(query_name)
+      redirect '/#queries'
+    end
+  end
+
   get '/logs' do
     logging(:show, :logs) do
       json Norikra::Log.logger.buffer
@@ -149,6 +165,9 @@ class Norikra::WebUI::Handler < Sinatra::Base
     query_name = params[:name]
     logging(:show, :json_query, [query_name]) do
       query = engine.queries.select{|q| q.name == query_name}.first
+      unless query
+        query = engine.suspended_queries.select{|q| q.name == query_name}.first
+      end
       if query
         content = {
           name: query.name,

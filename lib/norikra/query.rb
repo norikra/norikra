@@ -58,11 +58,15 @@ module Norikra
     end
 
     def to_hash
-      {'name' => @name, 'group' => @group, 'expression' => @expression, 'targets' => self.targets}
+      {'name' => @name, 'group' => @group, 'expression' => @expression, 'targets' => self.targets, 'suspended' => false}
     end
 
     def dump
       {name: @name, group: @group, expression: @expression}
+    end
+
+    def suspended?
+      false
     end
 
     def invalid?
@@ -460,5 +464,28 @@ module Norikra
     def expression; ''; end
     def dup; self; end
     def dup_with_stream_name(actual_name); self; end
+  end
+
+  class SuspendedQuery
+    attr_accessor :name, :group, :expression, :targets
+
+    def initialize(query)
+      @name = query.name
+      @group = query.group
+      @expression = query.expression
+      @targets = query.targets
+    end
+
+    def suspended?
+      true
+    end
+
+    def to_hash
+      {'name' => @name, 'group' => @group, 'expression' => @expression, 'targets' => @targets, 'suspended' => true}
+    end
+
+    def create
+      Query.new(name: @name, group: @group, expression: @expression)
+    end
   end
 end

@@ -16,7 +16,7 @@ require 'norikra/typedef_manager'
 
 module Norikra
   class Engine
-    attr_reader :targets, :queries, :output_pool, :typedef_manager
+    attr_reader :targets, :queries, :suspended_queries, :output_pool, :typedef_manager
 
     def initialize(output_pool, typedef_manager, opts={})
       @statistics = {
@@ -38,6 +38,7 @@ module Norikra
 
       @targets = []
       @queries = []
+      @suspended_queries = []
 
       @waiting_queries = []
     end
@@ -169,6 +170,7 @@ module Norikra
     def register(query)
       info "registering query", :name => query.name, :targets => query.targets, :expression => query.expression
       raise Norikra::ClientError, "query name '#{query.name}' already exists" if @queries.select{|q| q.name == query.name }.size > 0
+      raise Norikra::ClientError, "query name '#{query.name}' already exists in suspended" if @suspended_queries.select{|q| q.name == query.name }.size > 0
       raise Norikra::ClientError, "query '#{query.name}' is invalid query for Norikra" if query.invalid?
 
       query.targets.each do |target_name|
@@ -180,9 +182,43 @@ module Norikra
     def deregister(query_name)
       info "de-registering query", :name => query_name
       queries = @queries.select{|q| q.name == query_name }
+      s_queries = @suspended_queries.select{|q| q.name == query_name }
+
+      if queries.size == 1
+        deregister_query(queries.first)
+      elsif s_queries.size == 1
+        @suspended_queries.delete(s_queries.first)
+        true
+      else
+        nil # just ignore for 'not found'
+      end
+    end
+
+    def suspend(query_name)
+      info "suspending query", name: query_name
+      queries = @queries.select{|q| q.name == query_name }
       return nil unless queries.size == 1 # just ignore for 'not found'
 
-      deregister_query(queries.first)
+      suspending_query = queries.first
+      suspended_query = Norikra::SuspendedQuery.new(suspending_query)
+
+      deregister_query(suspending_query)
+      add_suspended_query(suspended_query)
+    end
+
+    def resume(query_name)
+      info "resuming query", name: query_name
+      queries = @suspended_queries.select{|q| q.name == query_name }
+      return nil unless queries.size == 1 # just ignore
+
+      suspended_query = queries.first
+      query = suspended_query.create # suspended query -> query object
+
+      query.targets.each do |target_name|
+        open(target_name) unless @targets.any?{|t| t.name == target_name}
+      end
+      register_query(query)
+      remove_suspended_query(suspended_query)
     end
 
     def send(target_name, events)
@@ -355,6 +391,21 @@ module Norikra
             deregister_fieldset_actually(target_name, removed_event_type_name, :query)
           end
         end
+      end
+      true
+    end
+
+    def add_suspended_query(query)
+      @mutex.synchronize do
+        return nil if @suspended_queries.include?(query)
+        @suspended_queries << query
+      end
+      true
+    end
+
+    def remove_suspended_query(query)
+      @mutex.synchronize do
+        @suspended_queries.delete(query)
       end
       true
     end

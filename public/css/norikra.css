@@ -20,6 +20,10 @@ body {
   margin: 5px 0;
 }
 
+tr.suspended {
+  background-color: gray;
+}
+
 tr.logline.trace > td {
   color: silver;
 }

@@ -65,12 +65,15 @@
 
 <% if queries.size > 0 %>
 <table class="table">
-  <tr><th>Group</th><th>Query name</th><th>Targets</th><th>Query</th><th style="text-align:right;">Events</th><th></th><th></th></tr>
-  <% queries.each_with_index do |query, index| %>
   <tr>
+    <th>Group</th><th>Query name</th><th>Targets</th><th>Query</th><th style="text-align:right;">Events</th><th></th><th></th><th></th>
+  </tr>
+  <% queries.each_with_index do |query, index| %>
+  <tr class="<%= query.suspended? ? "suspended" : "" %>">
     <td><%= query.group || "(default)" %></td>
     <td><%= query.name %></td>
     <td><%= query.targets.join(", ") %></td>
+    <td><%= query.suspended? ? "suspended" : "" %></td>
     <td>
       <button class="btn btn-default btn-xs show-query-expression" data-load="/json/query/<%= query.name %>">show query</button>
     </td>
@@ -80,6 +83,63 @@
       <button class="btn btn-info btn-xs show-query-events-sample" data-load="/json/events_sample/<%= query.name %>">
         <span class="glyphicon glyphicon-search"></span>
       </button>
+      <% end %>
+    </td>
+    <td>
+      <% if query.suspended? %>
+        <a class="btn btn-info btn-xs" data-toggle="modal" href="#resumeQuery<%= index %>">
+          <span class="glyphicon glyphicon-play"></span>
+        </a>
+        <div class="modal fade"
+          id="resumeQuery<%= index %>"
+          tabindex="-1" role="dialog" aria-labelledby="resumeQueryLabel<%= index %>" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Resume Query <%= query.name %></h4>
+              </div>
+              <div class="modal-body">
+                <p>name: <%= query.name %>, group: <%= query.group || "(default)" %></p>
+              <pre><%= query.expression %></pre>
+              </div>
+              <div class="modal-footer">
+                <form class="form-inline" action="/resume" method="POST">
+                  <input type="hidden" name="query_name" value="<%= query.name %>" />
+                  <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Resume</button>
+                </form>
+              </div>
+            </div><!-- /.modal-content -->
+          </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+      <% else %>
+        <a class="btn btn-warning btn-xs" data-toggle="modal" href="#suspendQuery<%= index %>">
+          <span class="glyphicon glyphicon-pause"></span>
+        </a>
+        <div class="modal fade"
+          id="suspendQuery<%= index %>"
+          tabindex="-1" role="dialog" aria-labelledby="suspendQueryLabel<%= index %>" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Suspend Query <%= query.name %></h4>
+              </div>
+              <div class="modal-body">
+                <p>name: <%= query.name %>, group: <%= query.group || "(default)" %></p>
+              <pre><%= query.expression %></pre>
+              </div>
+              <div class="modal-footer">
+                <form class="form-inline" action="/suspend" method="POST">
+                  <input type="hidden" name="query_name" value="<%= query.name %>" />
+                  <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-danger">Suspend</button>
+                </form>
+              </div>
+            </div><!-- /.modal-content -->
+          </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
       <% end %>
     </td>
     <td>
