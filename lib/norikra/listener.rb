@@ -87,7 +87,7 @@ module Norikra
       @events_statistics[:output] += event_list.size
 
       event_list.each do |e|
-        @stdout.puts JSON.dump(e)
+        @stdout.puts @query_name + "\t" + JSON.dump(e)
       end
     end
   end

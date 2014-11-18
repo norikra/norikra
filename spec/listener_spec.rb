@@ -190,7 +190,9 @@ describe Norikra::StdoutListener do
 
       results = []
       dummyio.string.split("\n").each do |line|
-        results << JSON.parse(line) if line != ''
+        query_name, json = line.split("\t")
+        expect(query_name).to eql("name")
+        results << JSON.parse(json) if json && json != ''
       end
       expect(results).to eql(events1 + events2)
     end
