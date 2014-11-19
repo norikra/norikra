@@ -476,6 +476,22 @@ module Norikra
       @targets = query.targets
     end
 
+    def <=>(other)
+      if @group.nil? || other.group.nil?
+        if @group.nil? && other.group.nil?
+          @name <=> other.name
+        else
+          @group.to_s <=> other.group.to_s
+        end
+      else
+        if @group == other.group
+          self.name <=> other.name
+        else
+          self.group <=> other.group
+        end
+      end
+    end
+
     def suspended?
       true
     end
