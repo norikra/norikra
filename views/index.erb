@@ -66,7 +66,7 @@
 <% if queries.size > 0 %>
 <table class="table">
   <tr>
-    <th>Group</th><th>Query name</th><th>Targets</th><th>Query</th><th style="text-align:right;">Events</th><th></th><th></th><th></th>
+    <th>Group</th><th>Query name</th><th>Targets</th><th></th><th>Query</th><th style="text-align:right;">Events</th><th></th><th></th><th></th>
   </tr>
   <% queries.each_with_index do |query, index| %>
   <tr class="<%= query.suspended? ? "suspended" : "" %>">
