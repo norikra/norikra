@@ -67,8 +67,7 @@ class Norikra::WebUI::Handler < Sinatra::Base
       input_data,session[:input_data] = session[:input_data],nil
 
       queries = engine.queries.sort + engine.suspended_queries.sort
-      pooled_events = Hash[* queries.map{|q| [q.name, engine.output_pool.pool.fetch(q.name, []).size.to_s]}.flatten]
-
+      pooled_events = Hash[* queries.map{|q| [q.name, engine.output_pool.pool.fetch(q.name, []).map(&:size).reduce(&:+).to_s]}.flatten]
       engine_targets = engine.targets.sort
       targets = engine_targets.map{|t|
         {
