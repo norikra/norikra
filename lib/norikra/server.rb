@@ -21,26 +21,26 @@ module Norikra
     MICRO_PREDEFINED = {
       :engine => { inbound:    { threads: 0, capacity: 0 }, outbound:   { threads: 0, capacity: 0 },
                    route_exec: { threads: 0, capacity: 0 }, timer_exec: { threads: 0, capacity: 0 }, },
-      :rpc => { threads: 2 },
+      :rpc => { threads: 2 }, # for desktop
       :web => { threads: 2 },
     }
     SMALL_PREDEFINED = {
-      :engine => { inbound:    { threads: 1, capacity: 0 }, outbound:   { threads: 1, capacity: 0 },
-                   route_exec: { threads: 1, capacity: 0 }, timer_exec: { threads: 1, capacity: 0 }, },
-      :rpc => { threads: 2 },
-      :web => { threads: 2 },
+      :engine => { inbound:    { threads: 2, capacity: 0 }, outbound:   { threads: 2, capacity: 0 },
+                   route_exec: { threads: 2, capacity: 0 }, timer_exec: { threads: 2, capacity: 0 }, },
+      :rpc => { threads: 9 }, # 4core HT
+      :web => { threads: 9 },
     }
     MIDDLE_PREDEFINED = {
-      :engine => { inbound:    { threads: 4, capacity: 0 }, outbound:   { threads: 2, capacity: 0 },
-                   route_exec: { threads: 2, capacity: 0 }, timer_exec: { threads: 2, capacity: 0 }, },
-      :rpc => { threads: 4 },
-      :web => { threads: 2 },
+      :engine => { inbound:    { threads: 4, capacity: 0 }, outbound:   { threads: 4, capacity: 0 },
+                   route_exec: { threads: 4, capacity: 0 }, timer_exec: { threads: 4, capacity: 0 }, },
+      :rpc => { threads: 17 }, # 4core HT 2CPU
+      :web => { threads: 17 },
     }
     LARGE_PREDEFINED = {
-      :engine => { inbound:    { threads: 6, capacity: 0 }, outbound:   { threads: 6, capacity: 0 },
-                   route_exec: { threads: 4, capacity: 0 }, timer_exec: { threads: 4, capacity: 0 }, },
-      :rpc => { threads: 8 },
-      :web => { threads: 2 },
+      :engine => { inbound:    { threads: 8, capacity: 0 }, outbound:   { threads: 8, capacity: 0 },
+                   route_exec: { threads: 8, capacity: 0 }, timer_exec: { threads: 8, capacity: 0 }, },
+      :rpc => { threads: 49 }, # 6core HT 4CPU
+      :web => { threads: 49 },
     }
 
     def self.threading_configuration(conf)
