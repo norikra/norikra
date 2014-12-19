@@ -44,7 +44,7 @@ module Norikra
       when 'integer', 'int', 'long' then 'long'
       when 'float', 'double' then 'double'
       when 'hash', 'array'
-        raise Norikra::ArgumentError, "#{type} is norikra internal type, not for esper"
+        raise Norikra::ArgumentError, "#{type} is container field. Don't specify it at open, use it directly."
       when 'byte'
         raise Norikra::ArgumentError, "byte is not supported in Norikra"
       else
