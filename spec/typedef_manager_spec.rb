@@ -11,7 +11,7 @@ describe Norikra::TypedefManager do
 
     describe '#lazy?' do
       it 'returns true' do
-        expect(manager.lazy?('sample')).to be_true
+        expect(manager.lazy?('sample')).to be_truthy
       end
     end
 
@@ -21,11 +21,11 @@ describe Norikra::TypedefManager do
         expect(r).to be_instance_of(Norikra::FieldSet)
 
         expect(r.fields['a'].type).to eql('string')
-        expect(r.fields['a'].optional?).to be_false
+        expect(r.fields['a'].optional?).to be_falsy
         expect(r.fields['b'].type).to eql('string')
-        expect(r.fields['b'].optional?).to be_false
+        expect(r.fields['b'].optional?).to be_falsy
         expect(r.fields['x'].type).to eql('string')
-        expect(r.fields['x'].optional?).to be_false
+        expect(r.fields['x'].optional?).to be_falsy
       end
     end
 
@@ -33,7 +33,7 @@ describe Norikra::TypedefManager do
       it 'does not fail, and target will become non-lazy status' do
         r = manager.generate_base_fieldset('sample', {'a'=>'foo','b'=>'bar','x'=>'yeeeees!'})
         manager.activate('sample', r)
-        expect(manager.lazy?('sample')).to be_false
+        expect(manager.lazy?('sample')).to be_falsy
       end
     end
   end
@@ -48,23 +48,23 @@ describe Norikra::TypedefManager do
 
     it 'three fields are defined as non-optional fields' do
       expect(manager.typedefs['sample'].fields['a'].type).to eql('string')
-      expect(manager.typedefs['sample'].fields['a'].optional?).to be_false
+      expect(manager.typedefs['sample'].fields['a'].optional?).to be_falsy
       expect(manager.typedefs['sample'].fields['b'].type).to eql('string')
-      expect(manager.typedefs['sample'].fields['b'].optional?).to be_false
+      expect(manager.typedefs['sample'].fields['b'].optional?).to be_falsy
       expect(manager.typedefs['sample'].fields['c'].type).to eql('float')
-      expect(manager.typedefs['sample'].fields['c'].optional?).to be_false
+      expect(manager.typedefs['sample'].fields['c'].optional?).to be_falsy
     end
 
     describe '#lazy?' do
       it 'returns false' do
-        expect(manager.lazy?('sample')).to be_false
+        expect(manager.lazy?('sample')).to be_falsy
       end
     end
     describe '#reserve' do
       it 'does not fail' do
         manager.reserve('sample', 'x', 'long')
         expect(manager.typedefs['sample'].fields['x'].type).to eql('integer')
-        expect(manager.typedefs['sample'].fields['x'].optional?).to be_true
+        expect(manager.typedefs['sample'].fields['x'].optional?).to be_truthy
       end
     end
 
@@ -72,25 +72,25 @@ describe Norikra::TypedefManager do
       context 'with query with single target' do
         it 'returns boolean which matches target or not' do
           q1 = Norikra::Query.new(:name => 'test', :expression => 'select a from sample.win:time(5 sec) where c > 1.0 and z')
-          expect(manager.ready?(q1)).to be_true
+          expect(manager.ready?(q1)).to be_truthy
           q2 = Norikra::Query.new(:name => 'test', :expression => 'select a from sample.win:time(5 sec) where c > 1.0 and d > 2.0')
-          expect(manager.ready?(q2)).to be_false
+          expect(manager.ready?(q2)).to be_falsy
           q3 = Norikra::Query.new(:name => 'test', :expression => 'select a from sample2.win:time(5 sec) where c > 1.0 and d > 2.0')
-          expect(manager.ready?(q3)).to be_false
+          expect(manager.ready?(q3)).to be_falsy
         end
       end
 
       context 'with query with multi targets, including unexisting target' do
         it 'returns false' do
           q = Norikra::Query.new(:name => 'test', :expression => 'select x.a,y.a from sample.win:time(5 sec) as x, sample2.win:time(5 sec) as y where x.c > 1.0 and y.d > 1.0')
-          expect(manager.ready?(q)).to be_false
+          expect(manager.ready?(q)).to be_falsy
         end
       end
 
       context 'with query with multi targets, all of them are exisitng' do
         it 'returns true' do
           q = Norikra::Query.new(:name => 'test', :expression => 'select x.a,d from sample.win:time(5 sec) as x, sample_next.win:time(5 sec) as y where x.c > 1.0 and y.d > 1.0')
-          expect(manager.ready?(q)).to be_true
+          expect(manager.ready?(q)).to be_truthy
         end
       end
     end
@@ -161,10 +161,10 @@ describe Norikra::TypedefManager do
         manager.bind_fieldset('sample', :query, set_query_base)
         expect(set_query_base.target).to eql('sample')
         expect(set_query_base.level).to eql(:query)
-        expect(manager.typedefs['sample'].queryfieldsets.include?(set_query_base)).to be_true
+        expect(manager.typedefs['sample'].queryfieldsets.include?(set_query_base)).to be_truthy
 
         manager.unbind_fieldset('sample', :query, set_query_base)
-        expect(manager.typedefs['sample'].queryfieldsets.include?(set_query_base)).to be_false
+        expect(manager.typedefs['sample'].queryfieldsets.include?(set_query_base)).to be_falsy
       end
     end
 
@@ -192,9 +192,9 @@ describe Norikra::TypedefManager do
 
         list = manager.subsets('sample', Norikra::FieldSet.new(base.merge({'d'=>'string','e'=>'string','g'=>'string'})))
         expect(list.size).to eql(3) # set_d, set_e, baseset
-        expect(list.include?(set_d)).to be_true
-        expect(list.include?(set_e)).to be_true
-        expect(list.include?(set_f)).to be_false
+        expect(list.include?(set_d)).to be_truthy
+        expect(list.include?(set_e)).to be_truthy
+        expect(list.include?(set_f)).to be_falsy
       end
     end
 
@@ -210,9 +210,9 @@ describe Norikra::TypedefManager do
 
         list = manager.supersets('sample', Norikra::FieldSet.new({'one'=>'int','three'=>'double'}))
         expect(list.size).to eql(2) # set_x, set_z
-        expect(list.include?(set_x)).to be_true
-        expect(list.include?(set_y)).to be_false
-        expect(list.include?(set_z)).to be_true
+        expect(list.include?(set_x)).to be_truthy
+        expect(list.include?(set_y)).to be_falsy
+        expect(list.include?(set_z)).to be_truthy
       end
     end
 

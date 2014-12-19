@@ -22,7 +22,7 @@ describe Norikra::Query do
           expect(q.fields('TestTable')).to eql(['param','path','size'].sort)
           expect(q.fields(nil)).to eql([])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -89,7 +89,7 @@ describe Norikra::Query do
           expect(q.fields('TestTable')).to eql([])
           expect(q.fields(nil)).to eql([])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -108,7 +108,7 @@ describe Norikra::Query do
           expect(q.fields('TestTable')).to eql(['name.string', 'param','path','size'].sort)
           expect(q.fields(nil)).to eql([])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -127,7 +127,7 @@ describe Norikra::Query do
           expect(q.fields('TestTable')).to eql(['path', 'size'].sort)
           expect(q.fields(nil)).to eql([])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -146,7 +146,7 @@ describe Norikra::Query do
           expect(q.fields('StreamB')).to eql(['size','header'].sort)
           expect(q.fields(nil)).to eql(['product'])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
 
         it 'returns query instances collectly parsed, with field accessing views' do
@@ -163,7 +163,7 @@ describe Norikra::Query do
           expect(q.fields('StreamB')).to eql(['size','header','ts2'].sort)
           expect(q.fields(nil)).to eql(['product'])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -182,7 +182,7 @@ describe Norikra::Query do
           expect(q.fields('Zones')).to eql(['name','zoneName','zoneId'].sort)
           expect(q.fields(nil)).to eql([])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -201,7 +201,7 @@ describe Norikra::Query do
           expect(q.fields('Zones')).to eql(['name','zoneName','zoneId'].sort)
           expect(q.fields(nil)).to eql([])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -220,7 +220,7 @@ describe Norikra::Query do
           expect(q.fields('SMA20Stream')).to eql(['movAgv','ticker'].sort)
           expect(q.fields(nil)).to eql([])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -239,7 +239,7 @@ describe Norikra::Query do
           expect(q.fields('TestTable')).to eql(['params.path', 'size', 'opts.$0'].sort)
           expect(q.fields(nil)).to eql([])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -258,7 +258,7 @@ describe Norikra::Query do
           expect(q.fields('TestTable')).to eql(['params.$$path.$1', 'size.$0.bytes', 'opts.num.$0'].sort)
           expect(q.fields(nil)).to eql([])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
 
         it 'can parse with nested function calls correctly' do
@@ -272,7 +272,7 @@ describe Norikra::Query do
           q = Norikra::Query.new(:name => 'TestTable query8.2', :expression => expression)
           expect(q.fields).to eql(['path.f1'])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -284,7 +284,7 @@ describe Norikra::Query do
           expect(q.fields('TestTable')).to eql(['path.source', 'ts'].sort)
           expect(q.fields(nil)).to eql([])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -304,7 +304,7 @@ describe Norikra::Query do
           expect(q.fields('EventA')).to eql(['name', 'content', 'type', 'source'].sort)
           expect(q.fields(nil)).to eql([])
 
-          expect(q.invalid?).to be_false
+          expect(q.invalid?).to be_falsy
         end
       end
 
@@ -314,7 +314,7 @@ describe Norikra::Query do
           q = Norikra::Query.new(
             name: 'Invalid query 1', expression: expression
           )
-          expect(q.invalid?).to be_true
+          expect(q.invalid?).to be_truthy
         end
       end
     end
@@ -340,11 +340,11 @@ describe Norikra::Query do
 
     describe '.stdout?' do
       it 'returns true if group name is "STDOUT()"' do
-        expect(Norikra::Query.stdout?(nil)).to be_false
-        expect(Norikra::Query.stdout?("")).to be_false
-        expect(Norikra::Query.stdout?("foo")).to be_false
-        expect(Norikra::Query.stdout?("STDOUT")).to be_false
-        expect(Norikra::Query.stdout?("STDOUT()")).to be_true
+        expect(Norikra::Query.stdout?(nil)).to be_falsy
+        expect(Norikra::Query.stdout?("")).to be_falsy
+        expect(Norikra::Query.stdout?("foo")).to be_falsy
+        expect(Norikra::Query.stdout?("STDOUT")).to be_falsy
+        expect(Norikra::Query.stdout?("STDOUT()")).to be_truthy
       end
     end
 
@@ -376,7 +376,7 @@ describe Norikra::Query do
       it 'returns false, always' do
         e1 = 'SELECT max(num) AS max FROM TestTable1.win:time(5 sec)'
         q1 = Norikra::Query.new(:name => 'q1', :group => nil, :expression => e1)
-        expect(q1.suspended?).to be_false
+        expect(q1.suspended?).to be_falsy
       end
     end
 
@@ -743,22 +743,20 @@ describe Norikra::Query do
 
   describe '.imported_java_class?' do
     it 'can do judge passed name exists under java package tree or not' do
-      expect(Norikra::Query.imported_java_class?('String')).to be_true
-      expect(Norikra::Query.imported_java_class?('Long')).to be_true
-      expect(Norikra::Query.imported_java_class?('Void')).to be_true
-      expect(Norikra::Query.imported_java_class?('BigDecimal')).to be_true
-      expect(Norikra::Query.imported_java_class?('Format')).to be_true
-      expect(Norikra::Query.imported_java_class?('Normalizer')).to be_true
-      expect(Norikra::Query.imported_java_class?('Date')).to be_true
-      expect(Norikra::Query.imported_java_class?('HashSet')).to be_true
-      expect(Norikra::Query.imported_java_class?('Random')).to be_true
-      expect(Norikra::Query.imported_java_class?('Timer')).to be_true
+      expect(Norikra::Query.imported_java_class?('String')).to be_truthy
+      expect(Norikra::Query.imported_java_class?('Long')).to be_truthy
+      expect(Norikra::Query.imported_java_class?('Void')).to be_truthy
+      expect(Norikra::Query.imported_java_class?('BigDecimal')).to be_truthy
+      expect(Norikra::Query.imported_java_class?('Format')).to be_truthy
+      expect(Norikra::Query.imported_java_class?('Normalizer')).to be_truthy
+      expect(Norikra::Query.imported_java_class?('Date')).to be_truthy
+      expect(Norikra::Query.imported_java_class?('HashSet')).to be_truthy
+      expect(Norikra::Query.imported_java_class?('Random')).to be_truthy
+      expect(Norikra::Query.imported_java_class?('Timer')).to be_truthy
 
-      expect(Norikra::Query.imported_java_class?('unexpected')).to be_false
-      expect(Norikra::Query.imported_java_class?('parameter')).to be_false
-      expect(Norikra::Query.imported_java_class?('param')).to be_false
+      expect(Norikra::Query.imported_java_class?('unexpected')).to be_falsy
+      expect(Norikra::Query.imported_java_class?('parameter')).to be_falsy
+      expect(Norikra::Query.imported_java_class?('param')).to be_falsy
     end
   end
 end
-
-#TODO: write specs about Norikra::SuspendedQuery

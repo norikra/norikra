@@ -64,15 +64,15 @@ describe Norikra::Field do
 
   describe '.container_type?' do
     it 'returns true for only "hash" and "array"' do
-      expect(Norikra::Field.container_type?('')).to be_false
-      expect(Norikra::Field.container_type?('string')).to be_false
-      expect(Norikra::Field.container_type?('int')).to be_false
-      expect(Norikra::Field.container_type?('long')).to be_false
+      expect(Norikra::Field.container_type?('')).to be_falsy
+      expect(Norikra::Field.container_type?('string')).to be_falsy
+      expect(Norikra::Field.container_type?('int')).to be_falsy
+      expect(Norikra::Field.container_type?('long')).to be_falsy
 
-      expect(Norikra::Field.container_type?('Hash')).to be_true
-      expect(Norikra::Field.container_type?('hash')).to be_true
-      expect(Norikra::Field.container_type?('Array')).to be_true
-      expect(Norikra::Field.container_type?('array')).to be_true
+      expect(Norikra::Field.container_type?('Hash')).to be_truthy
+      expect(Norikra::Field.container_type?('hash')).to be_truthy
+      expect(Norikra::Field.container_type?('Array')).to be_truthy
+      expect(Norikra::Field.container_type?('array')).to be_truthy
     end
   end
 

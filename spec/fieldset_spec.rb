@@ -21,12 +21,12 @@ describe Norikra::FieldSet do
 
     it 'accepts second argument as optional specification' do
       set = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long'}, false)
-      expect(set.fields['x'].optional?).to be_false
-      expect(set.fields['y'].optional?).to be_false
+      expect(set.fields['x'].optional?).to be_falsy
+      expect(set.fields['y'].optional?).to be_falsy
 
       set = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long'}, true)
-      expect(set.fields['x'].optional?).to be_true
-      expect(set.fields['y'].optional?).to be_true
+      expect(set.fields['x'].optional?).to be_truthy
+      expect(set.fields['y'].optional?).to be_truthy
     end
 
     it 'sets summary as comma-separated labeled field-type string with sorted field order' do
@@ -57,11 +57,11 @@ describe Norikra::FieldSet do
         expect(q_set1.dup.instance_eval{ @query_unique_keys }).to eql(['set1', 'g1'])
         expect(q_set2.dup.instance_eval{ @query_unique_keys }).to eql(['set2', nil])
 
-        expect(q_set2 == q_set3).to be_false
+        expect(q_set2 == q_set3).to be_falsy
 
-        expect(q_set1 == q_set1.dup).to be_true
-        expect(q_set2 == q_set2.dup).to be_true
-        expect(q_set3 == q_set3.dup).to be_true
+        expect(q_set1 == q_set1.dup).to be_truthy
+        expect(q_set2 == q_set2.dup).to be_truthy
+        expect(q_set3 == q_set3.dup).to be_truthy
       end
     end
 
@@ -246,13 +246,13 @@ describe Norikra::FieldSet do
     describe '#subset?' do
       it 'returns true when other instance has all fields of self' do
         other = Norikra::FieldSet.new({'a' => 'boolean', 'x' => 'string'})
-        expect(set.subset?(other)).to be_false
+        expect(set.subset?(other)).to be_falsy
 
         other.update([Norikra::Field.new('y', 'long')], false)
-        expect(set.subset?(other)).to be_true
+        expect(set.subset?(other)).to be_truthy
 
         other.update([Norikra::Field.new('z', 'double')], false)
-        expect(set.subset?(other)).to be_true
+        expect(set.subset?(other)).to be_truthy
       end
     end
 

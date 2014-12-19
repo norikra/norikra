@@ -25,7 +25,7 @@ describe Norikra::OutputPool do
           t = Time.now.to_i
           pool.push('TestTable query1',nil,[[t, {'count'=>1}],[t ,{'count'=>2}]])
 
-          pool.pool.keys.should eql(['TestTable query1'])
+          expect(pool.pool.keys).to eql(['TestTable query1'])
           events = pool.pool['TestTable query1']
 
           expect(events.size).to eq(1) # pool event bucket size is equal to times of #push
