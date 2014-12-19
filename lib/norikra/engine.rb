@@ -4,6 +4,9 @@ require 'norikra/error'
 require 'norikra/target'
 require 'norikra/listener'
 
+require 'norikra/query'
+require 'norikra/suspended_query'
+
 require 'norikra/logger'
 include Norikra::Log
 
