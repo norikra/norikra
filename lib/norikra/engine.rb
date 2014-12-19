@@ -224,6 +224,19 @@ module Norikra
       remove_suspended_query(suspended_query)
     end
 
+    def event_filter(event)
+      event.keys.each do |k|
+        if ! k.is_a?(String)
+          warn "Invalid key in event: Non-String field key: #{k.class}"
+          event.delete(k)
+        elsif k =~ /^\d/
+          warn "Invalid key in event: Starting with numeric char: #{k.to_s}"
+          event.delete(k)
+        end
+      end
+      event
+    end
+
     def send(target_name, events)
       trace "send messages", :target => target_name, :events => events
 
@@ -239,8 +252,9 @@ module Norikra
 
       if @typedef_manager.lazy?(target.name)
         info "opening lazy target", :target => target
-        debug "generating base fieldset from event", :target => target.name, :event => events.first
-        base_fieldset = @typedef_manager.generate_base_fieldset(target.name, events.first)
+        first_event = event_filter(events.first)
+        debug "generating base fieldset from event", :target => target.name, :event => first_event
+        base_fieldset = @typedef_manager.generate_base_fieldset(target.name, first_event)
 
         debug "registering base fieldset", :target => target.name, :base => base_fieldset
         register_base_fieldset(target.name, base_fieldset)
@@ -252,7 +266,8 @@ module Norikra
 
       strict_refer = (not target.auto_field?)
 
-      events.each do |event|
+      events.each do |input_event|
+        event = event_filter(input_event)
         fieldset = @typedef_manager.refer(target_name, event, strict_refer)
 
         unless registered_data_fieldset[fieldset.summary]
