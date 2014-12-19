@@ -225,6 +225,10 @@ module Norikra
     end
 
     def event_filter(event)
+      unless event.is_a?(Hash)
+        error "Invalid input event: Non-Hash (JSON) object: #{event.class}"
+        return nil
+      end
       event.keys.each do |k|
         if ! k.is_a?(String)
           warn "Invalid key in event: Non-String field key: #{k.class}"
@@ -252,7 +256,11 @@ module Norikra
 
       if @typedef_manager.lazy?(target.name)
         info "opening lazy target", :target => target
+
         first_event = event_filter(events.first)
+        if first_event.nil? # non-hash object
+          raise Norikra::ClientError, "Input data must be JSON object"
+        end
         debug "generating base fieldset from event", :target => target.name, :event => first_event
         base_fieldset = @typedef_manager.generate_base_fieldset(target.name, first_event)
 
@@ -268,6 +276,8 @@ module Norikra
 
       events.each do |input_event|
         event = event_filter(input_event)
+        next if event.nil? # non-hash object
+
         fieldset = @typedef_manager.refer(target_name, event, strict_refer)
 
         unless registered_data_fieldset[fieldset.summary]
