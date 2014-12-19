@@ -70,6 +70,8 @@ See: http://norikra.github.io/
 
 ## Changes
 
+* v1.1
+  * Suspend/Resume queries
 * v1.0
   * Esper-5.0 bundle
   * Pattern support

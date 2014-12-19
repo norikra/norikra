@@ -3,6 +3,20 @@
 Changes of norikra.
 
 ## v1
+* v1.1.2
+  * Enable `-javaagent` option
+  * Fix default/pre-set threads
+  * Update RSpec dependency to latest
+  * Reject field names, starting with numeric characters
+  * Reject non-JSON object input events
+  * Fix Bug:
+    * to show wrong output events from queries
+    * missing header column of list of queries in WebUI
+* v1.1.1
+  * Fix bug not to sort suspended queries correctly
+* v1.1.0
+  * Add API/WebUI controls to suspend/resume queries
+  * Add `STDOUT()` query group to show query result easilly
 * v1.0.8:
   * Fix bug not to read command line options for time/route threads
 * v1.0.7:
