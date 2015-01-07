@@ -543,7 +543,7 @@ module Norikra
         base_name = @typedef_manager.base_fieldset(target_name).event_type_name
         debug "add event type", :target => target_name, :level => 'query', :event_type => fieldset.event_type_name, :base => base_name
         @config.addEventType(fieldset.event_type_name, fieldset.definition, [base_name].to_java(:string))
-      else
+      else # :data
         subset_names = @typedef_manager.subsets(target_name, fieldset).map(&:event_type_name)
         debug "add event type", :target => target_name, :level => 'data', :event_type => fieldset.event_type_name, :inherit => subset_names
         @config.addEventType(fieldset.event_type_name, fieldset.definition, subset_names.to_java(:string))
