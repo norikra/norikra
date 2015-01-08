@@ -207,15 +207,6 @@ module Norikra
         end
       end
 
-          type = data[:type].to_s
-          optional = data.has_key?(:optional) ? data[:optional] : default_optional
-          if data[:null]
-            @fields[key.to_s] = NullField.new(key.to_s, type, optional)
-          else
-            @fields[key.to_s] = Field.new(key.to_s, type, optional)
-          end
-
-
       mapping = Hash[
         flatten_key_value_pairs.map{|key,value|
           type = case value
