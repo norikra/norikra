@@ -73,6 +73,8 @@ module Norikra
     def invalid?
       # check query is invalid as Norikra query or not
       self.ast.listup('selectionListElement').any?{|node| node.children.map(&:name).any?{|name| name == '*' } }
+
+      ### TODO: check arg of nullable(...) is just 'a' simple property reference
     end
 
     def targets
@@ -95,75 +97,86 @@ module Norikra
 
     def explore(outer_targets=[], alias_overridden={})
       ### TODO: nullable_fields
-      fields = {}
-      nullable_fields = {}
-      alias_map = {}.merge(alias_overridden)
 
-      all = []
-      unknowns = []
+      fields = {
+        defs: { all: [], unknown: [], target: {} },
+        nullables: { all: [], unknown: [], target: {} },
+      }
+
+      alias_map = alias_overridden.dup
+
       self.ast.listup(:stream).each do |node|
         node.aliases.each do |alias_name, target|
           alias_map[alias_name] = target
         end
         node.targets.each do |target|
-          fields[target] ||= []
+          fields[:defs][:target][target] = []
+          fields[:nullables][:target][target] = []
         end
       end
 
-      dup_aliases = (alias_map.keys & fields.keys)
-      unless dup_aliases.empty?
-        raise Norikra::ClientError, "Invalid alias '#{dup_aliases.join(',')}', same with target name"
-      end
-
-      default_target = fields.keys.size == 1 ? fields.keys.first : nil
+      # default target should be out of effect of outer_targets
+      default_target = fields[:defs][:target].keys.size == 1 ? fields[:defs][:target].keys.first : nil
 
       outer_targets.each do |t|
-        fields[t] ||= []
+        fields[:defs][:target][t] ||= []
+        fields[:nullables][:target][t] ||= []
       end
 
-      field_bag = []
-      self.subqueries.each do |subquery|
-        field_bag.push(subquery.explore(fields.keys, alias_map))
+      dup_aliases = (alias_map.keys & fields[:defs][:target].keys)
+      unless dup_aliases.empty?
+        raise Norikra::ClientError, "Invalid alias '#{dup_aliases.join(',')}', same with target name"
       end
 
       # names of 'AS'
       field_aliases = self.ast.listup(:selection).map(&:alias).compact
 
-      known_targets_aliases = fields.keys + alias_map.keys
+      known_targets_aliases = fields[:defs][:target].keys + alias_map.keys
       self.ast.fields(default_target, known_targets_aliases).each do |field_def|
         f = field_def[:f]
         next if field_aliases.include?(f)
 
-        all.push(f)
+        fields[:defs][:all].push(f)
+        fields[:nullables][:all].push(f) if field_def[:n]
 
         if field_def[:t]
           t = alias_map[field_def[:t]] || field_def[:t]
-          unless fields[t]
+          unless fields[:defs][:target][t]
             raise Norikra::ClientError, "unknown target alias name for: #{field_def[:t]}.#{field_def[:f]}"
           end
-          fields[t].push(f)
-
+          fields[:defs][:target][t].push(f)
+          fields[:nullables][:target][t].push(f) if field_def[:n]
         else
-          unknowns.push(f)
+          fields[:defs][:unknown].push(f)
+          fields[:nullables][:unknown].push(f) if field_def[:n]
         end
       end
 
-      field_bag.each do |bag|
-        all += bag['']
-        unknowns += bag[nil]
-        bag.keys.each do |t|
-          fields[t] ||= []
-          fields[t] += bag[t]
+      self.subqueries.each do |subquery|
+        sub = {}
+        sub[:defs], sub[:nullables] = subquery.explore(fields[:defs][:target].keys, alias_map)
+
+        [:defs, :nullables].each do |group|
+          fields[group][:all] += sub[group].delete('')
+          fields[group][:unknown] += sub[group].delete(nil)
+          sub[group].keys.each do |t|
+            fields[group][:target][t] ||= []
+            fields[group][:target][t] += sub[group][t]
+          end
         end
       end
 
-      fields.keys.each do |target|
-        fields[target] = fields[target].sort.uniq
-      end
-      fields[''] = all.sort.uniq
-      fields[nil] = unknowns.sort.uniq
+      compact = ->(data){
+        r = {}
+        data[:target].keys.each do |t|
+          r[t] = data[:target][t].sort.uniq
+        end
+        r[''] = data[:all].sort.uniq
+        r[nil] = data[:unknown].sort.uniq
+        r
+      }
 
-      [fields, nullable_fields]
+      [ compact.(fields[:defs]), compact.(fields[:nullables]) ]
     end
 
     def fields(target='')
@@ -229,6 +242,7 @@ module Norikra
     end
 
     def self.rewrite_query(statement_model, mapping)
+      ### TODO: rewrite_nullable_fields
       rewrite_event_type_name(statement_model, mapping)
       rewrite_event_field_name(statement_model, mapping)
     end

@@ -89,6 +89,52 @@ describe Norikra::Query do
           expect(q.fields('TestTable')).to eql([])
           expect(q.fields(nil)).to eql([])
 
+          expect(q.nullable_fields).to eql([])
+          expect(q.nullable_fields('TestTable')).to eql([])
+          expect(q.nullable_fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_falsy
+        end
+
+        it 'returns query instances collectly parsed, even if it has property' do
+          expression = 'SELECT rate(a.b) FROM TestTable output snapshot every 2 sec'
+          q = Norikra::Query.new(
+            :name => 'TestTable query1', :expression => expression
+          )
+          expect(q.name).to eql('TestTable query1')
+          expect(q.group).to be_nil
+          expect(q.expression).to eql(expression)
+          expect(q.targets).to eql(['TestTable'])
+
+          expect(q.fields).to eql(['a.b'])
+          expect(q.fields('TestTable')).to eql(['a.b'])
+          expect(q.fields(nil)).to eql([])
+
+          expect(q.nullable_fields).to eql([])
+          expect(q.nullable_fields('TestTable')).to eql([])
+          expect(q.nullable_fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_falsy
+        end
+
+        it 'returns query instances collectly parsed, with built-in NULLABLE()' do
+          expression = 'SELECT a, b, NULLABLE(c) FROM TestTable output snapshot every 2 sec'
+          q = Norikra::Query.new(
+            :name => 'TestTable query1', :expression => expression
+          )
+          expect(q.name).to eql('TestTable query1')
+          expect(q.group).to be_nil
+          expect(q.expression).to eql(expression)
+          expect(q.targets).to eql(['TestTable'])
+
+          expect(q.fields).to eql(['a', 'b', 'c'])
+          expect(q.fields('TestTable')).to eql(['a', 'b', 'c'])
+          expect(q.fields(nil)).to eql([])
+
+          expect(q.nullable_fields).to eql(['c'])
+          expect(q.nullable_fields('TestTable')).to eql(['c'])
+          expect(q.nullable_fields(nil)).to eql([])
+
           expect(q.invalid?).to be_falsy
         end
       end
@@ -178,9 +224,9 @@ describe Norikra::Query do
           expect(q.targets).to eql(['RfidEvent', 'Zones'])
 
           expect(q.fields).to eql(['name','zoneName','zoneId'].sort)
+          expect(q.fields(nil)).to eql([])
           expect(q.fields('RfidEvent')).to eql(['zoneId'])
           expect(q.fields('Zones')).to eql(['name','zoneName','zoneId'].sort)
-          expect(q.fields(nil)).to eql([])
 
           expect(q.invalid?).to be_falsy
         end
@@ -200,6 +246,28 @@ describe Norikra::Query do
           expect(q.fields('RfidEvent')).to eql(['zoneId'])
           expect(q.fields('Zones')).to eql(['name','zoneName','zoneId'].sort)
           expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_falsy
+        end
+
+        it 'returns query instances collectly parsed, even if it has nullable field' do
+          expression = 'select zoneId, (select NULLABLE(name) from Zones.std:unique(zoneName) where zoneId = RfidEvent.zoneId) as name from RfidEvent'
+          q = Norikra::Query.new(
+            :name => 'TestTable query5', :expression => expression
+          )
+          expect(q.name).to eql('TestTable query5')
+          expect(q.expression).to eql(expression)
+          expect(q.targets).to eql(['RfidEvent', 'Zones'].sort)
+
+          expect(q.fields).to eql(['name','zoneName','zoneId'].sort)
+          expect(q.fields('RfidEvent')).to eql(['zoneId'])
+          expect(q.fields('Zones')).to eql(['name','zoneName','zoneId'].sort)
+          expect(q.fields(nil)).to eql([])
+
+          expect(q.nullable_fields).to eql(['name'])
+          expect(q.nullable_fields(nil)).to eql([])
+          expect(q.nullable_fields('RfidEvent')).to eql([])
+          expect(q.nullable_fields('Zones')).to eql(['name'])
 
           expect(q.invalid?).to be_falsy
         end

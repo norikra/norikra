@@ -1222,7 +1222,12 @@ module Norikra
       #     ")"]]
 
       def function_name
-        self.find("funcIdentTop").find("escapableIdent").child.name
+        f = self.find("funcIdentTop")
+        if e = f.find("escapableIdent")
+          e.child.name
+        else
+          f.child.name
+        end
       end
 
       def nodetype?(*sym)
@@ -1249,27 +1254,16 @@ module Norikra
             [{:f => fieldname, :t => target}] + children_list
           end
         else
-          self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
+          if self.function_name == 'NULLABLE'
+            props = self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
+            props.each do |def_item|
+              def_item[:n] = true # nullable: true
+            end
+            props
+          else
+            self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
+          end
         end
-      end
-
-      ### NULLABLE field!
-      # ["libFunction",
-      #   ["libFunctionWithClass",
-      #     ["funcIdentTop", ["escapableIdent", "NULLABLE"]],
-      #     "(",
-      #     ["libFunctionArgs",["libFunctionArgItem",["expressionWithTime",["expressionQualifyable",
-      #       ["expression",
-      #         ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",["negatedExpression",
-      #           ["evalEqualsExpression",["evalRelationalExpression",["concatenationExpr",["additiveExpression",
-      #             ["multiplyExpression",["unaryExpression",
-      #               ["eventPropertyOrLibFunction",
-      #                 ["eventProperty",
-      #                   ["eventPropertyAtomic",
-      #                     ["eventPropertyIdent", ["keywordAllowedIdent", "b"]]]]]]]]]]]]]]]]]]]]],
-      #     ")"]]]
-      def nullable_fields(default_target=nil, known_targets_aliases=[])
-        
       end
     end
 
