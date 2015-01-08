@@ -717,6 +717,125 @@ module Norikra
     #                     ")"]]]]]]]]],
     #   "<EOF>"]
 
+    #### SELECT a,NULLABLE(b),COUNT(DISTINCT NULLABLE(c)) FROM t GROUP BY a,NULLABLE(b)
+
+    # ["startEPLExpressionRule",
+    #   ["eplExpression",
+    #     ["selectExpr",
+    #       "SELECT",
+    #       ["selectClause",
+    #         ["selectionList",
+    #           ["selectionListElement",
+    #             ["selectionListElementExpr",
+    #               ["expression",
+    #                 ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",["negatedExpression",
+    #                   ["evalEqualsExpression",["evalRelationalExpression",["concatenationExpr",["additiveExpression",
+    #                     ["multiplyExpression",["unaryExpression",
+    #                       ["eventPropertyOrLibFunction",
+    #                         ["eventProperty",
+    #                           ["eventPropertyAtomic", ["eventPropertyIdent", ["keywordAllowedIdent", "a"]]]]]]]]]]]]]]]]]]],
+    #           ",",
+    #           ["selectionListElement",
+    #             ["selectionListElementExpr",
+    #               ["expression",
+    #                 ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",["negatedExpression",
+    #                   ["evalEqualsExpression",["evalRelationalExpression",["concatenationExpr",["additiveExpression",
+    #                     ["multiplyExpression",["unaryExpression",
+    #                       ["eventPropertyOrLibFunction",
+    #                         ["libFunction",
+    #                           ["libFunctionWithClass",
+    #                             ["funcIdentTop", ["escapableIdent", "NULLABLE"]],
+    #                               "(",
+    #                               ["libFunctionArgs",
+    #                                 ["libFunctionArgItem",
+    #                                   ["expressionWithTime",
+    #                                     ["expressionQualifyable",
+    #                                       ["expression",
+    #                                         ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",
+    #                                           ["negatedExpression",["evalEqualsExpression",["evalRelationalExpression",
+    #                                             ["concatenationExpr",["additiveExpression",["multiplyExpression",["unaryExpression",
+    #                                               ["eventPropertyOrLibFunction",
+    #                                                 ["eventProperty",
+    #                                                   ["eventPropertyAtomic",
+    #                                                     ["eventPropertyIdent", ["keywordAllowedIdent", "b"]]]]]]]]]]]]]]]]]]]]],
+    #                               ")"]]]]]]]]]]]]]]]]],
+    #           ",",
+    #           ["selectionListElement",
+    #             ["selectionListElementExpr",
+    #               ["expression",
+    #                 ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",["negatedExpression",
+    #                   ["evalEqualsExpression",["evalRelationalExpression",["concatenationExpr",["additiveExpression",
+    #                     ["multiplyExpression",["unaryExpression",
+    #                       ["builtinFunc",
+    #                         "COUNT",
+    #                         "(",
+    #                         "DISTINCT",
+    #                         ["expression",
+    #                           ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",
+    #                             ["negatedExpression",["evalEqualsExpression",["evalRelationalExpression",
+    #                               ["concatenationExpr",["additiveExpression",["multiplyExpression",["unaryExpression",
+    #                                 ["eventPropertyOrLibFunction",
+    #                                   ["libFunction",
+    #                                     ["libFunctionWithClass",
+    #                                       ["funcIdentTop", ["escapableIdent", "NULLABLE"]],
+    #                                         "(",
+    #                                         ["libFunctionArgs",
+    #                                           ["libFunctionArgItem",
+    #                                             ["expressionWithTime",
+    #                                               ["expressionQualifyable",
+    #                                                 ["expression",
+    #                                                   ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",
+    #                                                     ["negatedExpression",["evalEqualsExpression",["evalRelationalExpression",
+    #                                                       ["concatenationExpr",["additiveExpression",["multiplyExpression",
+    #                                                         ["unaryExpression",
+    #                                                           ["eventPropertyOrLibFunction",
+    #                                                             ["eventProperty",
+    #                                                               ["eventPropertyAtomic",
+    #                                                                 ["eventPropertyIdent",
+    #                                                                   ["keywordAllowedIdent", "c"]]]]]]]]]]]]]]]]]]]]],
+    #                                                                       ")"]]]]]]]]]]]]]]],
+    #                                         ")"]]]]]]]]]]]]]]]]],
+    #       "FROM",
+    #       ["fromClause",
+    #         ["streamExpression", ["eventFilterExpression", ["classIdentifier", ["escapableStr", "t"]]]],
+    #         "regularJoin"],
+    #       "GROUP",
+    #       "BY",
+    #       ["groupByListExpr",
+    #         ["groupByListChoice",
+    #           ["expression",
+    #             ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",["negatedExpression",
+    #               ["evalEqualsExpression",["evalRelationalExpression",["concatenationExpr",["additiveExpression",
+    #                 ["multiplyExpression",["unaryExpression",
+    #                   ["eventPropertyOrLibFunction",
+    #                     ["eventProperty",
+    #                       ["eventPropertyAtomic", ["eventPropertyIdent", ["keywordAllowedIdent", "a"]]]]]]]]]]]]]]]]]],
+    #         ",",
+    #         ["groupByListChoice",
+    #           ["expression",
+    #             ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",["negatedExpression",
+    #               ["evalEqualsExpression",["evalRelationalExpression",["concatenationExpr",["additiveExpression",
+    #                 ["multiplyExpression",["unaryExpression",
+    #                   ["eventPropertyOrLibFunction",
+    #                     ["libFunction",
+    #                       ["libFunctionWithClass",
+    #                         ["funcIdentTop", ["escapableIdent", "NULLABLE"]],
+    #                         "(",
+    #                         ["libFunctionArgs",
+    #                           ["libFunctionArgItem",
+    #                             ["expressionWithTime",
+    #                               ["expressionQualifyable",
+    #                                 ["expression",
+    #                                   ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",
+    #                                     ["negatedExpression",["evalEqualsExpression",["evalRelationalExpression",
+    #                                       ["concatenationExpr",["additiveExpression",["multiplyExpression",["unaryExpression",
+    #                                         ["eventPropertyOrLibFunction",
+    #                                           ["eventProperty",
+    #                                             ["eventPropertyAtomic",
+    #                                               ["eventPropertyIdent", ["keywordAllowedIdent", "b"]]]]]]]]]]]]]]]]]]]]],
+    #                                         ")"]]]]]]]]]]]]]]]]]]],
+    #   "<EOF>"]
+
     def astnode(tree)
       # com.espertech.esper.epl.generated.EsperEPL2GrammarParser.ruleNames[ast.ruleIndex] #=> "startEPLExpressionRule"
       # com.espertech.esper.epl.generated.EsperEPL2GrammarParser.ruleNames[ast.getChild(0).ruleIndex] #=> "eplExpression"
@@ -892,7 +1011,7 @@ module Norikra
       #             ["eventProperty",
       #               ["eventPropertyAtomic", ["eventPropertyIdent", ["keywordAllowedIdent", "s"]]]]]]]]]]]]]]]]]]]
 
-      ### "count(*) AS cnt"  => ["SELECTION_ELEMENT_EXPR", "count", "cnt"]
+      ### "count(*) AS cnt"
       # ["selectionListElementExpr",
       #   ["expression",
       #     ["caseExpression", ["evalOrExpression", ["evalAndExpression", ["bitWiseExpression", ["negatedExpression",
@@ -925,6 +1044,22 @@ module Norikra
     end
 
     class ASTLibFunctionNode < ASTNode # LIB_FUNCTION
+      ### NULLABLE field!
+      # ["libFunction",
+      #   ["libFunctionWithClass",
+      #     ["funcIdentTop", ["escapableIdent", "NULLABLE"]],
+      #     "(",
+      #     ["libFunctionArgs",["libFunctionArgItem",["expressionWithTime",["expressionQualifyable",
+      #       ["expression",
+      #         ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",["negatedExpression",
+      #           ["evalEqualsExpression",["evalRelationalExpression",["concatenationExpr",["additiveExpression",
+      #             ["multiplyExpression",["unaryExpression",
+      #               ["eventPropertyOrLibFunction",
+      #                 ["eventProperty",
+      #                   ["eventPropertyAtomic",
+      #                     ["eventPropertyIdent", ["keywordAllowedIdent", "b"]]]]]]]]]]]]]]]]]]]]],
+      #     ")"]]]
+
       ### foo is function
       # "foo()"     => ["libFunction", ["libFunctionWithClass", ["funcIdentTop", ["escapableIdent", "foo"]], "(", ")"]]
 
@@ -1116,6 +1251,25 @@ module Norikra
         else
           self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
         end
+      end
+
+      ### NULLABLE field!
+      # ["libFunction",
+      #   ["libFunctionWithClass",
+      #     ["funcIdentTop", ["escapableIdent", "NULLABLE"]],
+      #     "(",
+      #     ["libFunctionArgs",["libFunctionArgItem",["expressionWithTime",["expressionQualifyable",
+      #       ["expression",
+      #         ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",["negatedExpression",
+      #           ["evalEqualsExpression",["evalRelationalExpression",["concatenationExpr",["additiveExpression",
+      #             ["multiplyExpression",["unaryExpression",
+      #               ["eventPropertyOrLibFunction",
+      #                 ["eventProperty",
+      #                   ["eventPropertyAtomic",
+      #                     ["eventPropertyIdent", ["keywordAllowedIdent", "b"]]]]]]]]]]]]]]]]]]]]],
+      #     ")"]]]
+      def nullable_fields(default_target=nil, known_targets_aliases=[])
+        
       end
     end
 

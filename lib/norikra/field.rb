@@ -165,11 +165,15 @@ module Norikra
     end
 
     def ==(other)
-      self.name == other.name && self.type == other.type && self.optional == other.optional
+      self.name == other.name && self.type == other.type && self.optional == other.optional && self.null? == other.null?
     end
 
     def optional? # used outside of FieldSet
       @optional
+    end
+
+    def null?
+      false
     end
 
     # def value(event) # by define_value_accessor
@@ -262,6 +266,27 @@ module Norikra
           @accessors.reduce(event){|e,a| safe_fetch(e, a)}
         end
       end
+    end
+  end
+
+  class NullField < Field
+    # For null field, virtual field
+    # to produce null value into nullable field when data doesn't have valid value
+
+    def null?
+      true
+    end
+
+    def format(value, element_path=nil) #element_path ex: 'fname.fchild', 'fname.$0', 'f.fchild.$2'
+      nil
+    end
+
+    def value(event)
+      nil
+    end
+
+    def define_value_accessor(name, chained)
+      # does nothing
     end
   end
 end

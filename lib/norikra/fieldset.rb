@@ -17,7 +17,11 @@ module Norikra
         elsif data.is_a?(Hash)
           type = data[:type].to_s
           optional = data.has_key?(:optional) ? data[:optional] : default_optional
-          @fields[key.to_s] = Field.new(key.to_s, type, optional)
+          if data[:null]
+            @fields[key.to_s] = NullField.new(key.to_s, type, optional)
+          else
+            @fields[key.to_s] = Field.new(key.to_s, type, optional)
+          end
         elsif data.is_a?(String) || data.is_a?(Symbol)
           @fields[key.to_s] = Field.new(key.to_s, data.to_s, default_optional)
         else
@@ -34,7 +38,7 @@ module Norikra
     end
 
     def dup
-      fields = Hash[@fields.map{|key,field| [key, {:type => field.type, :optional => field.optional}]}]
+      fields = Hash[@fields.map{|key,field| [key, {:type => field.type, :optional => field.optional, :null => field.null?}]}]
       self.class.new(fields, nil, @rebounds, @query_unique_keys)
     end
 
@@ -75,6 +79,8 @@ module Norikra
       dig.call(container)
     end
 
+    # field_names_key: a,b,c,d
+    ### comma separated field names, which contains valid values (null fields are not included)
     def self.field_names_key(data, fieldset=nil, strict=false, additional_fields=[])
       if !fieldset && strict
         raise RuntimeError, "strict(true) cannot be specified with fieldset=nil"
@@ -110,11 +116,12 @@ module Norikra
     end
 
     def field_names_key
-      self.class.field_names_key(@fields)
+      self.class.field_names_key(@fields.reject(&:null?))
     end
 
+    # same field_names_key may have different summary because of null fields
     def update_summary
-      @summary = @fields.keys.sort.map{|k| @fields[k].escaped_name + ':' + @fields[k].type}.join(',')
+      @summary = @fields.keys.sort.map{|k| f = @fields[k]; "#{f.escaped_name}:#{f.type}" + (f.null? ? ':null' : '')}.join(',')
       self
     end
 

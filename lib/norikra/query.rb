@@ -27,6 +27,7 @@ module Norikra
       @aliases = nil
       @subqueries = nil
       @fields = nil
+      @nullable_fields = nil
     end
 
     def <=>(other)
@@ -93,7 +94,9 @@ module Norikra
     end
 
     def explore(outer_targets=[], alias_overridden={})
+      ### TODO: nullable_fields
       fields = {}
+      nullable_fields = {}
       alias_map = {}.merge(alias_overridden)
 
       all = []
@@ -160,7 +163,7 @@ module Norikra
       fields[''] = all.sort.uniq
       fields[nil] = unknowns.sort.uniq
 
-      fields
+      [fields, nullable_fields]
     end
 
     def fields(target='')
@@ -168,8 +171,16 @@ module Norikra
       # target nil: fields for unknown targets
       return @fields[target] if @fields
 
-      @fields = explore()
+      @fields, @nullable_fields = explore()
       @fields[target]
+    end
+
+    def nullable_fields(target='')
+      # argument target is same with #fields
+      return @nullable_fields[target] if @nullable_fields
+
+      @fields, @nullable_fields = explore()
+      @nullable_fields[target]
     end
 
     class ParseRuleSelectorImpl
