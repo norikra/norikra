@@ -308,6 +308,25 @@ describe Norikra::Query do
         end
       end
 
+      context 'with non-builtin functions (ex: udf) with property arguments' do
+        it 'returns property fields correctly' do
+          expression = "select name, FOO(value) from EventA"
+          q = Norikra::Query.new(
+            :name => 'TestTable query10', :expression => expression
+          )
+          expect(q.name).to eql('TestTable query10')
+          expect(q.group).to be_nil
+          expect(q.expression).to eql(expression)
+          expect(q.targets).to eql(['EventA'])
+          expect(q.aliases).to eql([])
+          expect(q.fields).to eql(['name', 'value'].sort)
+          expect(q.fields('EventA')).to eql(['name', 'value'].sort)
+          expect(q.fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_falsy
+        end
+      end
+
       context 'with "*" selection list' do
         it 'returns query instance which is singed as invalid for norikra query' do
           expression = "select * from target1 where key1=1"

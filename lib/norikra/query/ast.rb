@@ -948,6 +948,25 @@ module Norikra
       #       ["libFunctionArgItem", ["expressionWithTime", ["expressionQualifyable", ["expression", EXPRESSION... ]]]]],
       #     ")"]]
 
+      ### foo(value)
+      # ["libFunction",
+      #   ["libFunctionWithClass",
+      #     ["funcIdentTop", ["escapableIdent", "FOO"]],
+      #     "(",
+      #     ["libFunctionArgs",
+      #       ["libFunctionArgItem",
+      #         ["expressionWithTime",
+      #           ["expressionQualifyable",
+      #             ["expression",
+      #               ["caseExpression",["evalOrExpression",["evalAndExpression",["bitWiseExpression",["negatedExpression",
+      #                 ["evalEqualsExpression",["evalRelationalExpression",["concatenationExpr",["additiveExpression",
+      #                   ["multiplyExpression",["unaryExpression",
+      #                     ["eventPropertyOrLibFunction",
+      #                       ["eventProperty",
+      #                         ["eventPropertyAtomic",
+      #                           ["eventPropertyIdent", ["keywordAllowedIdent", "value"]]]]]]]]]]]]]]]]]]]]],
+      #     ")"]]
+
       ### foo is property
       ### "foo.bar()"
       # ["libFunction",
@@ -1072,24 +1091,26 @@ module Norikra
       end
 
       def fields(default_target=nil, known_targets_aliases=[])
+        # class identifier is receiver: "IDENT.func()"
         identifier = self.find("classIdentifier")
-
-        return [] if identifier.nil? # built-in function call (no receivers exists)
-
-        if identifier.children.size == 1 && Norikra::Query.imported_java_class?(identifier.find("escapableStr").child.name)
-          # Java imported class name (ex: 'Math.abs(-1)')
-          self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
+        if identifier
+          if identifier.children.size == 1 && Norikra::Query.imported_java_class?(identifier.find("escapableStr").child.name)
+            # Java imported class name (ex: 'Math.abs(-1)')
+            self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
+          else
+            parts = identifier.listup('escapableStr').map{|node| node.child.name }
+            target, fieldname = if parts.size == 1
+                                  [ default_target, parts.first ]
+                                elsif known_targets_aliases.include?( parts.first )
+                                  [ parts[0], parts[1..-1].join(".") ]
+                                else
+                                  [ default_target, parts.join(".") ]
+                                end
+            children_list = self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
+            [{:f => fieldname, :t => target}] + children_list
+          end
         else
-          parts = identifier.listup('escapableStr').map{|node| node.child.name }
-          target, fieldname = if parts.size == 1
-                                [ default_target, parts.first ]
-                              elsif known_targets_aliases.include?( parts.first )
-                                [ parts[0], parts[1..-1].join(".") ]
-                              else
-                                [ default_target, parts.join(".") ]
-                              end
-          children_list = self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
-          [{:f => fieldname, :t => target}] + children_list
+          self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
         end
       end
     end
