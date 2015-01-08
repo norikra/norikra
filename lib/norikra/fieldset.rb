@@ -86,6 +86,11 @@ module Norikra
         raise RuntimeError, "strict(true) cannot be specified with fieldset=nil"
       end
 
+      non_nulls = {}
+      data.keys.each do |k|
+        non_nulls[k] = data[k] if !data[k].respond_to?(:null?) || !data[k].null?
+      end
+
       unless fieldset
         return data.keys.sort.join(',')
       end
@@ -116,7 +121,7 @@ module Norikra
     end
 
     def field_names_key
-      self.class.field_names_key(@fields.reject(&:null?))
+      self.class.field_names_key(@fields)
     end
 
     # same field_names_key may have different summary because of null fields
