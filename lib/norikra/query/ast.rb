@@ -1086,6 +1086,10 @@ module Norikra
       #     "(",
       #     ")"]]
 
+      def function_name
+        self.find("funcIdentTop").find("escapableIdent").child.name
+      end
+
       def nodetype?(*sym)
         sym.include?(:lib) || sym.include?(:libfunc)
       end
