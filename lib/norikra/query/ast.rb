@@ -864,9 +864,11 @@ module Norikra
       end
 
       cls = case name
+            when 'expression' then ASTExpression
             when 'eventProperty' then ASTEventPropNode
             when 'selectionListElementExpr' then ASTSelectionElementNode
             when 'libFunction' then ASTLibFunctionNode
+            when 'libFunctionArgItem' then ASTLibFunctionArgItemNode
             when 'streamExpression', 'subSelectFilterExpr' then ASTStreamNode
             when 'patternFilterExpression' then ASTPatternNode
             when 'subQueryExpr' then ASTSubSelectNode
@@ -886,6 +888,14 @@ module Norikra
         @name = name
         @children = children
         @tree = tree
+      end
+
+      def has_a?(name)
+        @children.size == 1 && (@children.first.name == name || @children.first.nodetype?(name))
+      end
+
+      def chain(*nodes)
+        nodes.reduce(self){|n, next_node| n && n.has_a?(next_node) ? n.child : nil }
       end
 
       def nodetype?(*sym)
@@ -929,6 +939,28 @@ module Norikra
 
       def fields(default_target=nil, known_targets_aliases=[])
         @children.map{|c| c.nodetype?(:subquery) ? [] : c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
+      end
+    end
+
+    class ASTExpression < ASTNode
+      # ["expression",
+      #   ["caseExpression", ["evalOrExpression", ["evalAndExpression", ["bitWiseExpression", ["negatedExpression",
+      #     ["evalEqualsExpression", ["evalRelationalExpression", ["concatenationExpr", ["additiveExpression",
+      #       ["multiplyExpression", ["unaryExpression", ["eventPropertyOrLibFunction",
+      #         ["eventProperty",
+      #           ["eventPropertyAtomic", ["eventPropertyIdent", ["keywordAllowedIdent", "s"]]]]]]]]]]]]]]]]]]]
+      def nodetype?(*sym)
+        sym.include?(:expression)
+      end
+
+      SIMPLE_PROPERTY_REFERENCE_NODES = [
+        "caseExpression", "evalOrExpression", "evalAndExpression", "bitWiseExpression", "negatedExpression",
+        "evalEqualsExpression", "evalRelationalExpression", "concatenationExpr", "additiveExpression",
+        "multiplyExpression", "unaryExpression", "eventPropertyOrLibFunction", "eventProperty"
+      ]
+      def propertyReference?
+        end_node = self.chain(*SIMPLE_PROPERTY_REFERENCE_NODES)
+        end_node && end_node.nodetype?(:property)
       end
     end
 
@@ -1264,6 +1296,21 @@ module Norikra
             self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
           end
         end
+      end
+    end
+
+    class ASTLibFunctionArgItemNode < ASTNode
+      # ["libFunctionArgs",
+      #   ["libFunctionArgItem",
+      #     ["expressionWithTime",
+      #       ["expressionQualifyable",
+      #         ["expression", ... ]]]]
+      def nodetype?(*sym)
+        sym.include?(:libarg)
+      end
+
+      def expression
+        self.chain("expressionWithTime", "expressionQualifyable", "expression")
       end
     end
 
