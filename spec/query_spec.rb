@@ -492,6 +492,41 @@ describe Norikra::Query do
       end
     end
 
+    describe '.rewrite_nullable_fields' do
+      context 'with NULLABLE()' do
+        expression = 'select a, nullable(b) from TestTable.win:time_batch(10 seconds) where c>0'
+        expected   = 'select a, b from TestTable.win:time_batch(10 seconds) where c>0'
+        it 'returns query without NULLABLE()' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_event_field_name(model, {'TestTable' => 'T1'}).toEPL).to eql(expression)
+          end
+        end
+      end
+
+      context 'with NULLABLE() in count(distinct)' do
+        expression = 'select a, count(distinct nullable(b)) from TestTable.win:time_batch(10 seconds) where c>0 group by a'
+        expected   = 'select a, count(distinct b) from TestTable.win:time_batch(10 seconds) where c>0 group by a'
+        it 'returns query without NULLABLE()' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_event_field_name(model, {'TestTable' => 'T1'}).toEPL).to eql(expression)
+          end
+        end
+      end
+
+      context 'with some NULLABLE()' do
+        expression = 'select a, NULLABLE(b), NULLABLE(c), count(*) as cnt from TestTable.win:time_batch(10 seconds) where c>0 group by a, b, c'
+        expected   = 'select a, b, c, count(*) AS cnt from TestTable.win:time_batch(10 seconds) where c>0 group by a, b, c'
+        it 'returns query without NULLABLE()' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_event_field_name(model, {'TestTable' => 'T1'}).toEPL).to eql(expression)
+          end
+        end
+      end
+    end
+
     describe '.rewrite_event_field_name' do
       context 'without any container field access' do
         expression = 'select count(*) as cnt from TestTable.win:time_batch(10 seconds) where path="/" and size>100 and (param.length())>0'
@@ -678,6 +713,13 @@ describe Norikra::Query do
           model = administrator.compileEPL(e5)
           mapping = {'RfidEvent' => 'R1', 'Zones' => 'Z1'}
           expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x5)
+
+          # Fully-qualified field access w/ container field access and NULLABLE()
+          e6 = 'select NULLABLE(RfidEvent.zoneId.$0), (select NULLABLE(name.x) from Zones.std:unique(zoneName) where zoneId=RfidEvent.zoneId.$0) as name from RfidEvent'
+          x6 = 'select R1.zoneId$$0, (select name$x from Z1.std:unique(zoneName) where zoneId=R1.zoneId$$0) as name from R1'
+          model = administrator.compileEPL(e6)
+          mapping = {'RfidEvent' => 'R1', 'Zones' => 'Z1'}
+          expect(Norikra::Query.rewrite_query(model, mapping).toEPL).to eql(x6)
         end
       end
 

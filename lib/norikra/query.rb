@@ -256,9 +256,30 @@ module Norikra
     end
 
     def self.rewrite_query(statement_model, mapping)
-      ### TODO: rewrite_nullable_fields
+      rewrite_nullable_fields(statement_model)
       rewrite_event_type_name(statement_model, mapping)
       rewrite_event_field_name(statement_model, mapping)
+    end
+
+    def self.rewrite_nullable_fields(statement_model)
+      # NULLABLE(field) -> field
+      ## NOTICE: NULLABLE(...) cannot be used in view parameters. ex: target.std:unique(NULLABLE(a)) -> x
+      rewriter = lambda {|node|
+        if node.respond_to?(:getExpression)
+          exp = node.getExpression
+          if exp && exp.is_a?(Java::ComEspertechEsperClientSoda::DotExpression) && exp.getChain.size == 1
+            # top-level lib function
+            # exp.getChain[0] #=> Java::ComEspertechEsperClientSoda::DotExpressionItem
+            if exp.getChain[0].name.upcase == 'NULLABLE'
+              node.setExpression(exp.getChain[0].getParameters[0])
+            end
+          end
+        end
+      }
+      recaller = lambda {|node|
+        Norikra::Query.rewrite_nullable_fields(node.getModel)
+      }
+      traverse_fields(rewriter, recaller, statement_model)
     end
 
     def self.rewrite_event_field_name(statement_model, mapping)
