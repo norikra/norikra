@@ -80,7 +80,7 @@ module Norikra
       end
 
       # NULLABLE(...) can have "a" single field reference only
-      nullables = self.ast.listup(:libfunc).select{|node| node.function_name == "NULLABLE" }
+      nullables = self.ast.listup(:libfunc).select{|node| node.function_name.upcase == "NULLABLE" }
       if nullables.size > 0
         unless nullables.all?{|node| args = node.find("libFunctionArgs"); args && args.has_a?(:libarg) }
           return "NULLABLE(...) must have a field argument"
