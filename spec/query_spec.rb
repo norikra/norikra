@@ -404,6 +404,31 @@ describe Norikra::Query do
           expect(q.invalid?).to be_truthy
         end
       end
+
+      context 'with valid/invalid NULLABLE(...)' do
+        it 'returns query instance to show valid/invalid' do
+          exp0 = "SELECT a, NULLABLE( ) FROM t1 where a > 1"
+          expect(Norikra::Query.new(name:'q0', expression: exp0).invalid?).to be_truthy
+
+          exp1 = "SELECT a, NULLABLE( b ) FROM t1 where a > 1"
+          expect(Norikra::Query.new(name:'q1', expression: exp1).invalid?).to be_falsy
+
+          exp2 = "SELECT a, NULLABLE( b ) FROM t1 where a || b"
+          expect(Norikra::Query.new(name:'q2', expression: exp2).invalid?).to be_falsy
+
+          exp3 = "SELECT a, NULLABLE( a, b ) FROM t1 where a"
+          expect(Norikra::Query.new(name:'q3', expression: exp3).invalid?).to be_truthy
+
+          exp4 = "SELECT a, NULLABLE( a + b ) FROM t1 where c"
+          expect(Norikra::Query.new(name:'q4', expression: exp4).invalid?).to be_truthy
+
+          exp5 = "SELECT a, NULLABLE( foo(b) ) FROM t1 where c"
+          expect(Norikra::Query.new(name:'q5', expression: exp5).invalid?).to be_truthy
+
+          exp6 = "SELECT a, NULLABLE( NULLABLE(b) ) FROM t1 where c"
+          expect(Norikra::Query.new(name:'q6', expression: exp6).invalid?).to be_truthy
+        end
+      end
     end
 
     describe '.looback' do

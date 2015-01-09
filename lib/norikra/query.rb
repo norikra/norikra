@@ -71,10 +71,26 @@ module Norikra
     end
 
     def invalid?
-      # check query is invalid as Norikra query or not
-      self.ast.listup('selectionListElement').any?{|node| node.children.map(&:name).any?{|name| name == '*' } }
+      # check query is invalid as Norikra query or not, and return invalid reason (or nil for valid queries)
 
-      ### TODO: check arg of nullable(...) is just 'a' simple property reference
+      # "SELECT *" is prohibited because each Norikra targets does not have all fields users expect
+      if self.ast.listup('selectionListElement').any?{|node| node.children.map(&:name).any?{|name| name == '*' } }
+        # '*' is a direct child of selectionListElement, not selectionListElementExpr
+        return "'SELECT *' is prohibited in query"
+      end
+
+      # NULLABLE(...) can have "a" single field reference only
+      nullables = self.ast.listup(:libfunc).select{|node| node.function_name == "NULLABLE" }
+      if nullables.size > 0
+        unless nullables.all?{|node| args = node.find("libFunctionArgs"); args && args.has_a?(:libarg) }
+          return "NULLABLE(...) must have a field argument"
+        end
+        unless nullables.all?{|node| exp = node.find(:libarg).expression; exp && exp.propertyReference? }
+          return "NULLABLE(...) can get a field, not expression"
+        end
+      end
+
+      nil
     end
 
     def targets
@@ -96,8 +112,6 @@ module Norikra
     end
 
     def explore(outer_targets=[], alias_overridden={})
-      ### TODO: nullable_fields
-
       fields = {
         defs: { all: [], unknown: [], target: {} },
         nullables: { all: [], unknown: [], target: {} },
