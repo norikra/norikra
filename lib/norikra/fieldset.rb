@@ -17,11 +17,7 @@ module Norikra
         elsif data.is_a?(Hash)
           type = data[:type].to_s
           optional = data.has_key?(:optional) ? data[:optional] : default_optional
-          if data[:null]
-            @fields[key.to_s] = NullField.new(key.to_s, type, optional)
-          else
-            @fields[key.to_s] = Field.new(key.to_s, type, optional)
-          end
+          @fields[key.to_s] = Field.new(key.to_s, type, optional, !!data[:nullable])
         elsif data.is_a?(String) || data.is_a?(Symbol)
           @fields[key.to_s] = Field.new(key.to_s, data.to_s, default_optional)
         else
@@ -38,7 +34,7 @@ module Norikra
     end
 
     def dup
-      fields = Hash[@fields.map{|key,field| [key, {:type => field.type, :optional => field.optional, :null => field.null?}]}]
+      fields = Hash[@fields.map{|key,field| [key, {type: field.type, optional: field.optional, nullable: field.nullable?}]}]
       self.class.new(fields, nil, @rebounds, @query_unique_keys)
     end
 
@@ -79,6 +75,7 @@ module Norikra
       dig.call(container)
     end
 
+    #### field_names_key is for lookup FieldSet from event data
     # field_names_key: a,b,c,d
     ### comma separated field names, which contains valid values (null fields are not included)
     def self.field_names_key(data, fieldset=nil, strict=false, additional_fields=[])
@@ -86,13 +83,8 @@ module Norikra
         raise RuntimeError, "strict(true) cannot be specified with fieldset=nil"
       end
 
-      non_nulls = {}
-      data.keys.each do |k|
-        non_nulls[k] = data[k] if !data[k].respond_to?(:null?) || !data[k].null?
-      end
-
       unless fieldset
-        return data.keys.sort.join(',')
+        return data.reject{|k,v| v.respond_to?(:nullable?) && v.nullable? }.keys.sort.join(',')
       end
 
       keys = []
@@ -124,9 +116,9 @@ module Norikra
       self.class.field_names_key(@fields)
     end
 
-    # same field_names_key may have different summary because of null fields
+    # summary is for checks whether FieldSet is already registered or not
     def update_summary
-      @summary = @fields.keys.sort.map{|k| f = @fields[k]; "#{f.escaped_name}:#{f.type}" + (f.null? ? ':null' : '')}.join(',')
+      @summary = @fields.keys.sort.map{|k| f = @fields[k]; "#{f.escaped_name}:#{f.type}" + (f.nullable? ? ':nullable' : '')}.join(',')
       self
     end
 
@@ -137,7 +129,15 @@ module Norikra
       self.update_summary
     end
 
-    #TODO: have a bug?
+    def update_nullable(fieldset)
+      nullables = []
+      fieldset.fields.each do |fname, f|
+        next if self.fields[fname] || !f.nullable?
+        nullables.push(f)
+      end
+      self.update(nullables, true) unless nullables.empty?
+    end
+
     def ==(other)
       return false if self.class != other.class
       self.summary == other.summary && self.query_unique_keys == other.query_unique_keys
@@ -151,8 +151,9 @@ module Norikra
       d
     end
 
-    def subset?(other) # self is subset of other (or not)
-      (self.fields.keys - other.fields.keys).size == 0
+    def subset?(other) # self is subset of other (or not)  ### query_fieldset.subset?(fieldset_referred_from_event_data)
+      ### nullable fields can be ignored (to be updated later, with nullable fields ignored here)
+      (self.fields.keys - other.fields.keys).reject{|fname| @fields[fname].nullable? }.size < 1
     end
 
     def event_type_name
