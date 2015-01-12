@@ -280,7 +280,6 @@ module Norikra
         event = event_filter(input_event)
         next if event.nil? # non-hash object
 
-        ####
         fieldset = @typedef_manager.refer(target_name, event, strict_refer)
 
         unless registered_data_fieldset[fieldset.summary]
@@ -290,7 +289,6 @@ module Norikra
           debug "successfully registered"
 
           # fieldset should be refined, when waiting_queries rewrite inheritance structure and data fieldset be renewed.
-          #######
           fieldset = @typedef_manager.refer(target_name, event, strict_refer)
         end
 
