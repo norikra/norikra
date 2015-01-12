@@ -172,8 +172,13 @@ module Norikra
       self
     end
 
-    def rebind(update_type_name)
-      self.dup.bind(@target, @level, update_type_name)
+    def rebind(update_type_name, query_fieldset=nil)
+      renew = self.dup
+      if query_fieldset
+        diff = self.nullable_diff(query_fieldset)
+        renew.update(diff, true) unless diff.empty? # all nullable fields are optional
+      end
+      renew.bind(@target, @level, update_type_name)
     end
 
     def format(data)
