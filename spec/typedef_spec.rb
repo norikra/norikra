@@ -540,10 +540,10 @@ describe Norikra::Typedef do
 
         r = t.dump
         expect(r.keys.sort).to eql([:a, :b, :c, :d])
-        expect(r[:a]).to eql({name: 'a', type: 'string', optional: false})
-        expect(r[:b]).to eql({name: 'b', type: 'integer', optional: false})
-        expect(r[:c]).to eql({name: 'c', type: 'float', optional: true})
-        expect(r[:d]).to eql({name: 'd', type: 'string', optional: true})
+        expect(r[:a]).to eql({name: 'a', type: 'string', optional: false, nullable: false})
+        expect(r[:b]).to eql({name: 'b', type: 'integer', optional: false, nullable: false})
+        expect(r[:c]).to eql({name: 'c', type: 'float', optional: true, nullable: false})
+        expect(r[:d]).to eql({name: 'd', type: 'string', optional: true, nullable: false})
 
         t2 = Norikra::Typedef.new(r)
         expect(t2.fields.keys.sort).to eql(fields.keys.sort)
@@ -560,12 +560,12 @@ describe Norikra::Typedef do
 
         r = t.dump
         expect(r.keys.sort).to eql([:a, :b, :c, :d, :e, :f])
-        expect(r[:a]).to eql({name: 'a', type: 'string', optional: false})
-        expect(r[:b]).to eql({name: 'b', type: 'integer', optional: false})
-        expect(r[:c]).to eql({name: 'c', type: 'float', optional: true})
-        expect(r[:d]).to eql({name: 'd', type: 'string', optional: true})
-        expect(r[:e]).to eql({name: 'e', type: 'array', optional: true})
-        expect(r[:f]).to eql({name: 'f', type: 'hash', optional: true})
+        expect(r[:a]).to eql({name: 'a', type: 'string', optional: false, nullable: false})
+        expect(r[:b]).to eql({name: 'b', type: 'integer', optional: false, nullable: false})
+        expect(r[:c]).to eql({name: 'c', type: 'float', optional: true, nullable: false})
+        expect(r[:d]).to eql({name: 'd', type: 'string', optional: true, nullable: false})
+        expect(r[:e]).to eql({name: 'e', type: 'array', optional: true, nullable: false})
+        expect(r[:f]).to eql({name: 'f', type: 'hash', optional: true, nullable: false})
       end
     end
   end

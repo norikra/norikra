@@ -233,18 +233,18 @@ describe Norikra::TypedefManager do
 
         r = m.dump_target('sample')
         expect(r).to eql({
-            a: {name: 'a', type: 'string', optional: false},
-            b: {name: 'b', type: 'string', optional: false},
-            c: {name: 'c', type: 'float', optional: false},
-            z: {name: 'z', type: 'boolean', optional: true},
+            a: {name: 'a', type: 'string', optional: false, nullable: false},
+            b: {name: 'b', type: 'string', optional: false, nullable: false},
+            c: {name: 'c', type: 'float', optional: false, nullable: false},
+            z: {name: 'z', type: 'boolean', optional: true, nullable: false},
           })
 
         r = m.dump_target('sample_next')
         expect(r).to eql({
-            a: {name: 'a', type: 'string', optional: false},
-            b: {name: 'b', type: 'string', optional: false},
-            c: {name: 'c', type: 'float', optional: false},
-            d: {name: 'd', type: 'float', optional: false},
+            a: {name: 'a', type: 'string', optional: false, nullable: false},
+            b: {name: 'b', type: 'string', optional: false, nullable: false},
+            c: {name: 'c', type: 'float', optional: false, nullable: false},
+            d: {name: 'd', type: 'float', optional: false, nullable: false},
           })
       end
     end
