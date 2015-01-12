@@ -1286,7 +1286,7 @@ module Norikra
             [{:f => fieldname, :t => target}] + children_list
           end
         else
-          if self.function_name == 'NULLABLE'
+          if self.function_name.upcase == 'NULLABLE'
             props = self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
             props.each do |def_item|
               def_item[:n] = true # nullable: true
