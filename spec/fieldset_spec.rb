@@ -284,8 +284,8 @@ describe Norikra::FieldSet do
       end
     end
 
-    describe '#update_nullable' do
-      it 'adds nullable fields of argument fieldset' do
+    describe '#nullable_diff' do
+      it 'provides the list of nullable fields, missing in self' do
         q1 = Norikra::FieldSet.new({
             'a' => 'string', 'd' => {type:'string', optional: false, nullable: true},
           })
@@ -296,19 +296,13 @@ describe Norikra::FieldSet do
           })
 
         s1 = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'bool'})
-        s1.update_nullable(q1)
-        expect(s1.fields.size).to eql(4)
-        expect(s1.summary).to eql('a:string,b:integer,c:boolean,d:string:nullable')
+        expect(s1.nullable_diff(q1).map(&:name).sort).to eql(['d'])
 
         s2 = Norikra::FieldSet.new({'a' => 'string'})
-        s2.update_nullable(q1)
-        expect(s2.fields.size).to eql(2)
-        expect(s2.summary).to eql('a:string,d:string:nullable')
+        expect(s2.nullable_diff(q1).map(&:name).sort).to eql(['d'])
 
         s3 = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'bool', 'd' => 'string'})
-        s3.update_nullable(q2)
-        expect(s3.fields.size).to eql(5)
-        expect(s3.summary).to eql('a:string,b:integer,c:boolean,d:string,e:integer:nullable')
+        expect(s3.nullable_diff(q2).map(&:name).sort).to eql(['e'])
       end
     end
 

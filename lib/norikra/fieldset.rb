@@ -129,13 +129,8 @@ module Norikra
       self.update_summary
     end
 
-    def update_nullable(fieldset)
-      nullables = []
-      fieldset.fields.each do |fname, f|
-        next if self.fields[fname] || !f.nullable?
-        nullables.push(f)
-      end
-      self.update(nullables, true) unless nullables.empty?
+    def nullable_diff(fieldset) # data_fieldset.nullable_diff(query_fieldset)
+      fieldset.fields.select{|fname, f| !self.fields[fname] && f.nullable? }.values
     end
 
     def ==(other)
