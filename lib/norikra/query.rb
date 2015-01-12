@@ -30,6 +30,11 @@ module Norikra
       @nullable_fields = nil
     end
 
+    def inspect
+      internal = ['name', 'group', 'expression', 'statement_name', 'targets', 'aliases', 'fields', 'nullable_fields', 'subqueries', 'fieldsets'].map{|x| "@#{x}=" + self.send(x.to_sym).inspect }.join(", ")
+      "<#Norikra::Query:#{self.object_id} #{internal}>"
+    end
+
     def <=>(other)
       if @group.nil? || other.group.nil?
         if @group.nil? && other.group.nil?
