@@ -354,7 +354,7 @@ module Norikra
     def update_inherits_graph(target_name, query_fieldset)
       # replace registered data fieldsets with new fieldset inherits this query fieldset
       @typedef_manager.supersets(target_name, query_fieldset).each do |set|
-        rebound = set.rebind(true) # update event_type_name with new inheritations
+        rebound = set.rebind(true, query_fieldset) # update event_type_name with new inheritations & nullable fields
 
         register_fieldset_actually(target_name, rebound, :data, true) # replacing on esper engine
         @typedef_manager.replace_fieldset(target_name, set, rebound)
@@ -472,6 +472,15 @@ module Norikra
 
         if @waiting_queries.size > 0
           register_waiting_queries
+        end
+        diff_nullable_fields = []
+        @typedef_manager.subsets(target_name, fieldset).each do |query_fieldset|
+          # fill nullable fields of all required query fieldsets
+          diff_nullable_fields += fieldset.nullable_diff(query_fieldset)
+          unless diff_nullable_fields.empty?
+            fieldset.update(diff_nullable_fields, true) # nullable fields are always optional
+            fieldset = fieldset.rebind(false) # type_name is not required to be updated because it is not registered yet
+          end
         end
         debug "registering data fieldset", :target => target_name, :fields => fieldset.fields
         register_fieldset_actually(target_name, fieldset, :data)
