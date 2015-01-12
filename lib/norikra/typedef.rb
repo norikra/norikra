@@ -11,8 +11,6 @@ module Norikra
   #  * known field-set list of a target
   #  * base set of a target
 
-  ### TODO: to be fixed w/ nullable fields
-
   class Typedef
     attr_accessor :fields, :container_fields, :waiting_fields ,:baseset, :queryfieldsets, :datafieldsets
 
@@ -134,7 +132,6 @@ module Norikra
                   @container_fields[field.container_name] = Norikra::Field.new(field.container_name, field.container_type, true)
                 end
               end
-              #TODO: null field?
             end
           end
         else
@@ -179,8 +176,6 @@ module Norikra
       true
     end
 
-    # TODO: null field
-    # to be designed by user of this API
     def simple_guess(data, opts={})
       #### in typedef_manager
       # guessed = @typedefs[target].simple_guess(event, strict: false, baseset: true)
@@ -218,12 +213,10 @@ module Norikra
           [key,type]
         }
       ]
-      ### TODO: null field
 
       FieldSet.new(mapping, false) # in simple_guess, optional is always false
     end
 
-    # TODO: fixed after internal design of null field lists
     def refer(data, strict=false)
       field_names_key = FieldSet.field_names_key(data, self, strict, @waiting_fields)
       return @set_map[field_names_key] if @set_map.has_key?(field_names_key)
@@ -235,7 +228,6 @@ module Norikra
           guessed_fields[key].type = field.type if guessed_fields[key].type != field.type
           guessed_fields[key].optional = field.optional if guessed_fields[key].optional != field.optional
         else
-          # TODO: null field
           guessed_fields[key] = field unless field.optional?
         end
       end
