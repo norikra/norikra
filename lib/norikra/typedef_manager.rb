@@ -124,7 +124,7 @@ module Norikra
       @typedefs[target].baseset
     end
 
-    def subsets(target, fieldset) # for data fieldset
+    def subsets(target, fieldset) # manager.subsets(target, data_fieldset) #=> [query_fieldset]
       sets = []
       @mutex.synchronize do
         @typedefs[target].queryfieldsets.each do |set|
@@ -135,7 +135,7 @@ module Norikra
       sets
     end
 
-    def supersets(target, fieldset) # for query fieldset
+    def supersets(target, fieldset) # manager.supersets(target, query_fieldset) #=> [data_fieldset]
       sets = []
       @mutex.synchronize do
         @typedefs[target].datafieldsets.each do |set|
