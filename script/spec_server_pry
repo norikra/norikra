@@ -1,26 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'drb'
 require 'pry'
-
-begin
-  begin
-    DRb.start_service("druby://localhost:0")
-  rescue SocketError, Errno::EADDRNOTAVAIL
-    DRb.start_service("druby://:0")
-  end
-  $spec_server = DRbObject.new_with_uri("druby://127.0.0.1:8989")
-rescue DRb::DRbConnError
-  err.puts "No DRb server is running. Running in local process instead ..."
-end
-
-def rspec(file=nil)
-  if file
-    $spec_server.run(["--color", "--format", "s", file], STDERR, STDOUT)
-  else
-    $spec_server.run(["--color", 'spec'], STDERR, STDOUT)
-  end
-end
 
 $service = nil
 def service
@@ -90,10 +70,6 @@ end
 puts <<DESC
 
 Example:
-  > # execute 'spork' on other terminal
-  > rspec 'spec/xxx_spec.rb'
-  > rspec # for all tests
-
   > query = Norikra::Query.new(name:'test1', expression:'SELECT ...')
   >
   > query.ast.to_a            # dump query AST

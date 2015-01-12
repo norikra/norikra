@@ -38,12 +38,6 @@ Fix code and tests:
 1. fix code in `lib`
 1. run `bundle exec rake`
 
-Run tests faster than 2 or more times:
-
-1. execute `spork`
-1. execute `script/spec_server_pry` in another terminal
-1. run `rspec` in pry console (executed fastly after second times)
-
 Execute norikra server with target/query continuation:
 
 1. `bundle exec rake devserver`
