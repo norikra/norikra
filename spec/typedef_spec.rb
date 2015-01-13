@@ -290,7 +290,7 @@ describe Norikra::Typedef do
         set1 = Norikra::FieldSet.new({'a'=>'string','b'=>'int'})
         set2 = Norikra::FieldSet.new({'a'=>'string','c'=>'int'})
         t.push(:data, set1)
-        expect { t.replace(:data, set1, set2) }.to raise_error(Norikra::ArgumentError)
+        expect { t.replace(:data, set1, set2) }.to raise_error(::ArgumentError)
       end
 
       it 'replaces typedef internal fieldset object for specified field_names_key' do
