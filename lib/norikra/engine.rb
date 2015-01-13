@@ -290,6 +290,7 @@ module Norikra
 
           # fieldset should be refined, when waiting_queries rewrite inheritance structure and data fieldset be renewed.
           fieldset = @typedef_manager.refer(target_name, event, strict_refer)
+          debug "re-referred data fieldset", :target => target_name, :fieldset => fieldset
         end
 
         trace "calling sendEvent with bound fieldset (w/ valid event_type_name)", :target => target_name, :event => event
@@ -393,7 +394,9 @@ module Norikra
 
         mapping = @typedef_manager.generate_fieldset_mapping(query)
         mapping.each do |target_name, query_fieldset|
+          trace "binding query fieldset", :fieldset => query_fieldset
           @typedef_manager.bind_fieldset(target_name, :query, query_fieldset)
+          trace "registering query fieldset", :fieldset => query_fieldset
           register_fieldset_actually(target_name, query_fieldset, :query)
           update_inherits_graph(target_name, query_fieldset)
           query.fieldsets[target_name] = query_fieldset
@@ -457,7 +460,9 @@ module Norikra
       ready.each do |query|
         mapping = @typedef_manager.generate_fieldset_mapping(query)
         mapping.each do |target_name, query_fieldset|
+          trace "binding query fieldset for waiting query", :query => query, :target => target_name, :fieldset => query_fieldset
           @typedef_manager.bind_fieldset(target_name, :query, query_fieldset)
+          trace "registering query fieldset", :target => target_name, :fieldset => query_fieldset
           register_fieldset_actually(target_name, query_fieldset, :query)
           update_inherits_graph(target_name, query_fieldset)
           query.fieldsets[target_name] = query_fieldset
