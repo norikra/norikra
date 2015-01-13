@@ -155,7 +155,7 @@ module Norikra
       @event_type_name.dup
     end
 
-    def bind(target, level, update_type_name=false)
+    def bind(target, level, type_name_update=false)
       @target = target
       @level = level
       prefix = case level
@@ -165,20 +165,20 @@ module Norikra
                else
                  raise ArgumentError, "unknown fieldset bind level: #{level}, for target #{target}"
                end
-      @rebounds += 1 if update_type_name
+      @rebounds += 1 if type_name_update
       query_unique_key = @query_unique_keys ? @query_unique_keys.join("\t") : ''
 
       @event_type_name = prefix + Digest::MD5.hexdigest([target, level.to_s, @rebounds.to_s, query_unique_key, @summary].join("\t"))
       self
     end
 
-    def rebind(update_type_name, query_fieldset=nil)
+    def rebind(type_name_update, query_fieldset=nil)
       renew = self.dup
       if query_fieldset
         diff = self.nullable_diff(query_fieldset)
         renew.update(diff, true) unless diff.empty? # all nullable fields are optional
       end
-      renew.bind(@target, @level, update_type_name)
+      renew.bind(@target, @level, type_name_update)
     end
 
     def format(data)
