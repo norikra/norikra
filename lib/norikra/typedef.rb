@@ -10,6 +10,7 @@ module Norikra
   #  * known field list of target (and these are optional or not), and container fields
   #  * known field-set list of a target
   #  * base set of a target
+
   class Typedef
     attr_accessor :fields, :container_fields, :waiting_fields ,:baseset, :queryfieldsets, :datafieldsets
 
@@ -39,7 +40,10 @@ module Norikra
       @queryfieldsets = []
       @datafieldsets = []
 
-      @set_map = {} # FieldSet.field_names_key(data_fieldset, fieldset) => data_fieldset
+      # FieldSet.field_names_key(data_fieldset, fieldset) => data_fieldset
+      ### field_names_key is built by keys w/ data, without null fields
+      ### data_fieldset includes null fields
+      @set_map = {}
 
       @mutex = Mutex.new
     end
@@ -173,9 +177,11 @@ module Norikra
     end
 
     def simple_guess(data, opts={})
-      unless opts.has_key?(:optional)
-        opts[:optional] = true
-      end
+      #### in typedef_manager
+      # guessed = @typedefs[target].simple_guess(event, strict: false, baseset: true)
+
+      #### in Typedef#refer
+      # guessed = self.simple_guess(data, strict: strict)
 
       flatten_key_value_pairs = []
 
@@ -199,24 +205,23 @@ module Norikra
       mapping = Hash[
         flatten_key_value_pairs.map{|key,value|
           type = case value
-                 when TrueClass,FalseClass then 'boolean'
-                 when Integer then 'long'
-                 when Float   then 'double'
-                 else
-                   'string'
+                 when TrueClass,FalseClass then {type: 'boolean'}
+                 when Integer then {type: 'long'}
+                 when Float   then {type: 'double'}
+                 else {type: 'string'}
                  end
           [key,type]
         }
       ]
 
-      FieldSet.new(mapping, opts[:optional])
+      FieldSet.new(mapping, false) # in simple_guess, optional is always false
     end
 
     def refer(data, strict=false)
       field_names_key = FieldSet.field_names_key(data, self, strict, @waiting_fields)
       return @set_map[field_names_key] if @set_map.has_key?(field_names_key)
 
-      guessed = self.simple_guess(data, optional: false, strict: strict)
+      guessed = self.simple_guess(data, strict: strict)
       guessed_fields = guessed.fields
       @fields.each do |key,field|
         if guessed_fields.has_key?(key)

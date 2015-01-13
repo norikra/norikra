@@ -174,7 +174,9 @@ module Norikra
       info "registering query", :name => query.name, :targets => query.targets, :expression => query.expression
       raise Norikra::ClientError, "query name '#{query.name}' already exists" if @queries.select{|q| q.name == query.name }.size > 0
       raise Norikra::ClientError, "query name '#{query.name}' already exists in suspended" if @suspended_queries.select{|q| q.name == query.name }.size > 0
-      raise Norikra::ClientError, "query '#{query.name}' is invalid query for Norikra" if query.invalid?
+      if reason = query.invalid?
+        raise Norikra::ClientError, "invalid query '#{query.name}': #{reason}"
+      end
 
       query.targets.each do |target_name|
         open(target_name) unless @targets.any?{|t| t.name == target_name}
@@ -288,6 +290,7 @@ module Norikra
 
           # fieldset should be refined, when waiting_queries rewrite inheritance structure and data fieldset be renewed.
           fieldset = @typedef_manager.refer(target_name, event, strict_refer)
+          debug "re-referred data fieldset", :target => target_name, :fieldset => fieldset
         end
 
         trace "calling sendEvent with bound fieldset (w/ valid event_type_name)", :target => target_name, :event => event
@@ -352,7 +355,7 @@ module Norikra
     def update_inherits_graph(target_name, query_fieldset)
       # replace registered data fieldsets with new fieldset inherits this query fieldset
       @typedef_manager.supersets(target_name, query_fieldset).each do |set|
-        rebound = set.rebind(true) # update event_type_name with new inheritations
+        rebound = set.rebind(true, query_fieldset) # update event_type_name with new inheritations & nullable fields
 
         register_fieldset_actually(target_name, rebound, :data, true) # replacing on esper engine
         @typedef_manager.replace_fieldset(target_name, set, rebound)
@@ -374,7 +377,9 @@ module Norikra
 
       @mutex.synchronize do
         raise Norikra::ClientError, "query '#{query.name}' already exists" unless @queries.select{|q| q.name == query.name }.empty?
-        raise Norikra::ClientError, "query '#{query.name}' is invalid query for Norikra" if query.invalid?
+        if reason = query.invalid?
+          raise Norikra::ClientError, "invalid query '#{query.name}': #{reason}"
+        end
         if lo_target_name = Norikra::Query.loopback(query.group)
           raise Norikra::ClientError, "loopback target '#{lo_target_name}'" unless Norikra::Target.valid?(lo_target_name)
         end
@@ -389,7 +394,9 @@ module Norikra
 
         mapping = @typedef_manager.generate_fieldset_mapping(query)
         mapping.each do |target_name, query_fieldset|
+          trace "binding query fieldset", :fieldset => query_fieldset
           @typedef_manager.bind_fieldset(target_name, :query, query_fieldset)
+          trace "registering query fieldset", :fieldset => query_fieldset
           register_fieldset_actually(target_name, query_fieldset, :query)
           update_inherits_graph(target_name, query_fieldset)
           query.fieldsets[target_name] = query_fieldset
@@ -453,7 +460,9 @@ module Norikra
       ready.each do |query|
         mapping = @typedef_manager.generate_fieldset_mapping(query)
         mapping.each do |target_name, query_fieldset|
+          trace "binding query fieldset for waiting query", :query => query, :target => target_name, :fieldset => query_fieldset
           @typedef_manager.bind_fieldset(target_name, :query, query_fieldset)
+          trace "registering query fieldset", :target => target_name, :fieldset => query_fieldset
           register_fieldset_actually(target_name, query_fieldset, :query)
           update_inherits_graph(target_name, query_fieldset)
           query.fieldsets[target_name] = query_fieldset
@@ -464,12 +473,30 @@ module Norikra
 
     def register_fieldset(target_name, fieldset)
       @mutex.synchronize do
+        trace "binding data fieldset", :fieldset => fieldset # to prepare pickup waiting queries by newly comming fields
         @typedef_manager.bind_fieldset(target_name, :data, fieldset)
 
         if @waiting_queries.size > 0
           register_waiting_queries
         end
-        debug "registering data fieldset", :target => target_name, :fields => fieldset.fields
+
+        diff_nullable_fields = []
+
+        @typedef_manager.subsets(target_name, fieldset).each do |query_fieldset|
+          next unless query_fieldset.level == :query
+          # fill nullable fields of all required query fieldsets
+          diff_nullable_fields += fieldset.nullable_diff(query_fieldset)
+        end
+
+        unless diff_nullable_fields.empty?
+          trace "query fieldset has nullable diff", :diff => diff_nullable_fields
+          fieldset.update(diff_nullable_fields, true) # nullable fields are always optional
+          trace "rebinding data fieldset w/ nullable fields", :fieldset => fieldset
+          rebound = fieldset.rebind(false) # type_name is not required to be updated because it is not registered yet
+          @typedef_manager.replace_fieldset(target_name, fieldset, rebound)
+          fieldset = rebound
+        end
+        debug "registering data fieldset", :target => target_name, :fieldset => fieldset
         register_fieldset_actually(target_name, fieldset, :data)
       end
     end

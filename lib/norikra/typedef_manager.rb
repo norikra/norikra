@@ -68,9 +68,11 @@ module Norikra
 
     def generate_fieldset_mapping(query)
       fields_set = {}
+      nullables_set = {}
 
       query.targets.each do |target|
         fields_set[target] = query.fields(target)
+        nullables_set[target] = query.nullable_fields(target)
       end
       query.fields(nil).each do |field|
         assumed = query.targets.select{|t| @typedefs[t].field_defined?([field])}
@@ -78,11 +80,12 @@ module Norikra
           raise Norikra::ClientError, "cannot determine target for field '#{field}' in this query"
         end
         fields_set[assumed.first].push(field)
+        nullables_set[assumed.first].push(field) if query.nullable_fields(nil).include?(field)
       end
 
       mapping = {}
       fields_set.each do |target,fields|
-        mapping[target] = generate_query_fieldset(target, fields.sort.uniq, query.name, query.group)
+        mapping[target] = generate_query_fieldset(target, fields.sort.uniq, nullables_set[target].sort.uniq, query.name, query.group)
       end
       mapping
     end
@@ -101,19 +104,19 @@ module Norikra
     end
 
     def generate_base_fieldset(target, event)
-      guessed = @typedefs[target].simple_guess(event, optional: false, strict: false, baseset: true) # all fields are non-optional
+      guessed = @typedefs[target].simple_guess(event, strict: false, baseset: true) # all fields are non-optional
       guessed.update(@typedefs[target].fields, false)
       guessed
     end
 
-    def generate_query_fieldset(target, field_name_list, query_name, query_group)
+    def generate_query_fieldset(target, field_name_list, nullable_list, query_name, query_group)
       # all fields of field_name_list should exists in definitions of typedef fields
       # for this premise, call 'bind_fieldset' for data fieldset before this method.
       required_fields = {}
       @mutex.synchronize do
         @typedefs[target].fields.each do |fieldname, field|
           if field_name_list.include?(fieldname) || !(field.optional?)
-            required_fields[fieldname] = {:type => field.type, :optional => field.optional}
+            required_fields[fieldname] = {:type => field.type, :optional => field.optional, :nullable => nullable_list.include?(fieldname)}
           end
         end
       end
@@ -124,7 +127,7 @@ module Norikra
       @typedefs[target].baseset
     end
 
-    def subsets(target, fieldset) # for data fieldset
+    def subsets(target, fieldset) # manager.subsets(target, data_fieldset) #=> [query_fieldset]
       sets = []
       @mutex.synchronize do
         @typedefs[target].queryfieldsets.each do |set|
@@ -135,7 +138,7 @@ module Norikra
       sets
     end
 
-    def supersets(target, fieldset) # for query fieldset
+    def supersets(target, fieldset) # manager.supersets(target, query_fieldset) #=> [data_fieldset]
       sets = []
       @mutex.synchronize do
         @typedefs[target].datafieldsets.each do |set|

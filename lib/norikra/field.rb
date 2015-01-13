@@ -35,7 +35,7 @@ module Norikra
     ### expected java.lang.Class or java.util.Map or the name of a previously-declared Map or ObjectArray type
     #### Correct type name is 'int'. see and run 'junks/esper-test.rb'
 
-    attr_accessor :name, :type, :esper_type, :optional, :escaped_name, :container_name, :container_type
+    attr_accessor :name, :type, :esper_type, :optional, :nullable, :escaped_name, :container_name, :container_type
 
     def self.esper_type_map(type)
       case type.to_s.downcase
@@ -75,10 +75,11 @@ module Norikra
       end
     end
 
-    def initialize(name, type, optional=nil)
+    def initialize(name, type, optional=nil, nullable=false)
       @name = name.to_s
       @type = self.class.valid_type(type)
       @optional = optional
+      @nullable = nullable
 
       @escaped_name = self.class.escape_name(@name)
 
@@ -154,22 +155,26 @@ module Norikra
 
     def to_hash(sym=false)
       if sym
-        {name: @name, type: @type, optional: @optional}
+        {name: @name, type: @type, optional: @optional, nullable: @nullable}
       else
-        {'name' => @name, 'type' => @type, 'optional' => @optional}
+        {'name' => @name, 'type' => @type, 'optional' => @optional, 'nullable' => @nullable}
       end
     end
 
     def dup(optional=nil)
-      self.class.new(@name, @type, optional.nil? ? @optional : optional)
+      self.class.new(@name, @type, optional.nil? ? @optional : optional, @nullable)
     end
 
     def ==(other)
-      self.name == other.name && self.type == other.type && self.optional == other.optional
+      self.name == other.name && self.type == other.type && self.optional == other.optional && self.nullable == other.nullable
     end
 
     def optional? # used outside of FieldSet
       @optional
+    end
+
+    def nullable?
+      @nullable
     end
 
     # def value(event) # by define_value_accessor

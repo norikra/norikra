@@ -135,6 +135,20 @@ describe Norikra::Field do
     end
   end
 
+  context 'specified as nullable' do
+    describe '#dup' do
+      it 'saves original boolean value' do
+        f = Norikra::Field.new('foo', 'string', false, false) # non-nullable
+        expect(f.nullable?).to be_falsy
+        expect(f.dup.nullable?).to be_falsy
+
+        f = Norikra::Field.new('bar', 'int', false, true)
+        expect(f.nullable?).to be_truthy
+        expect(f.dup.nullable?).to be_truthy
+      end
+    end
+  end
+
   context 'defined as string field' do
     describe '#format' do
       it 'converts specified value as string' do

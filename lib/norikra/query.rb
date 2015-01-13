@@ -27,6 +27,12 @@ module Norikra
       @aliases = nil
       @subqueries = nil
       @fields = nil
+      @nullable_fields = nil
+    end
+
+    def inspect
+      internal = ['name', 'group', 'expression', 'statement_name', 'targets', 'aliases', 'fields', 'nullable_fields', 'subqueries', 'fieldsets'].map{|x| "@#{x}=" + self.send(x.to_sym).inspect }.join(", ")
+      "<#Norikra::Query:#{self.object_id} #{internal}>"
     end
 
     def <=>(other)
@@ -70,8 +76,26 @@ module Norikra
     end
 
     def invalid?
-      # check query is invalid as Norikra query or not
-      self.ast.listup('selectionListElement').any?{|node| node.children.map(&:name).any?{|name| name == '*' } }
+      # check query is invalid as Norikra query or not, and return invalid reason (or nil for valid queries)
+
+      # "SELECT *" is prohibited because each Norikra targets does not have all fields users expect
+      if self.ast.listup('selectionListElement').any?{|node| node.children.map(&:name).any?{|name| name == '*' } }
+        # '*' is a direct child of selectionListElement, not selectionListElementExpr
+        return "'SELECT *' is prohibited in query"
+      end
+
+      # NULLABLE(...) can have "a" single field reference only
+      nullables = self.ast.listup(:libfunc).select{|node| node.function_name.upcase == "NULLABLE" }
+      if nullables.size > 0
+        unless nullables.all?{|node| args = node.find("libFunctionArgs"); args && args.has_a?(:libarg) }
+          return "NULLABLE(...) must have a field argument"
+        end
+        unless nullables.all?{|node| exp = node.find(:libarg).expression; exp && exp.propertyReference? }
+          return "NULLABLE(...) can get a field, not expression"
+        end
+      end
+
+      nil
     end
 
     def targets
@@ -93,74 +117,85 @@ module Norikra
     end
 
     def explore(outer_targets=[], alias_overridden={})
-      fields = {}
-      alias_map = {}.merge(alias_overridden)
+      fields = {
+        defs: { all: [], unknown: [], target: {} },
+        nullables: { all: [], unknown: [], target: {} },
+      }
 
-      all = []
-      unknowns = []
+      alias_map = alias_overridden.dup
+
       self.ast.listup(:stream).each do |node|
         node.aliases.each do |alias_name, target|
           alias_map[alias_name] = target
         end
         node.targets.each do |target|
-          fields[target] ||= []
+          fields[:defs][:target][target] = []
+          fields[:nullables][:target][target] = []
         end
       end
 
-      dup_aliases = (alias_map.keys & fields.keys)
-      unless dup_aliases.empty?
-        raise Norikra::ClientError, "Invalid alias '#{dup_aliases.join(',')}', same with target name"
-      end
-
-      default_target = fields.keys.size == 1 ? fields.keys.first : nil
+      # default target should be out of effect of outer_targets
+      default_target = fields[:defs][:target].keys.size == 1 ? fields[:defs][:target].keys.first : nil
 
       outer_targets.each do |t|
-        fields[t] ||= []
+        fields[:defs][:target][t] ||= []
+        fields[:nullables][:target][t] ||= []
       end
 
-      field_bag = []
-      self.subqueries.each do |subquery|
-        field_bag.push(subquery.explore(fields.keys, alias_map))
+      dup_aliases = (alias_map.keys & fields[:defs][:target].keys)
+      unless dup_aliases.empty?
+        raise Norikra::ClientError, "Invalid alias '#{dup_aliases.join(',')}', same with target name"
       end
 
       # names of 'AS'
       field_aliases = self.ast.listup(:selection).map(&:alias).compact
 
-      known_targets_aliases = fields.keys + alias_map.keys
+      known_targets_aliases = fields[:defs][:target].keys + alias_map.keys
       self.ast.fields(default_target, known_targets_aliases).each do |field_def|
         f = field_def[:f]
         next if field_aliases.include?(f)
 
-        all.push(f)
+        fields[:defs][:all].push(f)
+        fields[:nullables][:all].push(f) if field_def[:n]
 
         if field_def[:t]
           t = alias_map[field_def[:t]] || field_def[:t]
-          unless fields[t]
+          unless fields[:defs][:target][t]
             raise Norikra::ClientError, "unknown target alias name for: #{field_def[:t]}.#{field_def[:f]}"
           end
-          fields[t].push(f)
-
+          fields[:defs][:target][t].push(f)
+          fields[:nullables][:target][t].push(f) if field_def[:n]
         else
-          unknowns.push(f)
+          fields[:defs][:unknown].push(f)
+          fields[:nullables][:unknown].push(f) if field_def[:n]
         end
       end
 
-      field_bag.each do |bag|
-        all += bag['']
-        unknowns += bag[nil]
-        bag.keys.each do |t|
-          fields[t] ||= []
-          fields[t] += bag[t]
+      self.subqueries.each do |subquery|
+        sub = {}
+        sub[:defs], sub[:nullables] = subquery.explore(fields[:defs][:target].keys, alias_map)
+
+        [:defs, :nullables].each do |group|
+          fields[group][:all] += sub[group].delete('')
+          fields[group][:unknown] += sub[group].delete(nil)
+          sub[group].keys.each do |t|
+            fields[group][:target][t] ||= []
+            fields[group][:target][t] += sub[group][t]
+          end
         end
       end
 
-      fields.keys.each do |target|
-        fields[target] = fields[target].sort.uniq
-      end
-      fields[''] = all.sort.uniq
-      fields[nil] = unknowns.sort.uniq
+      compact = ->(data){
+        r = {}
+        data[:target].keys.each do |t|
+          r[t] = data[:target][t].sort.uniq
+        end
+        r[''] = data[:all].sort.uniq
+        r[nil] = data[:unknown].sort.uniq
+        r
+      }
 
-      fields
+      [ compact.(fields[:defs]), compact.(fields[:nullables]) ]
     end
 
     def fields(target='')
@@ -168,8 +203,16 @@ module Norikra
       # target nil: fields for unknown targets
       return @fields[target] if @fields
 
-      @fields = explore()
+      @fields, @nullable_fields = explore()
       @fields[target]
+    end
+
+    def nullable_fields(target='')
+      # argument target is same with #fields
+      return @nullable_fields[target] if @nullable_fields
+
+      @fields, @nullable_fields = explore()
+      @nullable_fields[target]
     end
 
     class ParseRuleSelectorImpl
@@ -218,8 +261,30 @@ module Norikra
     end
 
     def self.rewrite_query(statement_model, mapping)
+      rewrite_nullable_fields(statement_model)
       rewrite_event_type_name(statement_model, mapping)
       rewrite_event_field_name(statement_model, mapping)
+    end
+
+    def self.rewrite_nullable_fields(statement_model)
+      # NULLABLE(field) -> field
+      ## NOTICE: NULLABLE(...) cannot be used in view parameters. ex: target.std:unique(NULLABLE(a)) -> x
+      rewriter = lambda {|node|
+        if node.respond_to?(:getExpression)
+          exp = node.getExpression
+          if exp && exp.is_a?(Java::ComEspertechEsperClientSoda::DotExpression) && exp.getChain.size == 1
+            # top-level lib function
+            # exp.getChain[0] #=> Java::ComEspertechEsperClientSoda::DotExpressionItem
+            if exp.getChain[0].name.upcase == 'NULLABLE'
+              node.setExpression(exp.getChain[0].getParameters[0])
+            end
+          end
+        end
+      }
+      recaller = lambda {|node|
+        Norikra::Query.rewrite_nullable_fields(node.getModel)
+      }
+      traverse_fields(rewriter, recaller, statement_model)
     end
 
     def self.rewrite_event_field_name(statement_model, mapping)

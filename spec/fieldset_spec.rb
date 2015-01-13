@@ -36,11 +36,44 @@ describe Norikra::FieldSet do
       set = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long', 'a' => 'Boolean'})
       expect(set.summary).to eql('a:boolean,x:string,y:integer')
     end
+
+    it 'can set optional/nullable options for each fields' do
+      set = Norikra::FieldSet.new({
+          'x' => {type: 'string'}, # optional: default_optional(==nil, falsy), nullable: false
+          'y' => {type: 'long', optional: true, nullable: true},
+        })
+      expect(set.fields['x'].type).to eql('string')
+      expect(set.fields['x'].optional?).to be_falsy
+      expect(set.fields['x'].nullable?).to be_falsy
+
+      expect(set.fields['y'].type).to eql('integer')
+      expect(set.fields['y'].optional?).to be_truthy
+      expect(set.fields['y'].nullable?).to be_truthy
+    end
+
+    it 'sets summary with nullable informations, ordered by key names' do
+      set = Norikra::FieldSet.new({
+          'x' => {type: 'string'}, # optional: default_optional(==nil, falsy), nullable: false
+          'y' => {type: 'integer', optional: true, nullable: true},
+          'z' => {type: 'boolean'}
+        })
+      expect(set.summary).to eql('x:string,y:integer:nullable,z:boolean')
+    end
   end
 
   context 'initialized with some fields' do
     set = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long', 'a' => 'Boolean'})
     set2 = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'float', 'd' => 'bool', 'e' => 'integer'})
+    set3 = Norikra::FieldSet.new({
+        'a' => 'string', 'b' => 'int', 'c' => 'float',
+        'd' => {type:'bool', optional: true, nullable: true},
+        'e' => {type:'long', optional: true, nullable: false}
+      })
+    set4 = Norikra::FieldSet.new({
+        'a' => 'string', 'b' => 'int', 'c' => 'float',
+        'd' => {type:'bool', optional: true, nullable: true},
+        'e' => {type:'long', optional: true, nullable: true}
+      })
 
     q_set1 = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long'}, nil, 0, ['set1', 'g1'])
     q_set2 = Norikra::FieldSet.new({'x' => 'string', 'y' => 'long'}, nil, 0, ['set2', nil])
@@ -62,6 +95,15 @@ describe Norikra::FieldSet do
         expect(q_set1 == q_set1.dup).to be_truthy
         expect(q_set2 == q_set2.dup).to be_truthy
         expect(q_set3 == q_set3.dup).to be_truthy
+      end
+
+      it 'make duplicated object with same type/optional/nullable specifications' do
+        set3d = set3.dup
+        ['a', 'b', 'c', 'd', 'e'].each do |f|
+          expect(set3d.fields[f].type).to eql(set3.fields[f].type)
+          expect(set3d.fields[f].optional).to eql(set3.fields[f].optional)
+          expect(set3d.fields[f].nullable).to eql(set3.fields[f].nullable)
+        end
       end
     end
 
@@ -175,6 +217,11 @@ describe Norikra::FieldSet do
       it 'returns comma-separeted sorted field names' do
         expect(set.field_names_key).to eql('a,x,y')
       end
+
+      it 'returns result w/o nullable fields' do
+        expect(set3.field_names_key).to eql('a,b,c,e')
+        expect(set4.field_names_key).to eql('a,b,c')
+      end
     end
 
     describe '#udpate_summary' do
@@ -192,6 +239,18 @@ describe Norikra::FieldSet do
 
         expect(x.summary).not_to eql(oldsummary)
         expect(x.summary).to eql('a:boolean,x:integer,y:integer')
+
+        x.fields['c'] = Norikra::Field.new('c', 'string', true, true) # optional, nullable
+
+        x.update_summary
+
+        expect(x.summary).to eql('a:boolean,c:string:nullable,x:integer,y:integer')
+
+        x.fields['b'] = Norikra::Field.new('b', 'float', true, false) # optional, non-nullable
+
+        x.update_summary
+
+        expect(x.summary).to eql('a:boolean,b:float,c:string:nullable,x:integer,y:integer')
       end
     end
 
@@ -219,6 +278,31 @@ describe Norikra::FieldSet do
         x.update([Norikra::Field.new('z', 'string')], true)
         expect(x.fields.size).to eql(4)
         expect(x.summary).to eql('a:boolean,x:string,y:integer,z:string')
+        x.update([Norikra::Field.new('b', 'string', true, true), Norikra::Field.new('c', 'integer', true, true)], true)
+        expect(x.fields.size).to eql(6)
+        expect(x.summary).to eql('a:boolean,b:string:nullable,c:integer:nullable,x:string,y:integer,z:string')
+      end
+    end
+
+    describe '#nullable_diff' do
+      it 'provides the list of nullable fields, missing in self' do
+        q1 = Norikra::FieldSet.new({
+            'a' => 'string', 'd' => {type:'string', optional: false, nullable: true},
+          })
+        q2 = Norikra::FieldSet.new({
+            'a' => 'string', 'b' => 'int',
+            'd' => {type:'string', optional: false, nullable: true},
+            'e' => {type:'int', optional: false, nullable: true},
+          })
+
+        s1 = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'bool'})
+        expect(s1.nullable_diff(q1).map(&:name).sort).to eql(['d'])
+
+        s2 = Norikra::FieldSet.new({'a' => 'string'})
+        expect(s2.nullable_diff(q1).map(&:name).sort).to eql(['d'])
+
+        s3 = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'bool', 'd' => 'string'})
+        expect(s3.nullable_diff(q2).map(&:name).sort).to eql(['e'])
       end
     end
 
@@ -240,6 +324,15 @@ describe Norikra::FieldSet do
         expect(d['c']).to eql('double')
         expect(d['d']).to eql('boolean')
         expect(d['e']).to eql('long')
+
+        d = set3.definition # nullable does not have any effects
+        expect(d).to be_instance_of(Hash)
+        expect(d.size).to eql(5)
+        expect(d['a']).to eql('string')
+        expect(d['b']).to eql('long')
+        expect(d['c']).to eql('double')
+        expect(d['d']).to eql('boolean')
+        expect(d['e']).to eql('long')
       end
     end
 
@@ -253,6 +346,24 @@ describe Norikra::FieldSet do
 
         other.update([Norikra::Field.new('z', 'double')], false)
         expect(set.subset?(other)).to be_truthy
+      end
+
+      it 'returns true if other instance does not have fields marked as nullable' do
+        other = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'float', 'd' => 'bool', 'e' => 'int'})
+        expect(set3.subset?(other)).to be_truthy
+        expect(set4.subset?(other)).to be_truthy
+
+        other = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'float'})
+        expect(set3.subset?(other)).to be_falsy
+        expect(set4.subset?(other)).to be_truthy
+
+        other = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'float', 'd' => 'bool'})
+        expect(set3.subset?(other)).to be_falsy
+        expect(set4.subset?(other)).to be_truthy
+
+        other = Norikra::FieldSet.new({'a' => 'string', 'b' => 'int', 'c' => 'float', 'e' => 'int'})
+        expect(set3.subset?(other)).to be_truthy
+        expect(set4.subset?(other)).to be_truthy
       end
     end
 

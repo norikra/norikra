@@ -17,7 +17,7 @@ module Norikra
         elsif data.is_a?(Hash)
           type = data[:type].to_s
           optional = data.has_key?(:optional) ? data[:optional] : default_optional
-          @fields[key.to_s] = Field.new(key.to_s, type, optional)
+          @fields[key.to_s] = Field.new(key.to_s, type, optional, !!data[:nullable])
         elsif data.is_a?(String) || data.is_a?(Symbol)
           @fields[key.to_s] = Field.new(key.to_s, data.to_s, default_optional)
         else
@@ -34,7 +34,7 @@ module Norikra
     end
 
     def dup
-      fields = Hash[@fields.map{|key,field| [key, {:type => field.type, :optional => field.optional}]}]
+      fields = Hash[@fields.map{|key,field| [key, {type: field.type, optional: field.optional, nullable: field.nullable?}]}]
       self.class.new(fields, nil, @rebounds, @query_unique_keys)
     end
 
@@ -75,13 +75,16 @@ module Norikra
       dig.call(container)
     end
 
+    #### field_names_key is for lookup FieldSet from event data
+    # field_names_key: a,b,c,d
+    ### comma separated field names, which contains valid values (null fields are not included)
     def self.field_names_key(data, fieldset=nil, strict=false, additional_fields=[])
       if !fieldset && strict
         raise RuntimeError, "strict(true) cannot be specified with fieldset=nil"
       end
 
       unless fieldset
-        return data.keys.sort.join(',')
+        return data.reject{|k,v| v.respond_to?(:nullable?) && v.nullable? }.keys.sort.join(',')
       end
 
       keys = []
@@ -113,8 +116,9 @@ module Norikra
       self.class.field_names_key(@fields)
     end
 
+    # summary is for checks whether FieldSet is already registered or not
     def update_summary
-      @summary = @fields.keys.sort.map{|k| @fields[k].escaped_name + ':' + @fields[k].type}.join(',')
+      @summary = @fields.keys.sort.map{|k| f = @fields[k]; "#{f.escaped_name}:#{f.type}" + (f.nullable? ? ':nullable' : '')}.join(',')
       self
     end
 
@@ -125,7 +129,10 @@ module Norikra
       self.update_summary
     end
 
-    #TODO: have a bug?
+    def nullable_diff(fieldset) # data_fieldset.nullable_diff(query_fieldset)
+      fieldset.fields.select{|fname, f| !self.fields[fname] && f.nullable? }.values
+    end
+
     def ==(other)
       return false if self.class != other.class
       self.summary == other.summary && self.query_unique_keys == other.query_unique_keys
@@ -139,15 +146,16 @@ module Norikra
       d
     end
 
-    def subset?(other) # self is subset of other (or not)
-      (self.fields.keys - other.fields.keys).size == 0
+    def subset?(other) # self is subset of other (or not)  ### query_fieldset.subset?(fieldset_referred_from_event_data)
+      ### nullable fields can be ignored (to be updated later, with nullable fields ignored here)
+      (self.fields.keys - other.fields.keys).reject{|fname| @fields[fname].nullable? }.size < 1
     end
 
     def event_type_name
       @event_type_name.dup
     end
 
-    def bind(target, level, update_type_name=false)
+    def bind(target, level, type_name_update=false)
       @target = target
       @level = level
       prefix = case level
@@ -157,15 +165,20 @@ module Norikra
                else
                  raise ArgumentError, "unknown fieldset bind level: #{level}, for target #{target}"
                end
-      @rebounds += 1 if update_type_name
+      @rebounds += 1 if type_name_update
       query_unique_key = @query_unique_keys ? @query_unique_keys.join("\t") : ''
 
       @event_type_name = prefix + Digest::MD5.hexdigest([target, level.to_s, @rebounds.to_s, query_unique_key, @summary].join("\t"))
       self
     end
 
-    def rebind(update_type_name)
-      self.dup.bind(@target, @level, update_type_name)
+    def rebind(type_name_update, query_fieldset=nil)
+      renew = self.dup
+      if query_fieldset
+        diff = self.nullable_diff(query_fieldset)
+        renew.update(diff, true) unless diff.empty? # all nullable fields are optional
+      end
+      renew.bind(@target, @level, type_name_update)
     end
 
     def format(data)
