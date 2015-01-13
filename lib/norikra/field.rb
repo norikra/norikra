@@ -233,7 +233,7 @@ module Norikra
       self.instance_eval do
         def safe_fetch(v, accessor)
           unless accessor.is_a?(String) || accessor.is_a?(Fixnum)
-            raise ArgumentError, "container_accessor must be a String or Interger, but #{accessor.class.to_s}"
+            raise ::ArgumentError, "container_accessor must be a String or Interger, but #{accessor.class.to_s}"
           end
           if v.is_a?(Hash)
             # v[accessor] || v[accessor.to_s]

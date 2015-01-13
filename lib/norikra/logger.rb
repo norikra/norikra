@@ -55,7 +55,7 @@ module Norikra
       end
 
       level = level.upcase
-      raise ArgumentError, "unknown log level: #{level}" unless LOG_LEVELS.include?(level)
+      raise ::ArgumentError, "unknown log level: #{level}" unless LOG_LEVELS.include?(level)
 
       p = java.util.Properties.new
       p.setProperty('log4j.appender.default.layout', 'org.apache.log4j.PatternLayout')

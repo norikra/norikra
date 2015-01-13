@@ -21,7 +21,7 @@ module Norikra
         elsif data.is_a?(String) || data.is_a?(Symbol)
           @fields[key.to_s] = Field.new(key.to_s, data.to_s, default_optional)
         else
-          raise ArgumentError, "FieldSet.new argument class unknown: #{fields.class}"
+          raise ::ArgumentError, "FieldSet.new argument class unknown: #{fields.class}"
         end
       end
       self.update_summary
@@ -163,7 +163,7 @@ module Norikra
                when :query then 'q_'
                when :data then 'e_' # event
                else
-                 raise ArgumentError, "unknown fieldset bind level: #{level}, for target #{target}"
+                 raise ::ArgumentError, "unknown fieldset bind level: #{level}, for target #{target}"
                end
       @rebounds += 1 if type_name_update
       query_unique_key = @query_unique_keys ? @query_unique_keys.join("\t") : ''

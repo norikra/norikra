@@ -135,7 +135,7 @@ module Norikra
             end
           end
         else
-          raise ArgumentError, "unknown level #{level}"
+          raise ::ArgumentError, "unknown level #{level}"
         end
       end
       true
@@ -151,7 +151,7 @@ module Norikra
         when :data
           raise RuntimeError, "BUG: pop of data fieldset is nonsense"
         else
-          raise ArgumentError, "unknown level #{level}"
+          raise ::ArgumentError, "unknown level #{level}"
         end
       end
       true
@@ -163,10 +163,10 @@ module Norikra
         raise Norikra::ArgumentError, "field definition mismatch with already defined fields"
       end
       if level != :data
-        raise ArgumentError, "invalid argument, fieldset replace should be called for :data"
+        raise ::ArgumentError, "invalid argument, fieldset replace should be called for :data"
       end
       if old_fieldset.field_names_key != fieldset.field_names_key
-        raise ArgumentError, "try to replace different field name sets"
+        raise ::ArgumentError, "try to replace different field name sets"
       end
       @mutex.synchronize do
         @datafieldsets.delete(old_fieldset)
