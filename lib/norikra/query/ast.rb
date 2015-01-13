@@ -1021,13 +1021,13 @@ module Norikra
         if props.size > 1 # alias.fieldname or container_fieldname.key.$1 or fieldname.method(...)
           non_calls = props.select{|p| p.children.size == 1 }.map{|p| p.find('eventPropertyIdent').find('keywordAllowedIdent').child.name }
           if known_targets_aliases.include?(leading_name)
-            [ {:f => non_calls[1..-1].join("."), :t => leading_name} ]
+            [ {f: non_calls[1..-1].join("."), t: leading_name} ]
           else
-            [ {:f => non_calls.join("."), :t => default_target} ]
+            [ {f: non_calls.join("."), t: default_target} ]
           end
         else # fieldname (default target)
           # ["eventProperty", ["eventPropertyAtomic", ["eventPropertyIdent", ["keywordAllowedIdent", "a"]]]
-          [ {:f => leading_name, :t => default_target } ]
+          [ {f: leading_name, t: default_target } ]
         end
       end
     end
@@ -1283,7 +1283,7 @@ module Norikra
                                   [ default_target, parts.join(".") ]
                                 end
             children_list = self.listup(:prop).map{|c| c.fields(default_target, known_targets_aliases)}.reduce(&:+) || []
-            [{:f => fieldname, :t => target}] + children_list
+            [{f: fieldname, t: target}] + children_list
           end
         else
           if self.function_name.upcase == 'NULLABLE'

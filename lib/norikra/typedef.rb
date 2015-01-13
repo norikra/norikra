@@ -98,7 +98,7 @@ module Norikra
 
     def push(level, fieldset)
       unless self.consistent?(fieldset)
-        warn "fieldset mismatch", :self => self, :with => fieldset
+        warn "fieldset mismatch", receiver: self, with: fieldset
         raise Norikra::ArgumentError, "field definition mismatch with already defined fields"
       end
 
@@ -159,7 +159,7 @@ module Norikra
 
     def replace(level, old_fieldset, fieldset)
       unless self.consistent?(fieldset)
-        warn "fieldset mismatch", :self => self, :with => fieldset
+        warn "fieldset mismatch", receiver: self, with: fieldset
         raise Norikra::ArgumentError, "field definition mismatch with already defined fields"
       end
       if level != :data

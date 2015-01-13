@@ -97,7 +97,7 @@ module Norikra
       plugins = Gem.find_latest_files('norikra/udf/*.rb')
       plugins.each do |plugin|
         begin
-          debug "plugin file found!", :file => plugin
+          debug "plugin file found!", file: plugin
           rbpath = plugin.dup
           4.times do
             rbpath = File.dirname( rbpath )
@@ -107,7 +107,7 @@ module Norikra
           require gemname
           load plugin
         rescue => e
-          warn "Failed to load norikra UDF plugin", :plugin => plugin.to_s, :error_class => e.class, :error => e.message
+          warn "Failed to load norikra UDF plugin", plugin: plugin.to_s, error_class: e.class, error: e.message
           e.backtrace.each do |t|
             warn "  " + t
           end

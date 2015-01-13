@@ -30,9 +30,9 @@ class Norikra::WebUI::API < Sinatra::Base
 
   def logging(type, handler, args=[], opts={})
     if type == :manage
-      debug "WebAPI", :handler => handler.to_s, :args => args
+      debug "WebAPI", handler: handler.to_s, args: args
     else
-      trace "WebAPI", :handler => handler.to_s, :args => args
+      trace "WebAPI", handler: handler.to_s, args: args
     end
 
     begin
@@ -111,7 +111,7 @@ class Norikra::WebUI::API < Sinatra::Base
   post '/register' do
     query_name, query_group, expression = args = parse_args(['query_name', 'query_group', 'expression'], request)
     logging(:manage, :register, args){
-      r = engine.register(Norikra::Query.new(:name => query_name, :group => query_group, :expression => expression))
+      r = engine.register(Norikra::Query.new(name: query_name, group: query_group, expression: expression))
       json result: (!!r)
     }
   end

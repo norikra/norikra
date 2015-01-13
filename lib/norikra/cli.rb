@@ -11,70 +11,70 @@ module Norikra
     def self.register_common_start_options(klass)
       klass.module_exec {
         ### Server options
-        option :host, :type => :string, :default => nil, :aliases => "-H", :desc => 'host address that server listen [0.0.0.0]'
-        option :port, :type => :numeric, :default => nil, :aliases => "-P", :desc => 'port that server uses [26571]'
-        option :'ui-port', :type => :numeric, :default => nil, :desc => 'port that Web UI server uses [26578]'
+        option :host, type: :string, default: nil, aliases: "-H", desc: 'host address that server listen [0.0.0.0]'
+        option :port, type: :numeric, default: nil, aliases: "-P", desc: 'port that server uses [26571]'
+        option :'ui-port', type: :numeric, default: nil, desc: 'port that Web UI server uses [26578]'
 
-        option :stats, :type => :string, :default => nil, :aliases => "-s", \
-                       :desc => 'status file path to load/dump targets and queries [none]'
-        option :'stats-secondary', :type => :string, :default => nil, \
-                       :desc => 'status file secondary path, to dump stats with date/time, like "stats.%Y%m%d.json" [none]'
-        option :'suppress-dump-stat', :type => :boolean, :default => false, \
-                       :desc => 'specify not to update stat file with updated targets/queries on runtime [false]'
-        option :'dump-stat-interval', :type => :numeric, :default => nil, \
-                       :desc => 'interval(seconds) of status file dumps on runtime [none (on shutdown only)]'
+        option :stats, type: :string, default: nil, aliases: "-s", \
+                       desc: 'status file path to load/dump targets and queries [none]'
+        option :'stats-secondary', type: :string, default: nil, \
+                       desc: 'status file secondary path, to dump stats with date/time, like "stats.%Y%m%d.json" [none]'
+        option :'suppress-dump-stat', type: :boolean, default: false, \
+                       desc: 'specify not to update stat file with updated targets/queries on runtime [false]'
+        option :'dump-stat-interval', type: :numeric, default: nil, \
+                       desc: 'interval(seconds) of status file dumps on runtime [none (on shutdown only)]'
 
         ### Daemonize options
-        option :daemonize, :type => :boolean, :default => false, :aliases => "-d", \
-                           :desc => 'daemonize Norikra server [false (foreground)]'
-        option :pidfile, :type => :string, :default => DEFAULT_PID_PATH, :aliases => "-p", \
-                         :desc => "pidfile path when daemonized [#{DEFAULT_PID_PATH}]"
-        option :outfile, :type => :string, :default => nil, \
-                         :desc => "stdout redirect file when daemonized [${logdir}/norikra.out]"
+        option :daemonize, type: :boolean, default: false, aliases: "-d", \
+                           desc: 'daemonize Norikra server [false (foreground)]'
+        option :pidfile, type: :string, default: DEFAULT_PID_PATH, aliases: "-p", \
+                         desc: "pidfile path when daemonized [#{DEFAULT_PID_PATH}]"
+        option :outfile, type: :string, default: nil, \
+                         desc: "stdout redirect file when daemonized [${logdir}/norikra.out]"
 
         ### JVM options
-        option :'bare-jvm', :type => :boolean, :default => false, :desc => "use JVM without any recommended options"
-        option :'gc-log', :type => :string, :default => nil, :desc => "output gc logs on specified file path"
+        option :'bare-jvm', type: :boolean, default: false, desc: "use JVM without any recommended options"
+        option :'gc-log', type: :string, default: nil, desc: "output gc logs on specified file path"
 
         ### Performance options
         # performance predefined configuration sets
-        option :micro, :type => :boolean, :default => false, \
-               :desc => 'development or testing (inbound:0, outbound:0, route:0, timer:0, rpc:2)'
-        option :small, :type => :boolean, :default => false, \
-               :desc => 'virtual or small scale servers (inbound:1, outbount:1, route:1, timer:1, rpc:2)'
-        option :middle, :type => :boolean, :default => false, \
-               :desc => 'rackmount servers (inbound:4, outbound:2, route:2, timer:2, rpc:4)'
-        option :large, :type => :boolean, :default => false, \
-               :desc => 'high performance servers (inbound: 6, outbound: 6, route:4, timer:4, rpc: 8)'
+        option :micro, type: :boolean, default: false, \
+               desc: 'development or testing (inbound:0, outbound:0, route:0, timer:0, rpc:2)'
+        option :small, type: :boolean, default: false, \
+               desc: 'virtual or small scale servers (inbound:1, outbount:1, route:1, timer:1, rpc:2)'
+        option :middle, type: :boolean, default: false, \
+               desc: 'rackmount servers (inbound:4, outbound:2, route:2, timer:2, rpc:4)'
+        option :large, type: :boolean, default: false, \
+               desc: 'high performance servers (inbound: 6, outbound: 6, route:4, timer:4, rpc: 8)'
         # Esper
-        option :'inbound-threads',  :type => :numeric, :default => nil, :desc => 'number of threads for inbound data'
-        option :'outbound-threads', :type => :numeric, :default => nil, :desc => 'number of threads for outbound data'
-        option :'route-threads',    :type => :numeric, :default => nil, :desc => 'number of threads for events routing for query execution'
-        option :'timer-threads',    :type => :numeric, :default => nil, :desc => 'number of threads for internal timers for query execution'
+        option :'inbound-threads',  type: :numeric, default: nil, desc: 'number of threads for inbound data'
+        option :'outbound-threads', type: :numeric, default: nil, desc: 'number of threads for outbound data'
+        option :'route-threads',    type: :numeric, default: nil, desc: 'number of threads for events routing for query execution'
+        option :'timer-threads',    type: :numeric, default: nil, desc: 'number of threads for internal timers for query execution'
         ### about capacity options of esper's capacity-bound queue processing, see Esper's thread reference.
         # http://esper.codehaus.org/esper-4.10.0/doc/reference/en-US/html/configuration.html#config-engine-threading-advanced
         # default nil: unbound queueing
-        option :'inbound-thread-capacity',  :type => :numeric, :default => nil
-        option :'outbound-thread-capacity', :type => :numeric, :default => nil
-        option :'route-thread-capacity',    :type => :numeric, :default => nil
-        option :'timer-thread-capacity',    :type => :numeric, :default => nil
+        option :'inbound-thread-capacity',  type: :numeric, default: nil
+        option :'outbound-thread-capacity', type: :numeric, default: nil
+        option :'route-thread-capacity',    type: :numeric, default: nil
+        option :'timer-thread-capacity',    type: :numeric, default: nil
         # Jetty
-        option :'rpc-threads', :type => :numeric, :default => nil, :desc => 'number of threads for rpc handlers'
-        option :'web-threads', :type => :numeric, :default => nil, :desc => 'number of threads for WebUI handlers'
+        option :'rpc-threads', type: :numeric, default: nil, desc: 'number of threads for rpc handlers'
+        option :'web-threads', type: :numeric, default: nil, desc: 'number of threads for WebUI handlers'
 
         ### Logging options
-        option :logdir, :type => :string, :default => nil, :aliases => "-l", \
-               :desc => "directory path of logfiles when daemonized [nil (console for foreground)]"
-        option :'log-filesize', :type => :string, :default => nil, :desc => 'log rotation size [10MB]'
-        option :'log-backups' , :type => :numeric, :default => nil, :desc => 'log rotation backups [10]'
-        option :'log-buffer-lines', :type => :numeric, :default => nil, :desc => 'log lines to fetch from API [1000]'
-        option :'log4j-properties-path', :type => :string, :default => nil, :desc => 'path to log4j.properties. ignore other log* options when this option is present'
+        option :logdir, type: :string, default: nil, aliases: "-l", \
+               desc: "directory path of logfiles when daemonized [nil (console for foreground)]"
+        option :'log-filesize', type: :string, default: nil, desc: 'log rotation size [10MB]'
+        option :'log-backups' , type: :numeric, default: nil, desc: 'log rotation backups [10]'
+        option :'log-buffer-lines', type: :numeric, default: nil, desc: 'log lines to fetch from API [1000]'
+        option :'log4j-properties-path', type: :string, default: nil, desc: 'path to log4j.properties. ignore other log* options when this option is present'
 
         ### Loglevel options
-        option :'more-quiet',   :type => :boolean, :default => false,                   :desc => 'set loglevel as ERROR'
-        option :quiet,          :type => :boolean, :default => false, :aliases => "-q", :desc => 'set loglevel as WARN'
-        option :verbose,        :type => :boolean, :default => false, :aliases => "-v", :desc => 'set loglevel as DEBUG'
-        option :'more-verbose', :type => :boolean, :default => false,                   :desc => 'set loglevel as TRACE'
+        option :'more-quiet',   type: :boolean, default: false,                desc: 'set loglevel as ERROR'
+        option :quiet,          type: :boolean, default: false, aliases: "-q", desc: 'set loglevel as WARN'
+        option :verbose,        type: :boolean, default: false, aliases: "-v", desc: 'set loglevel as DEBUG'
+        option :'more-verbose', type: :boolean, default: false,                desc: 'set loglevel as TRACE'
       }
     end
   end
@@ -117,7 +117,7 @@ module Norikra
     ### 'start' and 'serverprocess' have almost same option set (for parse/help)
     ### DIFF: jvm options (-X)
     Norikra::CLIUtil.register_common_start_options(self)
-    option :help, :type => :boolean, :default => false, :aliases => "-h", :desc => "show this message"
+    option :help, type: :boolean, default: false, aliases: "-h", desc: "show this message"
     desc "start [-Xxxx] [other options]", "Start Norikra server process"
     def start(*optargs)
       if options[:help]
@@ -168,7 +168,7 @@ module Norikra
         File.open(outfile, 'w'){|file| file.write 'write test on parent process'}
 
         pidfile = File.open(options[:pidfile], 'w')
-        pid = spawn(jruby_path, *args, :pgroup => 0)
+        pid = spawn(jruby_path, *args, pgroup: 0)
         pidfile.write(pid.to_s)
         pidfile.close
         waiting_child = true
@@ -183,12 +183,12 @@ module Norikra
     end
 
     Norikra::CLIUtil.register_common_start_options(self)
-    desc "serverproc", "execute server process actually (don't execute this subcommand directly)", :hide => true
+    desc "serverproc", "execute server process actually (don't execute this subcommand directly)", hide: true
     def serverproc
       conf = {}
 
       if options[:daemonize]
-        conf[:daemonize] = {:outfile => options[:outfile]}
+        conf[:daemonize] = {outfile: options[:outfile]}
       end
 
       ### stat file
@@ -247,9 +247,9 @@ module Norikra
       server.shutdown
     end
 
-    option :pidfile, :type => :string, :default => DEFAULT_PID_PATH, :aliases => "-p", \
-                     :desc => "pidfile path when daemonized [#{DEFAULT_PID_PATH}]"
-    option :timeout, :type => :numeric, :default => 5, :desc => "timeout seconds to wait process exit [5]"
+    option :pidfile, type: :string, default: DEFAULT_PID_PATH, aliases: "-p", \
+                     desc: "pidfile path when daemonized [#{DEFAULT_PID_PATH}]"
+    option :timeout, type: :numeric, default: 5, desc: "timeout seconds to wait process exit [5]"
     desc "stop [options]", "stop daemonized Norikra server"
     def stop
       unless test(?r,options[:pidfile])

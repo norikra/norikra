@@ -35,7 +35,7 @@ module Norikra::RPC
       info "RPC server #{@host}:#{@port}, #{@threads} threads"
       @thread = Thread.new do
         @mizuno = Mizuno::Server.new
-        @mizuno.run(@app, :embedded => true, :threads => @threads, :port => @port, :host => @host)
+        @mizuno.run(@app, embedded: true, threads: @threads, port: @port, host: @host)
       end
     end
 

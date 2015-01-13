@@ -18,7 +18,7 @@ module Norikra
     end
 
     def to_hash
-      {:name => @name, :auto_field => @auto_field}
+      {name: @name, auto_field: @auto_field}
     end
 
     def ==(other)

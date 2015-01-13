@@ -19,28 +19,28 @@ module Norikra
     attr_accessor :running
 
     MICRO_PREDEFINED = {
-      :engine => { inbound:    { threads: 0, capacity: 0 }, outbound:   { threads: 0, capacity: 0 },
-                   route_exec: { threads: 0, capacity: 0 }, timer_exec: { threads: 0, capacity: 0 }, },
-      :rpc => { threads: 2 }, # for desktop
-      :web => { threads: 2 },
+      engine: { inbound:    { threads: 0, capacity: 0 }, outbound:   { threads: 0, capacity: 0 },
+                route_exec: { threads: 0, capacity: 0 }, timer_exec: { threads: 0, capacity: 0 }, },
+      rpc: { threads: 2 }, # for desktop
+      web: { threads: 2 },
     }
     SMALL_PREDEFINED = {
-      :engine => { inbound:    { threads: 2, capacity: 0 }, outbound:   { threads: 2, capacity: 0 },
-                   route_exec: { threads: 2, capacity: 0 }, timer_exec: { threads: 2, capacity: 0 }, },
-      :rpc => { threads: 9 }, # 4core HT
-      :web => { threads: 9 },
+      engine: { inbound:    { threads: 2, capacity: 0 }, outbound:   { threads: 2, capacity: 0 },
+                route_exec: { threads: 2, capacity: 0 }, timer_exec: { threads: 2, capacity: 0 }, },
+      rpc: { threads: 9 }, # 4core HT
+      web: { threads: 9 },
     }
     MIDDLE_PREDEFINED = {
-      :engine => { inbound:    { threads: 4, capacity: 0 }, outbound:   { threads: 4, capacity: 0 },
-                   route_exec: { threads: 4, capacity: 0 }, timer_exec: { threads: 4, capacity: 0 }, },
-      :rpc => { threads: 17 }, # 4core HT 2CPU
-      :web => { threads: 17 },
+      engine: { inbound:    { threads: 4, capacity: 0 }, outbound:   { threads: 4, capacity: 0 },
+                route_exec: { threads: 4, capacity: 0 }, timer_exec: { threads: 4, capacity: 0 }, },
+      rpc: { threads: 17 }, # 4core HT 2CPU
+      web: { threads: 17 },
     }
     LARGE_PREDEFINED = {
-      :engine => { inbound:    { threads: 8, capacity: 0 }, outbound:   { threads: 8, capacity: 0 },
-                   route_exec: { threads: 8, capacity: 0 }, timer_exec: { threads: 8, capacity: 0 }, },
-      :rpc => { threads: 49 }, # 6core HT 4CPU
-      :web => { threads: 49 },
+      engine: { inbound:    { threads: 8, capacity: 0 }, outbound:   { threads: 8, capacity: 0 },
+                route_exec: { threads: 8, capacity: 0 }, timer_exec: { threads: 8, capacity: 0 }, },
+      rpc: { threads: 49 }, # 6core HT 4CPU
+      web: { threads: 49 },
     }
 
     def self.threading_configuration(conf)
@@ -118,14 +118,14 @@ module Norikra
       @engine = Norikra::Engine.new(@output_pool, @typedef_manager, {thread: @thread_conf[:engine]})
 
       @rpcserver = Norikra::RPC::HTTP.new(
-        :engine => @engine,
-        :host => @host, :port => @port,
-        :threads => @thread_conf[:rpc][:threads]
+        engine: @engine,
+        host: @host, port: @port,
+        threads: @thread_conf[:rpc][:threads]
       )
       @webserver = Norikra::WebUI::HTTP.new(
-        :engine => @engine,
-        :host => @host, :port => @ui_port,
-        :threads => @thread_conf[:web][:threads]
+        engine: @engine,
+        host: @host, port: @ui_port,
+        threads: @thread_conf[:web][:threads]
       )
     end
 
@@ -143,7 +143,7 @@ module Norikra
         end
         if @stats.queries && @stats.queries.size > 0
           @stats.queries.each do |query|
-            @engine.register(Norikra::Query.new(:name => query[:name], :group => query[:group], :expression => query[:expression]))
+            @engine.register(Norikra::Query.new(name: query[:name], group: query[:group], expression: query[:expression]))
           end
         end
       end
@@ -202,12 +202,12 @@ module Norikra
       Norikra::UDF.listup.each do |mojule|
         if mojule.is_a?(Class)
           name = @engine.load(mojule)
-          info "UDF loaded", :name => name
+          info "UDF loaded", name: name
         elsif mojule.is_a?(Module) && mojule.respond_to?(:plugins)
           mojule.init if mojule.respond_to?(:init)
           mojule.plugins.each do |klass|
             name = @engine.load(klass)
-            info "UDF loaded", :name => name
+            info "UDF loaded", name: name
           end
         end
       end
@@ -215,7 +215,7 @@ module Norikra
 
     def dump_stats
       Norikra::Stats.generate(@engine).dump(@stats_path, @stats_secondary_path)
-      info "Current status saved", :path => @stats_path
+      info "Current status saved", path: @stats_path
     end
   end
 end

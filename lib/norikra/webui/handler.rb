@@ -13,7 +13,7 @@ require 'erubis'
 class Norikra::WebUI::Handler < Sinatra::Base
   set :public_folder, File.absolute_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'public'))
   set :views, File.absolute_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'views'))
-  set :erb, :escape_html => true
+  set :erb, escape_html: true
 
   enable :sessions
 
@@ -27,9 +27,9 @@ class Norikra::WebUI::Handler < Sinatra::Base
 
   def logging(type, handler, args=[], opts={})
     if type == :manage
-      debug "WebUI", :handler => handler.to_s, :args => args
+      debug "WebUI", handler: handler.to_s, args: args
     else
-      trace "WebUI", :handler => handler.to_s, :args => args
+      trace "WebUI", handler: handler.to_s, args: args
     end
 
     begin
@@ -78,7 +78,7 @@ class Norikra::WebUI::Handler < Sinatra::Base
         }
       }
 
-      erb :index, :layout => :base, :locals => {
+      erb :index, layout: :base, locals: {
         input_data: input_data,
         stat: engine.statistics,
         queries: queries,
@@ -109,14 +109,14 @@ class Norikra::WebUI::Handler < Sinatra::Base
       redirect '/#query_add'
     }
 
-    logging(:manage, :register, [query_name, query_group, expression], :on_error_hook => error_hook) do
+    logging(:manage, :register, [query_name, query_group, expression], on_error_hook: error_hook) do
       if query_name.nil? || query_name.empty?
         raise Norikra::ClientError, "Query name MUST NOT be blank"
       end
       if query_group.nil? || query_group.empty?
         query_group = nil
       end
-      engine.register(Norikra::Query.new(:name => query_name, :group => query_group, :expression => expression))
+      engine.register(Norikra::Query.new(name: query_name, group: query_group, expression: expression))
       redirect '/#queries'
     end
   end

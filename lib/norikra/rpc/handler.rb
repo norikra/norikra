@@ -13,9 +13,9 @@ class Norikra::RPC::Handler
 
   def logging(type, handler, args=[])
     if type == :manage
-      debug "RPC", :handler => handler.to_s, :args => args
+      debug "RPC", handler: handler.to_s, args: args
     else
-      trace "RPC", :handler => handler.to_s, :args => args
+      trace "RPC", handler: handler.to_s, args: args
     end
 
     begin
@@ -67,7 +67,7 @@ class Norikra::RPC::Handler
 
   def register(query_name, query_group, expression)
     logging(:manage, :register, [query_name, query_group, expression]){
-      r = @engine.register(Norikra::Query.new(:name => query_name, :group => query_group, :expression => expression))
+      r = @engine.register(Norikra::Query.new(name: query_name, group: query_group, expression: expression))
       !!r
     }
   end

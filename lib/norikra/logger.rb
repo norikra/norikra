@@ -245,11 +245,11 @@ module Norikra
     FORMAT_SIMULATED = "%s [%s] %s\n"
     attr_accessor :logs, :output
     def initialize
-      @logs = { :TRACE => [], :DEBUG => [], :INFO => [], :WARN => [], :ERROR => [], :FATAL => [] }
+      @logs = { TRACE: [], DEBUG: [], INFO: [], WARN: [], ERROR: [], FATAL: [] }
       @output = []
     end
     def log(level, message, data, from)
-      @logs[level].push({:message => message, :data => data, :from => from})
+      @logs[level].push({message: message, data: data, from: from})
       formatted = sprintf(FORMAT_SIMULATED, Time.now.strftime(TIME_FORMAT), level.to_s, format(from, message, data))
       @output.push(formatted)
     end

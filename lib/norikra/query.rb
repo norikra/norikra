@@ -60,7 +60,7 @@ module Norikra
     end
 
     def dup
-      self.class.new(:name => @name, :group => @group, :expression => @expression.dup)
+      self.class.new(name: @name, group: @group, expression: @expression.dup)
     end
 
     def to_hash
@@ -300,7 +300,7 @@ module Norikra
       # model.getWhereClause.getChildren[1].getChildren[0].getPropertyName #=> 'field.key1.$1'
       # model.getWhereClause.getChildren[2].getChildren[0].getChain[0].getName #=> 'opts.num.$0' from opts.num.$0.length()
 
-      query = Norikra::Query.new(:name => 'dummy name by .rewrite_event_field_name', :expression => statement_model.toEPL)
+      query = Norikra::Query.new(name: 'dummy name by .rewrite_event_field_name', expression: statement_model.toEPL)
       targets = query.targets
       fqfs_prefixes = targets + query.aliases
 

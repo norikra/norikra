@@ -116,7 +116,7 @@ module Norikra
       @mutex.synchronize do
         @typedefs[target].fields.each do |fieldname, field|
           if field_name_list.include?(fieldname) || !(field.optional?)
-            required_fields[fieldname] = {:type => field.type, :optional => field.optional, :nullable => nullable_list.include?(fieldname)}
+            required_fields[fieldname] = {type: field.type, optional: field.optional, nullable: nullable_list.include?(fieldname)}
           end
         end
       end

@@ -8,9 +8,9 @@ module Norikra
       Norikra::Stats.new(
         targets: engine.targets.map{|t|
           {
-            :name => t.name,
-            :fields => engine.typedef_manager.dump_target(t.name),
-            :auto_field => t.auto_field
+            name: t.name,
+            fields: engine.typedef_manager.dump_target(t.name),
+            auto_field: t.auto_field
           }
         },
         queries: engine.queries.map(&:dump)
