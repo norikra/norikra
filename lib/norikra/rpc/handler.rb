@@ -13,9 +13,9 @@ class Norikra::RPC::Handler
 
   def logging(type, handler, args=[])
     if type == :manage
-      debug "RPC", handler: handler.to_s, args: args
+      debug("RPC"){ { handler: handler.to_s, args: args } }
     else
-      trace "RPC", handler: handler.to_s, args: args
+      trace("RPC"){ { handler: handler.to_s, args: args } }
     end
 
     begin

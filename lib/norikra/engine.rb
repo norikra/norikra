@@ -138,7 +138,7 @@ module Norikra
     def open(target_name, fields=nil, auto_field=true)
       # fields nil || [] => lazy
       # fields {'fieldname' => 'type'} : type 'string', 'boolean', 'int', 'long', 'float', 'double'
-      info "opening target", target: target_name, fields: fields, :auto_field => auto_field
+      info "opening target", target: target_name, fields: fields, auto_field: auto_field
       raise Norikra::ArgumentError, "invalid target name" unless Norikra::Target.valid?(target_name)
       target = Norikra::Target.new(target_name, fields, auto_field)
       return false if @targets.include?(target)
@@ -294,7 +294,7 @@ module Norikra
         end
 
         trace "calling sendEvent with bound fieldset (w/ valid event_type_name)", target: target_name, event: event
-        trace "This is assert for valid event_type_name", event_type_name: fieldset.event_type_name
+        trace("This is assert for valid event_type_name"){ { event_type_name: fieldset.event_type_name } }
         formed = fieldset.format(event)
         trace "sendEvent", data: formed
         @runtime.sendEvent(formed.to_java, fieldset.event_type_name)
@@ -386,7 +386,7 @@ module Norikra
 
         unless @typedef_manager.ready?(query)
           @waiting_queries.push(query)
-          trace "waiting query fields", targets: query.targets, fields: query.targets.map{|t| query.fields(t)}
+          trace("waiting query fields"){ { targets: query.targets, fields: query.targets.map{|t| query.fields(t)} } }
           @typedef_manager.register_waiting_fields(query)
           @queries.push(query)
           return
@@ -564,15 +564,15 @@ module Norikra
       #   .addEventType("AccountUpdate", accountUpdateDef, new String[] {"BaseUpdate"});
       case level
       when :base
-        debug "add event type", target: target_name, level: 'base', event_type: fieldset.event_type_name
+        debug("add event type"){ { target: target_name, level: 'base', event_type: fieldset.event_type_name } }
         @config.addEventType(fieldset.event_type_name, fieldset.definition)
       when :query
         base_name = @typedef_manager.base_fieldset(target_name).event_type_name
-        debug "add event type", target: target_name, level: 'query', event_type: fieldset.event_type_name, base: base_name
+        debug("add event type"){ { target: target_name, level: 'query', event_type: fieldset.event_type_name, base: base_name } }
         @config.addEventType(fieldset.event_type_name, fieldset.definition, [base_name].to_java(:string))
       else # :data
         subset_names = @typedef_manager.subsets(target_name, fieldset).map(&:event_type_name)
-        debug "add event type", target: target_name, level: 'data', event_type: fieldset.event_type_name, inherit: subset_names
+        debug("add event type"){ { target: target_name, level: 'data', event_type: fieldset.event_type_name, inherit: subset_names } }
         @config.addEventType(fieldset.event_type_name, fieldset.definition, subset_names.to_java(:string))
 
         @registered_fieldsets[target_name][level][fieldset.summary] = fieldset

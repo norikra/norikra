@@ -25,7 +25,7 @@ module Norikra
         value = value.getUnderlying
       end
 
-      trace "converting", value: value
+      trace("converting"){ { value: value } }
 
       if value.nil?
         value
@@ -43,7 +43,7 @@ module Norikra
     def update(new_events, old_events)
       t = Time.now.to_i
       events = new_events.map{|e| [t, type_convert(e)]}
-      trace "updated event", query: @query_name, group: @query_group, event: events
+      trace("updated event"){ { query: @query_name, group: @query_group, event: events } }
       @output_pool.push(@query_name, @query_group, events)
       @events_statistics[:output] += events.size
     end
@@ -60,7 +60,7 @@ module Norikra
 
     def update(new_events, old_events)
       event_list = new_events.map{|e| type_convert(e) }
-      trace "loopback event", query: @query_name, group: @query_group, event: event_list
+      trace("loopback event"){ { query: @query_name, group: @query_group, event: event_list } }
       @events_statistics[:output] += event_list.size
       #
       # We does NOT convert 'container.$0' into container['field'].
@@ -83,7 +83,7 @@ module Norikra
 
     def update(new_events, old_events)
       event_list = new_events.map{|e| type_convert(e) }
-      trace "stdout event", query: @query_name, event: event_list
+      trace("stdout event"){ { query: @query_name, event: event_list } }
       @events_statistics[:output] += event_list.size
 
       event_list.each do |e|

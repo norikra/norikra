@@ -27,9 +27,9 @@ class Norikra::WebUI::Handler < Sinatra::Base
 
   def logging(type, handler, args=[], opts={})
     if type == :manage
-      debug "WebUI", handler: handler.to_s, args: args
+      debug("WebUI"){ { handler: handler.to_s, args: args } }
     else
-      trace "WebUI", handler: handler.to_s, args: args
+      trace("WebUI"){ { handler: handler.to_s, args: args } }
     end
 
     begin

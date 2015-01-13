@@ -122,32 +122,44 @@ module Norikra
 
     def self.logger; @@logger ; end
 
-    def trace(message, data=nil)
+    def trace(message, data=nil, &block)
+      return unless @@logger.enabled?(LEVEL_TRACE)
+      data ||= block
       from = @@devmode ? caller_locations(1,1) : nil
       @@logger.trace(message, data, from)
     end
 
-    def debug(message, data=nil)
+    def debug(message, data=nil, &block)
+      return unless @@logger.enabled?(LEVEL_DEBUG)
+      data ||= block
       from = @@devmode ? caller_locations(1,1) : nil
       @@logger.debug(message, data, from)
     end
 
-    def info(message, data=nil)
+    def info(message, data=nil, &block)
+      return unless @@logger.enabled?(LEVEL_INFO)
+      data ||= block
       from = @@devmode ? caller_locations(1,1) : nil
       @@logger.info(message, data, from)
     end
 
-    def warn(message, data=nil)
+    def warn(message, data=nil, &block)
+      return unless @@logger.enabled?(LEVEL_WARN)
+      data ||= block
       from = @@devmode ? caller_locations(1,1) : nil
       @@logger.warn(message, data, from)
     end
 
-    def error(message, data=nil)
+    def error(message, data=nil, &block)
+      return unless @@logger.enabled?(LEVEL_ERROR)
+      data ||= block
       from = @@devmode ? caller_locations(1,1) : nil
       @@logger.error(message, data, from)
     end
 
-    def fatal(message, data=nil)
+    def fatal(message, data=nil, &block)
+      # always enabled
+      data ||= block
       from = @@devmode ? caller_locations(1,1) : nil
       @@logger.fatal(message, data, from)
     end
@@ -170,6 +182,17 @@ module Norikra
         @buffer.shift
       end
       @buffer << [Time.now.strftime(TIME_FORMAT), level, line]
+    end
+
+    def enabled?(level)
+      case level
+      when LEVEL_TRACE then @log4j.isTraceEnabled
+      when LEVEL_DEBUG then @log4j.isDebugEnabled
+      when LEVEL_INFO  then @log4j.isInfoEnabled
+      when LEVEL_WARN  then @log4j.isWarnEnabled
+      when LEVEL_ERROR then @log4j.isErrorEnabled
+      else true
+      end
     end
 
     def trace(message, data=nil, from=nil)
@@ -253,6 +276,7 @@ module Norikra
       formatted = sprintf(FORMAT_SIMULATED, Time.now.strftime(TIME_FORMAT), level.to_s, format(from, message, data))
       @output.push(formatted)
     end
+    def enabled?(level); true; end
     def trace(m,d,f); self.log(:TRACE,m,d,f); end
     def debug(m,d,f); self.log(:DEBUG,m,d,f); end
     def info(m,d,f) ; self.log(:INFO, m,d,f); end
