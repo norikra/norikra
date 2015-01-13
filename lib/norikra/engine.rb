@@ -492,7 +492,9 @@ module Norikra
           trace "query fieldset has nullable diff", :diff => diff_nullable_fields
           fieldset.update(diff_nullable_fields, true) # nullable fields are always optional
           trace "rebinding data fieldset w/ nullable fields", :fieldset => fieldset
-          @typedef_manager.rebind_fieldset(fieldset, false) # type_name is not required to be updated because it is not registered yet
+          rebound = fieldset.rebind(false) # type_name is not required to be updated because it is not registered yet
+          @typedef_manager.replace_fieldset(target_name, fieldset, rebound)
+          fieldset = rebound
         end
         debug "registering data fieldset", :target => target_name, :fieldset => fieldset
         register_fieldset_actually(target_name, fieldset, :data)
