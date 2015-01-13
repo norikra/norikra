@@ -248,7 +248,7 @@ module Norikra
 
       #, status:404, message:'content not found'
       if data.is_a?(Proc)
-        ', ' + format_data(data.call)
+        format_data(data.call)
       elsif data.is_a?(Hash)
         ', ' + data.map{|k,v| "#{k}:#{v.inspect}"}.join(', ')
       else
