@@ -95,6 +95,11 @@ module Norikra
       @typedefs[target].push(level, fieldset)
     end
 
+    def rebind_fieldset(fieldset, type_name_update)
+      fieldset.rebind(type_name_update)
+      @typedefs[fieldset.target].push(fieldset.level, fieldset)
+    end
+
     def unbind_fieldset(target, level, fieldset)
       @typedefs[target].pop(level, fieldset)
     end
