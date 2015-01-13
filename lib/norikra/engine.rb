@@ -473,21 +473,28 @@ module Norikra
 
     def register_fieldset(target_name, fieldset)
       @mutex.synchronize do
+        trace "binding data fieldset", :fieldset => fieldset # to prepare pickup waiting queries by newly comming fields
         @typedef_manager.bind_fieldset(target_name, :data, fieldset)
 
         if @waiting_queries.size > 0
           register_waiting_queries
         end
+
         diff_nullable_fields = []
+
         @typedef_manager.subsets(target_name, fieldset).each do |query_fieldset|
+          next unless query_fieldset.level == :query
           # fill nullable fields of all required query fieldsets
           diff_nullable_fields += fieldset.nullable_diff(query_fieldset)
-          unless diff_nullable_fields.empty?
-            fieldset.update(diff_nullable_fields, true) # nullable fields are always optional
-            fieldset = fieldset.rebind(false) # type_name is not required to be updated because it is not registered yet
-          end
         end
-        debug "registering data fieldset", :target => target_name, :fields => fieldset.fields
+
+        unless diff_nullable_fields.empty?
+          trace "query fieldset has nullable diff", :diff => diff_nullable_fields
+          fieldset.update(diff_nullable_fields, true) # nullable fields are always optional
+          trace "rebinding data fieldset w/ nullable fields", :fieldset => fieldset
+          @typedef_manager.rebind_fieldset(fieldset, false) # type_name is not required to be updated because it is not registered yet
+        end
+        debug "registering data fieldset", :target => target_name, :fieldset => fieldset
         register_fieldset_actually(target_name, fieldset, :data)
       end
     end
