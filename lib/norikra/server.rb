@@ -201,15 +201,21 @@ module Norikra
       info "Loading UDF plugins"
       Norikra::UDF.listup.each do |mojule|
         if mojule.is_a?(Class)
-          name = @engine.load(mojule)
+          name = @engine.load(:udf, mojule)
           info "UDF loaded", name: name
         elsif mojule.is_a?(Module) && mojule.respond_to?(:plugins)
           mojule.init if mojule.respond_to?(:init)
           mojule.plugins.each do |klass|
-            name = @engine.load(klass)
+            name = @engine.load(:udf, klass)
             info "UDF loaded", name: name
           end
         end
+      end
+
+      info "Loading Listener plugins"
+      Norikra::Listener.listup.each do |klass|
+        @engine.load(:listener, klass)
+        info "Listener loaded", name: klass
       end
     end
 

@@ -4,6 +4,19 @@ require_relative './spec_helper'
 require 'json'
 require 'norikra/listener'
 
+class DummyEngine
+  attr_reader :events
+
+  def initialize
+    @events = {}
+  end
+
+  def send(target, events)
+    @events[target] ||= []
+    @events[target].push(*events)
+  end
+end
+
 class DummyOutputPool
   attr_reader :pool
 
@@ -18,17 +31,15 @@ class DummyOutputPool
   end
 end
 
-describe Norikra::Listener do
+describe Norikra::Listener::Base do
   it 'should be initialized' do
-    dummy_pool = DummyOutputPool.new
     statistics = {output: 0}
-    expect { Norikra::Listener.new('name', 'group', dummy_pool, statistics) }.not_to raise_error
+    expect { Norikra::Listener::Base.new('name', 'group', statistics) }.not_to raise_error
   end
 
   describe '#type_convert' do
-    dummy_pool = DummyOutputPool.new
     statistics = {output: 0}
-    listener = Norikra::Listener.new('name', 'group', dummy_pool, statistics)
+    listener = Norikra::Listener::Base.new('name', 'group', statistics)
 
     it 'returns value itself for number, boolean and nil' do
       val = 10001
@@ -103,11 +114,22 @@ describe Norikra::Listener do
       expect(rval["percentiles"]).to eql({"10" => 0.1, "50" => 0.5, "99" => 0.99})
     end
   end
+end
+
+describe Norikra::Listener::MemoryPool do
+  describe '.check' do
+    it 'always returns true' do
+      expect(Norikra::Listener::MemoryPool.check(nil)).to be_truthy
+      expect(Norikra::Listener::MemoryPool.check('')).to be_truthy
+      expect(Norikra::Listener::MemoryPool.check('FOO')).to be_truthy
+      expect(Norikra::Listener::MemoryPool.check('FOO()')).to be_truthy
+    end
+  end
 
   describe '#update' do
-    dummy_pool = DummyOutputPool.new
     statistics = {output: 0}
-    listener = Norikra::Listener.new('name', 'group', dummy_pool, statistics)
+    listener = Norikra::Listener::MemoryPool.new('name', 'group', statistics)
+    listener.output_pool = dummy_pool = DummyOutputPool.new
 
     it 'pushs events into pool, with current time' do
       listener.update([{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}], [])
@@ -124,30 +146,35 @@ describe Norikra::Listener do
   end
 end
 
-class DummyEngine
-  attr_reader :events
+describe Norikra::Listener::Loopback do
+  describe '.check' do
+    it 'returns nil for nil group' do
+      expect(Norikra::Listener::Loopback.check(nil)).to be_nil
+    end
 
-  def initialize
-    @events = {}
+    it 'returns nil for string group name without prefix' do
+      expect(Norikra::Listener::Loopback.check('a')).to be_nil
+      expect(Norikra::Listener::Loopback.check('group1')).to be_nil
+      expect(Norikra::Listener::Loopback.check('LOOPBACK')).to be_nil
+    end
+
+    it 'returns specified string as loopback target by parentheses' do
+      expect(Norikra::Listener::Loopback.check('LOOPBACK()')).to be_nil
+      expect(Norikra::Listener::Loopback.check('LOOPBACK(a)')).to eql('a')
+      expect(Norikra::Listener::Loopback.check('LOOPBACK(loopback_target)')).to eql('loopback_target')
+      expect(Norikra::Listener::Loopback.check('LOOPBACK(target name)')).to eql('target name') # should be invalid on 'open'
+    end
   end
 
-  def send(target, events)
-    @events[target] ||= []
-    @events[target].push(*events)
-  end
-end
-
-describe Norikra::LoopbackListener do
   it 'should be initialized' do
-    dummy_engine = DummyEngine.new
     statistics = {output: 0}
-    expect { Norikra::LoopbackListener.new(dummy_engine, 'name', 'LOOPBACK(target1)', statistics) }.not_to raise_error
+    expect { Norikra::Listener::Loopback.new('name', 'LOOPBACK(target1)', statistics) }.not_to raise_error
   end
 
   describe '#update' do
-    dummy_engine = DummyEngine.new
     statistics = {output: 0}
-    listener = Norikra::LoopbackListener.new(dummy_engine, 'name', 'LOOPBACK(target1)', statistics)
+    listener = Norikra::Listener::Loopback.new('name', 'LOOPBACK(target1)', statistics)
+    listener.engine = dummy_engine = DummyEngine.new
 
     it 'sends events into engine with target name' do
       listener.update([{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}], [])
@@ -163,17 +190,25 @@ describe Norikra::LoopbackListener do
   end
 end
 
-describe Norikra::StdoutListener do
+describe Norikra::Listener::Stdout do
+  describe '.check' do
+    it 'returns true if group name is "STDOUT()"' do
+      expect(Norikra::Listener::Stdout.check(nil)).to be_falsy
+      expect(Norikra::Listener::Stdout.check("")).to be_falsy
+      expect(Norikra::Listener::Stdout.check("foo")).to be_falsy
+      expect(Norikra::Listener::Stdout.check("STDOUT")).to be_falsy
+      expect(Norikra::Listener::Stdout.check("STDOUT()")).to be_truthy
+    end
+  end
+
   it 'should be initialized' do
-    dummy_engine = DummyEngine.new
     statistics = {output: 0}
-    expect { Norikra::StdoutListener.new(dummy_engine, 'name', 'STDOUT()', statistics) }.not_to raise_error
+    expect { Norikra::Listener::Stdout.new('name', 'STDOUT()', statistics) }.not_to raise_error
   end
 
   describe '#update' do
-    dummy_engine = DummyEngine.new
     statistics = {output: 0}
-    listener = Norikra::StdoutListener.new(dummy_engine, 'name', 'STDOUT()', statistics)
+    listener = Norikra::Listener::Stdout.new('name', 'STDOUT()', statistics)
     dummyio = StringIO.new
     listener.instance_eval{ @stdout = dummyio }
 

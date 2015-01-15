@@ -51,14 +51,6 @@ module Norikra
       end
     end
 
-    def self.loopback(group)
-      group && group =~ /^LOOPBACK\((.+)\)$/ && $1
-    end
-
-    def self.stdout?(group)
-      group && group == "STDOUT()"
-    end
-
     def dup
       self.class.new(name: @name, group: @group, expression: @expression.dup)
     end

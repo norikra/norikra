@@ -44,6 +44,8 @@ module Norikra
       @suspended_queries = []
 
       @waiting_queries = []
+
+      @listeners = []
     end
 
     def statistics
@@ -304,8 +306,13 @@ module Norikra
       nil
     end
 
-    def load(plugin_klass)
-      load_udf(plugin_klass)
+    def load(type, plugin_klass)
+      case type
+      when :udf then load_udf(plugin_klass)
+      when :listener then load_listener(plugin_klass)
+      else
+        raise "BUG: unknown plugin type: #{type}"
+      end
     end
 
     private
@@ -365,7 +372,7 @@ module Norikra
 
     def register_query(query)
 
-      if lo_target_name = Norikra::Query.loopback(query.group)
+      if lo_target_name = Norikra::Listener::Loopback.check(query.group)
         raise "Invalid loopback target name should be checked before. THIS IS BUG." unless Norikra::Target.valid?(lo_target_name)
 
         target = Norikra::Target.new(lo_target_name)
@@ -380,7 +387,7 @@ module Norikra
         if reason = query.invalid?
           raise Norikra::ClientError, "invalid query '#{query.name}': #{reason}"
         end
-        if lo_target_name = Norikra::Query.loopback(query.group)
+        if lo_target_name = Norikra::Listener::Loopback.check(query.group)
           raise Norikra::ClientError, "loopback target '#{lo_target_name}'" unless Norikra::Target.valid?(lo_target_name)
         end
 
@@ -512,6 +519,10 @@ module Norikra
       end
     end
 
+    def load_listener(listener_klass)
+      @listeners.push(listener_klass)
+    end
+
     # this method should be protected with @mutex lock
     def register_query_actually(query, mapping)
       # 'mapping' argument is {target => fieldset}
@@ -525,13 +536,18 @@ module Norikra
       statement_model = administrator.compileEPL(query.expression)
       Norikra::Query.rewrite_query(statement_model, event_type_name_map)
 
-      listener = if Norikra::Query.loopback(query.group)
-                   Norikra::LoopbackListener.new(self, query.name, query.group, @statistics[:events])
-                 elsif Norikra::Query.stdout?(query.group)
-                   Norikra::StdoutListener.new(self, query.name, query.group, @statistics[:events])
-                 else
-                   Norikra::Listener.new(query.name, query.group, @output_pool, @statistics[:events])
-                 end
+      listener = nil
+      @listeners.each do |klass|
+        trace("checking listeners"){ {target: klass, result: klass.check(query.group)} }
+        if klass.check(query.group)
+          listener = klass.new(query.name, query.group, @statistics[:events])
+          break
+        end
+      end
+      raise "BUG: no listener is selected" unless listener
+      listener.engine = self if listener.respond_to?(:engine=)
+      listener.output_pool = @output_pool if listener.respond_to?(:output_pool=)
+      listener.start
 
       epl = administrator.create(statement_model)
       epl.java_send :addListener, [com.espertech.esper.client.UpdateListener.java_class], listener
