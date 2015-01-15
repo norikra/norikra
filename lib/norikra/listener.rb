@@ -7,6 +7,9 @@ require 'esper/lib/cglib-nodep-3.1.jar'
 require 'norikra/field'
 require 'norikra/query'
 
+require 'norikra/logger'
+include Norikra::Log
+
 require 'json'
 
 module Norikra
@@ -80,21 +83,29 @@ module Norikra
 
       def start
         if self.respond_to?(:process_async)
-          @thread = Thread.new do
-            while @running
-              events_empty = true
-              @mutex.synchronize do
-                events = @events
-                @events = []
-              end
-              unless events.empty?
-                events_empty = false
-                process_async(events)
-              end
-              sleep @async_interval if events_empty
-            end
-          end
+          trace "starting thread to process events in background", query: @query_name
+          @thread = Thread.new(&method(:background))
         end
+      end
+
+      def background
+        trace "backgroupd thread starts", query: @query_name
+        while @running
+          events_empty = true
+          events = nil
+          @mutex.synchronize do
+            events = @events
+            @events = []
+          end
+          unless events.empty?
+            events_empty = false
+            trace("calling #process_async"){ {listener: self.class, query: @query_name, events: events.size} }
+            process_async(events)
+          end
+          sleep @async_interval if events_empty
+        end
+      rescue => e
+        error "exception in listener background thread, stopped", listener: self.class, query: @query_name, error: e
       end
 
       def push(events)
