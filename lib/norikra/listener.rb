@@ -118,6 +118,7 @@ module Norikra
       # end
 
       def shutdown
+        trace "stopping listener", query: @query_name
         @running = false
         @thread.join if @thread
         @thread = nil
@@ -144,7 +145,11 @@ module Norikra
       end
 
       def update(new_events, old_events)
-        raise NotImplementedError
+        t = Time.now.to_i
+        events = new_events.map{|e| [t, type_convert(e)]}
+        trace("updated event"){ { query: @query_name, group: @query_group, event: events } }
+        push(new_events)
+        @events_statistics[:output] += events.size
       end
     end
 
