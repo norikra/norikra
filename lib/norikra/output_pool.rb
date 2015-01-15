@@ -21,7 +21,7 @@ module Norikra
           group.delete(query_name)
         end
         @groups.delete(query_name)
-      @pool.delete(query_name)
+        @pool.delete(query_name)
       end
       nil
     end
