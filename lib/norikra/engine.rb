@@ -567,11 +567,11 @@ module Norikra
       epl = administrator.getStatement(query.statement_name)
       return unless epl
 
-      @output_pool.remove(query.name, query.group)
       epl.stop unless epl.isStopped
       epl.destroy unless epl.isDestroyed
       listener = @running_listeners.delete(query.name)
       listener.shutdown
+      @output_pool.remove(query.name, query.group)
     end
 
     # this method should be protected with @mutex lock
