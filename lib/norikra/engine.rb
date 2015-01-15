@@ -46,6 +46,7 @@ module Norikra
       @waiting_queries = []
 
       @listeners = []
+      @running_listeners = {} # query_name => listener
     end
 
     def statistics
@@ -548,6 +549,7 @@ module Norikra
       listener.engine = self if listener.respond_to?(:engine=)
       listener.output_pool = @output_pool if listener.respond_to?(:output_pool=)
       listener.start
+      @running_listeners[query.name] = listener
 
       epl = administrator.create(statement_model)
       epl.java_send :addListener, [com.espertech.esper.client.UpdateListener.java_class], listener
@@ -568,6 +570,8 @@ module Norikra
       @output_pool.remove(query.name, query.group)
       epl.stop unless epl.isStopped
       epl.destroy unless epl.isDestroyed
+      listener = @running_listeners.delete(query.name)
+      listener.shutdown
     end
 
     # this method should be protected with @mutex lock
