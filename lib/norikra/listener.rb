@@ -148,7 +148,7 @@ module Norikra
         t = Time.now.to_i
         events = new_events.map{|e| [t, type_convert(e)]}
         trace("updated event"){ { query: @query_name, group: @query_group, event: events } }
-        push(new_events)
+        push(events)
         @events_statistics[:output] += events.size
       end
     end
