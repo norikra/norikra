@@ -65,7 +65,7 @@ module Norikra
         @async_interval = DEFAULT_ASYNC_INTERVAL
 
         @thread = nil
-        @events = [] # [query_name, ]
+        @events = []
         @mutex = Mutex.new
         @running = true
       end
