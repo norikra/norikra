@@ -1,6 +1,9 @@
 require 'norikra/error'
 require 'rubygems'
 
+require 'norikra/logger'
+include Norikra::Log
+
 module Norikra
   module UDF
     #### esper-4.9.0/esper/doc/reference/html/extension.html#custom-singlerow-function
@@ -104,6 +107,7 @@ module Norikra
           end
           files = Dir.entries( rbpath )
           gemname = files.select{|f| f=~ /\.gemspec$/ }.first.sub(/\.gemspec$/, '')
+          trace "Loading UDF gem", gemname: gemname, path: plugin
           require gemname
           load plugin
         rescue => e
