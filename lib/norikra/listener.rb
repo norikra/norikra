@@ -4,6 +4,8 @@ require 'esper/lib/commons-logging-1.1.3.jar'
 require 'esper/lib/antlr-runtime-4.1.jar'
 require 'esper/lib/cglib-nodep-3.1.jar'
 
+require 'rubygems'
+
 require 'norikra/field'
 require 'norikra/query'
 
@@ -27,6 +29,7 @@ module Norikra
           end
           files = Dir.entries( rbpath )
           gemname = files.select{|f| f=~ /\.gemspec$/ }.first.sub(/\.gemspec$/, '')
+          trace "Loading listener gem", gemname: gemname, path: plugin
           require gemname
           load plugin
         rescue => e
