@@ -64,6 +64,9 @@ See: http://norikra.github.io/
 
 ## Changes
 
+* v1.2
+  * `NULLABLE()` fields
+  * Pluggable listeners
 * v1.1
   * Suspend/Resume queries
 * v1.0

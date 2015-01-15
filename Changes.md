@@ -3,6 +3,10 @@
 Changes of norikra.
 
 ## v1
+* v1.2.0
+  * Add `NULLABLE(...)` field to query NULL explicitly
+  * Pluggable listener and user defined listener gems
+  * Fix bug to ignore fields in Esper built-in function
 * v1.1.2
   * Enable `-javaagent` option
   * Fix default/pre-set threads
