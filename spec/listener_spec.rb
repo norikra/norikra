@@ -114,6 +114,9 @@ describe Norikra::Listener::Base do
       expect(rval["percentiles"]).to eql({"10" => 0.1, "50" => 0.5, "99" => 0.99})
     end
   end
+
+  ### TODO: add specs of #start, #process_async, #push and default #update
+  ### TODO: add norikra/listener_spec_helper.rb
 end
 
 describe Norikra::Listener::MemoryPool do
