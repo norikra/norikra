@@ -113,7 +113,7 @@ module Norikra
 
       def push(events)
         @mutex.synchronize do
-          @events << events
+          @events += events
         end
       end
 
