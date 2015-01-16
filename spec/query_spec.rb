@@ -158,6 +158,27 @@ describe Norikra::Query do
 
           expect(q.invalid?).to be_falsy
         end
+
+        it 'returns query instances correctly parsed, with built-in NULLABLE() in CASE' do
+          expression = 'SELECT CASE WHEN eventType = 1 AND NULLABLE(detail.type) = 1 THEN 1 ELSE 0 END AS type, COUNT(*) AS c FROM TestTable.win:time_batch(10 sec) GROUP BY CASE WHEN eventType = 1 AND NULLABLE(detail.type) = 1 THEN 1 ELSE 0 END'
+          q = Norikra::Query.new(
+            :name => 'TestTable query1', :expression => expression
+          )
+          expect(q.name).to eql('TestTable query1')
+          expect(q.group).to be_nil
+          expect(q.expression).to eql(expression)
+          expect(q.targets).to eql(['TestTable'])
+
+          expect(q.fields).to eql(['detail.type', 'eventType'])
+          expect(q.fields('TestTable')).to eql(['detail.type', 'eventType'])
+          expect(q.fields(nil)).to eql([])
+
+          expect(q.nullable_fields).to eql(['detail.type'])
+          expect(q.nullable_fields('TestTable')).to eql(['detail.type'])
+          expect(q.nullable_fields(nil)).to eql([])
+
+          expect(q.invalid?).to be_falsy
+        end
       end
 
       context 'with order by' do
@@ -499,6 +520,17 @@ describe Norikra::Query do
       context 'with NULLABLE() in count(distinct)' do
         expression = 'select a, count(distinct nullable(b)) from TestTable.win:time_batch(10 seconds) where c>0 group by a'
         expected   = 'select a, count(distinct b) from TestTable.win:time_batch(10 seconds) where c>0 group by a'
+        it 'returns query without NULLABLE()' do
+          with_engine do
+            model = administrator.compileEPL(expression)
+            expect(Norikra::Query.rewrite_nullable_fields(model).toEPL).to eql(expected)
+          end
+        end
+      end
+
+      context 'with NULLABLE() in CASE' do
+        expression = 'select case when eventType=1 and nullable(detail.type)=1 then 1 else 0 end as type, count(*) AS c from TestTable.win:time_batch(10 seconds) group by case when eventType=1 and nullable(detail.type)=1 then 1 else 0 end'
+        expected =   'select case when eventType=1 and detail.type=1 then 1 else 0 end as type, count(*) as c from TestTable.win:time_batch(10 seconds) group by case when eventType=1 and detail.type=1 then 1 else 0 end'
         it 'returns query without NULLABLE()' do
           with_engine do
             model = administrator.compileEPL(expression)
