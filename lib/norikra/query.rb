@@ -261,16 +261,39 @@ module Norikra
     def self.rewrite_nullable_fields(statement_model)
       # NULLABLE(field) -> field
       ## NOTICE: NULLABLE(...) cannot be used in view parameters. ex: target.std:unique(NULLABLE(a)) -> x
+      check_nullable = lambda {|exp|
+        # top-level lib function
+        # exp.getChain[0] #=> Java::ComEspertechEsperClientSoda::DotExpressionItem
+        exp &&
+        exp.is_a?(Java::ComEspertechEsperClientSoda::DotExpression) &&
+        exp.getChain.size == 1 &&
+        exp.getChain[0].name.upcase == 'NULLABLE'
+      }
+      fetch_field = lambda {|exp| exp.getChain[0].getParameters[0] }
+
       rewriter = lambda {|node|
-        if node.respond_to?(:getExpression)
-          exp = node.getExpression
-          if exp && exp.is_a?(Java::ComEspertechEsperClientSoda::DotExpression) && exp.getChain.size == 1
-            # top-level lib function
-            # exp.getChain[0] #=> Java::ComEspertechEsperClientSoda::DotExpressionItem
-            if exp.getChain[0].name.upcase == 'NULLABLE'
-              node.setExpression(exp.getChain[0].getParameters[0])
-            end
-          end
+        # without loop of parameters because this code shows which parameter cause errors in user's environment
+        if node.respond_to?(:getExpression) && check_nullable.(node.getExpression)
+          node.setExpression(fetch_field.(node.getExpression))
+        end
+
+        if node.respond_to?(:getFilter) && check_nullable.(node.getFilter)
+          node.setFilter(fetch_field.(node.getFilter))
+        end
+
+        if node.respond_to?(:getChildren) && node.getChildren.any?{|exp| check_nullable.(exp) }
+          node.setChildren(node.getChildren.map{|e| check_nullable.(e) ? fetch_field.(e) : e })
+        end
+
+        if node.respond_to?(:getParameters) && node.getParameters.any?{|exp| check_nullable.(exp) }
+          node.setParameters(node.getParameters.map{|e| check_nullable.(e) ? fetch_field.(e) : e })
+        end
+        if node.respond_to?(:getChain) && node.getChain.any?{|exp| check_nullable.(exp) }
+          node.setChain(node.getChain.map{|e| check_nullable.(e) ? fetch_field.(e) : e })
+        end
+
+        if node.respond_to?(:getExpressions) && node.getExpressions.any?{|exp| check_nullable.(exp) }
+          node.setExpressions(node.getExpressions.map{|e| check_nullable.(e) ? fetch_field.(e) : e })
         end
       }
       recaller = lambda {|node|
