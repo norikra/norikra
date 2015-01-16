@@ -491,7 +491,7 @@ describe Norikra::Query do
         it 'returns query without NULLABLE()' do
           with_engine do
             model = administrator.compileEPL(expression)
-            expect(Norikra::Query.rewrite_event_field_name(model, {'TestTable' => 'T1'}).toEPL).to eql(expression)
+            expect(Norikra::Query.rewrite_nullable_fields(model).toEPL).to eql(expected)
           end
         end
       end
@@ -502,18 +502,18 @@ describe Norikra::Query do
         it 'returns query without NULLABLE()' do
           with_engine do
             model = administrator.compileEPL(expression)
-            expect(Norikra::Query.rewrite_event_field_name(model, {'TestTable' => 'T1'}).toEPL).to eql(expression)
+            expect(Norikra::Query.rewrite_nullable_fields(model).toEPL).to eql(expected)
           end
         end
       end
 
       context 'with some NULLABLE()' do
         expression = 'select a, NULLABLE(b), NULLABLE(c), count(*) as cnt from TestTable.win:time_batch(10 seconds) where c>0 group by a, b, c'
-        expected   = 'select a, b, c, count(*) AS cnt from TestTable.win:time_batch(10 seconds) where c>0 group by a, b, c'
+        expected   = 'select a, b, c, count(*) as cnt from TestTable.win:time_batch(10 seconds) where c>0 group by a, b, c'
         it 'returns query without NULLABLE()' do
           with_engine do
             model = administrator.compileEPL(expression)
-            expect(Norikra::Query.rewrite_event_field_name(model, {'TestTable' => 'T1'}).toEPL).to eql(expression)
+            expect(Norikra::Query.rewrite_nullable_fields(model).toEPL).to eql(expected)
           end
         end
       end
