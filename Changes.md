@@ -3,6 +3,8 @@
 Changes of norikra.
 
 ## v1
+* v1.2.1
+  * Fix bug to fail to rewrite nullable fields
 * v1.2.0
   * Add `NULLABLE(...)` field to query NULL explicitly
   * Pluggable listener and user defined listener gems
