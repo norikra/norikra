@@ -45,7 +45,7 @@ module Norikra
 
       @waiting_queries = []
 
-      @listeners = []
+      @listeners = {} # Listener.label => Listener
       @running_listeners = {} # query_name => listener
     end
 
@@ -373,7 +373,7 @@ module Norikra
 
     def register_query(query)
 
-      if lo_target_name = Norikra::Listener::Loopback.check(query.group)
+      if lo_target_name = Norikra::Listener::Loopback.target(query.group)
         raise "Invalid loopback target name should be checked before. THIS IS BUG." unless Norikra::Target.valid?(lo_target_name)
 
         target = Norikra::Target.new(lo_target_name)
@@ -388,7 +388,7 @@ module Norikra
         if reason = query.invalid?
           raise Norikra::ClientError, "invalid query '#{query.name}': #{reason}"
         end
-        if lo_target_name = Norikra::Listener::Loopback.check(query.group)
+        if lo_target_name = Norikra::Listener::Loopback.target(query.group)
           raise Norikra::ClientError, "loopback target '#{lo_target_name}'" unless Norikra::Target.valid?(lo_target_name)
         end
 
@@ -520,8 +520,29 @@ module Norikra
       end
     end
 
-    def load_listener(listener_klass)
-      @listeners.push(listener_klass)
+    def load_listener(klass)
+      @listeners[klass.label] = klass
+      klass
+    end
+
+    def create_listener(query)
+      opts = Norikra::Listener.parse(query.group)
+      klass = if opts && @listeners.has_key?(opts[:name])
+                @listeners[opts[:name]]
+              else
+                Norikra::Listener::MemoryPool
+              end
+      argument = opts ? opts[:argument] : nil
+      trace("selecting listeners"){ { group: query.group, listener: klass, argument: argument } }
+
+      inst = klass.new(argument, query.name, query.group)
+      inst.events_statistics = @statistics[:events]
+
+      inst.engine = self if inst.respond_to?(:engine=)
+      inst.output_pool = @output_pool if inst.respond_to?(:output_pool=)
+
+      inst.start
+      inst
     end
 
     # this method should be protected with @mutex lock
@@ -537,19 +558,7 @@ module Norikra
       statement_model = administrator.compileEPL(query.expression)
       Norikra::Query.rewrite_query(statement_model, event_type_name_map)
 
-      listener = nil
-      @listeners.each do |klass|
-        trace("checking listeners"){ {target: klass, result: klass.check(query.group)} }
-        if klass.check(query.group)
-          listener = klass.new(query.name, query.group, @statistics[:events])
-          break
-        end
-      end
-      raise "BUG: no listener is selected" unless listener
-      listener.engine = self if listener.respond_to?(:engine=)
-      listener.output_pool = @output_pool if listener.respond_to?(:output_pool=)
-      listener.start
-      @running_listeners[query.name] = listener
+      @running_listeners[query.name] = listener = create_listener(query)
 
       epl = administrator.create(statement_model)
       epl.java_send :addListener, [com.espertech.esper.client.UpdateListener.java_class], listener

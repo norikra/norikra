@@ -16,6 +16,14 @@ require 'json'
 
 module Norikra
   module Listener
+    def self.parse(group_name)
+      if group_name && group_name =~ /^([_A-Z]+)\((.*)\)$/
+        {name: $1, argument: $2}
+      else
+        nil
+      end
+    end
+
     def self.listup
       return unless defined? Gem
 
@@ -41,7 +49,7 @@ module Norikra
       end
 
       known_consts = [:Base, :MemoryPool, :Loopback, :Stdout]
-      listeners = [Norikra::Listener::Stdout, Norikra::Listener::Loopback]
+      listeners = []
       self.constants.each do |c|
         next if known_consts.include?(c)
 
@@ -50,7 +58,9 @@ module Norikra
           listeners.push(klass)
         end
       end
-      listeners.push(Norikra::Listener::MemoryPool)
+      [Norikra::Listener::Stdout, Norikra::Listener::Loopback].each do |listener|
+        listeners.push(listener)
+      end
       listeners
     end
 
@@ -59,16 +69,28 @@ module Norikra
 
       DEFAULT_ASYNC_INTERVAL = 0.1
 
-      def self.check(group_name)
+      attr_writer :events_statistics
+      # attr_writer :engine
+      # attr_writer :output_pool
+
+      def self.label
         raise NotImplementedError
       end
 
-      def initialize(query_name, query_group, events_statistics)
+      def initialize(argument, query_name, query_group)
+        @argument = argument
         @query_name = query_name
         @query_group = query_group
-        @events_statistics = events_statistics
 
         @async_interval = DEFAULT_ASYNC_INTERVAL
+
+        @mode = if self.respond_to?(:process_sync)
+                  :sync
+                elsif self.respond_to?(:process_async)
+                  :async
+                else
+                  raise "BUG: Invalid custom listener '#{self.class.to_s}'"
+                end
 
         @thread = nil
         @events = []
@@ -76,16 +98,8 @@ module Norikra
         @running = true
       end
 
-      # def engine=(engine)
-      #   @engine = engine
-      # end
-
-      # def output_pool=(output_pool)
-      #   @output_pool = output_pool
-      # end
-
       def start
-        if self.respond_to?(:process_async)
+        if @mode == :async
           trace "starting thread to process events in background", query: @query_name
           @thread = Thread.new(&method(:background))
         end
@@ -117,9 +131,6 @@ module Norikra
         end
       end
 
-      # def process_async
-      # end
-
       def shutdown
         trace "stopping listener", query: @query_name
         @running = false
@@ -149,74 +160,88 @@ module Norikra
 
       def update(new_events, old_events)
         t = Time.now.to_i
-        events = new_events.map{|e| [t, type_convert(e)]}
-        trace("updated event"){ { query: @query_name, group: @query_group, event: events } }
-        push(events)
-        @events_statistics[:output] += events.size
+        if @mode == :sync
+          news = new_events.map{|e| type_convert(e) }
+          olds = if old_events.respond_to?(:map)
+                   old_events.map{|e| type_convert(e) }
+                 else
+                   type_convert(old_events)
+                 end
+          trace("produced events"){ { listener: self.class, query: @query_name, group: @query_group, news: news, olds: olds } }
+          process_sync(news, olds)
+          @events_statistics[:output] += news.size
+        else # async
+          events = new_events.map{|e| [t, type_convert(e)]}
+          trace("pushed events"){ { listener: self.class, query: @query_name, group: @query_group, event: events } }
+          push(events)
+          @events_statistics[:output] += events.size
+        end
       end
     end
 
     class MemoryPool < Base
-      def self.check(group_name)
-        true
+      attr_writer :output_pool
+
+      def self.label
+        nil # Memory pool listener is built-in and implicit listener
       end
 
-      def output_pool=(output_pool)
-        @output_pool = output_pool
-      end
-
-      def update(new_events, old_events)
+      def process_sync(news, olds)
         t = Time.now.to_i
-        events = new_events.map{|e| [t, type_convert(e)]}
-        trace("updated event"){ { query: @query_name, group: @query_group, event: events } }
+        events = news.map{|e| [t, e]}
         @output_pool.push(@query_name, @query_group, events)
-        @events_statistics[:output] += events.size
       end
     end
 
     class Loopback < Base
-      def self.check(group_name)
-        group_name && group_name =~ /^LOOPBACK\((.+)\)$/ && $1
+      attr_writer :engine
+
+      def self.label
+        "LOOPBACK"
       end
 
-      def initialize(query_name, query_group, events_statistics)
+      def self.target(query_group)
+        if query_group
+          opts = Norikra::Listener.parse(query_group)
+          if opts && opts[:name] == label()
+            opts[:argument]
+          else
+            nil
+          end
+        else
+          nil
+        end
+      end
+
+      def initialize(argument, query_name, query_group)
         super
-        @loopback_target = Loopback.check(query_group)
-        raise "BUG: query group is not 'LOOPBACK(...)'" unless @loopback_target
+        if @argument.nil? || @argument.empty?
+          raise Norikra::ClientError, "LOOPBACK target name not specified"
+        end
       end
 
-      def engine=(engine)
-        @engine = engine
-      end
-
-      def update(new_events, old_events)
-        event_list = new_events.map{|e| type_convert(e) }
-        trace("loopback event"){ { query: @query_name, group: @query_group, event: event_list } }
-        @events_statistics[:output] += event_list.size
-        #
+      def process_sync(news, olds)
         # We does NOT convert 'container.$0' into container['field'].
         # Use escaped names like 'container__0'. That is NOT so confused.
-        @engine.send(@loopback_target, event_list)
+        trace("loopback event"){ { query: @query_name, group: @query_group, event: news } }
+        @engine.send(@argument, news)
       end
     end
 
     class Stdout < Base
-      def self.check(group_name)
-        group_name && group_name == "STDOUT()"
+      attr_accessor :stdout
+
+      def self.label
+        "STDOUT"
       end
 
-      def initialize(query_name, query_group, events_statistics)
+      def initialize(argument, query_name, query_group)
         super
-        raise "BUG: query group is not 'STDOUT()'" unless Stdout.check(query_group)
         @stdout = STDOUT
       end
 
-      def update(new_events, old_events)
-        event_list = new_events.map{|e| type_convert(e) }
-        trace("stdout event"){ { query: @query_name, event: event_list } }
-        @events_statistics[:output] += event_list.size
-
-        event_list.each do |e|
+      def process_sync(news, olds)
+        news.each do |e|
           @stdout.puts @query_name + "\t" + JSON.dump(e)
         end
       end

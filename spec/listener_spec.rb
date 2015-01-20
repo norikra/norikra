@@ -31,15 +31,23 @@ class DummyOutputPool
   end
 end
 
-describe Norikra::Listener::Base do
-  it 'should be initialized' do
-    statistics = {output: 0}
-    expect { Norikra::Listener::Base.new('name', 'group', statistics) }.not_to raise_error
+class DummySyncListener < Norikra::Listener::Base
+  def process_sync(news, olds)
+    # drop
   end
+end
 
+class DummyAsyncListener < Norikra::Listener::Base
+  def process_async(news, olds)
+    # drop
+  end
+end
+
+describe Norikra::Listener::Base do
   describe '#type_convert' do
     statistics = {output: 0}
-    listener = Norikra::Listener::Base.new('name', 'group', statistics)
+    listener = DummySyncListener.new('', 'name', 'group')
+    listener.events_statistics = statistics
 
     it 'returns value itself for number, boolean and nil' do
       val = 10001
@@ -115,103 +123,77 @@ describe Norikra::Listener::Base do
     end
   end
 
-  ### TODO: add specs of #start, #process_async, #push and default #update
-  ### TODO: add norikra/listener_spec_helper.rb
+  ### TODO: add specs of .parse, #start, #shutdown, #push and #update
 end
 
 describe Norikra::Listener::MemoryPool do
-  describe '.check' do
-    it 'always returns true' do
-      expect(Norikra::Listener::MemoryPool.check(nil)).to be_truthy
-      expect(Norikra::Listener::MemoryPool.check('')).to be_truthy
-      expect(Norikra::Listener::MemoryPool.check('FOO')).to be_truthy
-      expect(Norikra::Listener::MemoryPool.check('FOO()')).to be_truthy
+  describe '.label' do
+    it 'returns nil' do
+      expect(Norikra::Listener::MemoryPool.label).to be_nil
     end
   end
 
-  describe '#update' do
-    statistics = {output: 0}
-    listener = Norikra::Listener::MemoryPool.new('name', 'group', statistics)
+  describe '#process_sync' do
+    listener = Norikra::Listener::MemoryPool.new(nil, 'name', 'group')
     listener.output_pool = dummy_pool = DummyOutputPool.new
 
     it 'pushs events into pool, with current time' do
-      listener.update([{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}], [])
-      expect(statistics[:output]).to eql(2)
+      listener.process_sync([{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}], [])
       expect(dummy_pool.pool['group']['name'].size).to eql(2)
       expect(dummy_pool.pool['group']['name'][0][0]).to be_a(Fixnum)
       expect(dummy_pool.pool['group']['name'][0][1]).to eql({"n1" => 100, "s" => "string one"})
       expect(dummy_pool.pool['group']['name'][1][1]).to eql({"n1" => 101, "s" => "string two"})
 
-      listener.update([{"n1" => 102, "s" => "string three"}], [])
-      expect(statistics[:output]).to eql(3)
+      listener.process_sync([{"n1" => 102, "s" => "string three"}], [])
       expect(dummy_pool.pool['group']['name'].size).to eql(3)
     end
   end
 end
 
 describe Norikra::Listener::Loopback do
-  describe '.check' do
-    it 'returns nil for nil group' do
-      expect(Norikra::Listener::Loopback.check(nil)).to be_nil
-    end
-
-    it 'returns nil for string group name without prefix' do
-      expect(Norikra::Listener::Loopback.check('a')).to be_nil
-      expect(Norikra::Listener::Loopback.check('group1')).to be_nil
-      expect(Norikra::Listener::Loopback.check('LOOPBACK')).to be_nil
-    end
-
-    it 'returns specified string as loopback target by parentheses' do
-      expect(Norikra::Listener::Loopback.check('LOOPBACK()')).to be_nil
-      expect(Norikra::Listener::Loopback.check('LOOPBACK(a)')).to eql('a')
-      expect(Norikra::Listener::Loopback.check('LOOPBACK(loopback_target)')).to eql('loopback_target')
-      expect(Norikra::Listener::Loopback.check('LOOPBACK(target name)')).to eql('target name') # should be invalid on 'open'
+  describe '.label' do
+    it 'returns "LOOPBACK"' do
+      expect(Norikra::Listener::Loopback.label).to eql("LOOPBACK")
     end
   end
 
   it 'should be initialized' do
     statistics = {output: 0}
-    expect { Norikra::Listener::Loopback.new('name', 'LOOPBACK(target1)', statistics) }.not_to raise_error
+    inst = Norikra::Listener::Loopback.new('target1', 'name', 'LOOPBACK(target1)')
+    inst.events_statistics = statistics
   end
 
-  describe '#update' do
-    statistics = {output: 0}
-    listener = Norikra::Listener::Loopback.new('name', 'LOOPBACK(target1)', statistics)
+  describe '#process_sync' do
+    listener = Norikra::Listener::Loopback.new('target1', 'name', 'LOOPBACK(target1)')
     listener.engine = dummy_engine = DummyEngine.new
 
     it 'sends events into engine with target name' do
-      listener.update([{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}], [])
-      expect(statistics[:output]).to eql(2)
+      listener.process_sync([{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}], [])
       expect(dummy_engine.events['target1'].size).to eql(2)
       expect(dummy_engine.events['target1'][0]).to eql({"n1" => 100, "s" => "string one"})
       expect(dummy_engine.events['target1'][1]).to eql({"n1" => 101, "s" => "string two"})
 
-      listener.update([{"n1" => 102, "s" => "string three"}], [])
-      expect(statistics[:output]).to eql(3)
+      listener.process_sync([{"n1" => 102, "s" => "string three"}], [])
       expect(dummy_engine.events['target1'].size).to eql(3)
     end
   end
 end
 
 describe Norikra::Listener::Stdout do
-  describe '.check' do
-    it 'returns true if group name is "STDOUT()"' do
-      expect(Norikra::Listener::Stdout.check(nil)).to be_falsy
-      expect(Norikra::Listener::Stdout.check("")).to be_falsy
-      expect(Norikra::Listener::Stdout.check("foo")).to be_falsy
-      expect(Norikra::Listener::Stdout.check("STDOUT")).to be_falsy
-      expect(Norikra::Listener::Stdout.check("STDOUT()")).to be_truthy
+  describe '.label' do
+    it 'returns "STDOUT"' do
+      expect(Norikra::Listener::Stdout.label).to eql("STDOUT")
     end
   end
 
   it 'should be initialized' do
     statistics = {output: 0}
-    expect { Norikra::Listener::Stdout.new('name', 'STDOUT()', statistics) }.not_to raise_error
+    inst = Norikra::Listener::Stdout.new('', 'name', 'STDOUT()')
+    inst.events_statistics = statistics
   end
 
-  describe '#update' do
-    statistics = {output: 0}
-    listener = Norikra::Listener::Stdout.new('name', 'STDOUT()', statistics)
+  describe '#process_sync' do
+    listener = Norikra::Listener::Stdout.new('', 'name', 'STDOUT()')
     dummyio = StringIO.new
     listener.instance_eval{ @stdout = dummyio }
 
@@ -219,12 +201,10 @@ describe Norikra::Listener::Stdout do
       dummyio.truncate(0)
 
       events1 = [{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}]
-      listener.update(events1, [])
-      expect(statistics[:output]).to eql(2)
+      listener.process_sync(events1, [])
 
       events2 = [{"n1" => 102, "s" => "string three"}]
-      listener.update(events2, [])
-      expect(statistics[:output]).to eql(3)
+      listener.process_sync(events2, [])
 
       results = []
       dummyio.string.split("\n").each do |line|
