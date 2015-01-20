@@ -1,35 +1,8 @@
 # -*- coding: utf-8 -*-
 require_relative './spec_helper'
-
 require 'json'
 require 'norikra/listener'
-
-class DummyEngine
-  attr_reader :events
-
-  def initialize
-    @events = {}
-  end
-
-  def send(target, events)
-    @events[target] ||= []
-    @events[target].push(*events)
-  end
-end
-
-class DummyOutputPool
-  attr_reader :pool
-
-  def initialize
-    @pool = {}
-  end
-
-  def push(query_name, query_group, events)
-    @pool[query_group] ||= {}
-    @pool[query_group][query_name] ||= []
-    @pool[query_group][query_name].push(*events)
-  end
-end
+require 'norikra/listener_spec_helper'
 
 class DummySyncListener < Norikra::Listener::Base
   def process_sync(news, olds)
@@ -135,7 +108,7 @@ describe Norikra::Listener::MemoryPool do
 
   describe '#process_sync' do
     listener = Norikra::Listener::MemoryPool.new(nil, 'name', 'group')
-    listener.output_pool = dummy_pool = DummyOutputPool.new
+    listener.output_pool = dummy_pool = Norikra::ListenerSpecHelper::DummyOutputPool.new
 
     it 'pushs events into pool, with current time' do
       listener.process_sync([{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}], [])
@@ -165,7 +138,7 @@ describe Norikra::Listener::Loopback do
 
   describe '#process_sync' do
     listener = Norikra::Listener::Loopback.new('target1', 'name', 'LOOPBACK(target1)')
-    listener.engine = dummy_engine = DummyEngine.new
+    listener.engine = dummy_engine = Norikra::ListenerSpecHelper::DummyEngine.new
 
     it 'sends events into engine with target name' do
       listener.process_sync([{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}], [])
