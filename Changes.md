@@ -3,6 +3,8 @@
 Changes of norikra.
 
 ## v1
+* v1.2.2
+  * Change API for custom listner plugins (incompatible with 1.2.0, 1.2.1)
 * v1.2.1
   * Fix bug to fail to rewrite nullable fields
 * v1.2.0
