@@ -50,7 +50,7 @@ module Norikra
       # http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/RollingFileAppender.html
 
       if level.upcase == 'TEST' # with opts[:logger] as DummyLogger instance
-        level = LOG_LEVEL_DEFAULT
+        level = opts[:level] || LOG_LEVEL_DEFAULT
         @@test_flag = true
       end
 
