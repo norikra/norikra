@@ -556,7 +556,9 @@ module Norikra
       administrator = @service.getEPAdministrator
 
       statement_model = administrator.compileEPL(query.expression)
+      trace("rewite query"){ "before EPL=#{statement_model.toEPL} event_type_name_map=#{event_type_name_map.inspect}" }
       Norikra::Query.rewrite_query(statement_model, event_type_name_map)
+      trace("rewite query"){ "after  EPL=#{statement_model.toEPL}" }
 
       @running_listeners[query.name] = listener = create_listener(query)
 

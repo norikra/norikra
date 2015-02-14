@@ -9,6 +9,7 @@ require 'norikra/logger'
 
 $dummylogger = Norikra::DummyLogger.new
 Norikra::Log.init('test', nil, {:logger => $dummylogger})
+#Norikra::Log.init('test', nil, {:logger => $dummylogger, :level=>"TRACE"})
 
 require 'norikra/engine'
 

@@ -302,7 +302,7 @@ module Norikra
       traverse_fields(rewriter, recaller, statement_model)
     end
 
-    def self.rewrite_event_field_name(statement_model, mapping)
+    def self.rewrite_event_field_name(statement_model, mapping, fqfs_prefixes=nil)
       # mapping: {target_name => query_event_type_name}
       #  mapping is for target name rewriting of fully qualified field name access
 
@@ -317,7 +317,7 @@ module Norikra
 
       query = Norikra::Query.new(name: 'dummy name by .rewrite_event_field_name', expression: statement_model.toEPL)
       targets = query.targets
-      fqfs_prefixes = targets + query.aliases
+      fqfs_prefixes ||= (targets + query.aliases)
 
       default_target = (targets.size == 1 ? targets.first : nil)
 
@@ -370,7 +370,7 @@ module Norikra
         end
       }
       recaller = lambda {|node|
-        Norikra::Query.rewrite_event_field_name(node.getModel, mapping)
+        Norikra::Query.rewrite_event_field_name(node.getModel, mapping, fqfs_prefixes)
       }
 
       traverse_fields(rewriter, recaller, statement_model)
