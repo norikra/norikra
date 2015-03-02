@@ -45,7 +45,7 @@ module Norikra
     end
 
     def self.load(path)
-      File.open(path, 'r', :external_encoding=>'utf-8') do |file|
+      File.open(path, 'r', external_encoding: 'utf-8') do |file|
         self.new(JSON.parse(file.read, symbolize_names: true))
       end
     end
