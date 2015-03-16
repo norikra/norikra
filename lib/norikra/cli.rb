@@ -24,6 +24,10 @@ module Norikra
         option :'dump-stat-interval', type: :numeric, default: nil, \
                        desc: 'interval(seconds) of status file dumps on runtime [none (on shutdown only)]'
 
+        option :shutoff, type: :boolean, default: false, desc: '[EXPERIMENTAL] enable "shutoff" mode, to reject input data under high memory usage'
+        option :'shutoff-threshold', type: :numeric, default: 90, desc: 'threshold percent of heap memory usage to turn "shutoff mode" on'
+        option :'shutoff-check-interval', type: :numeric, default: 10, desc: 'interval seconds to turn "shutoff mode" on/off'
+
         ### Daemonize options
         option :daemonize, type: :boolean, default: false, aliases: "-d", \
                            desc: 'daemonize Norikra server [false (foreground)]'
@@ -195,6 +199,13 @@ module Norikra
       conf[:stats] = {
         path: options[:stats], secondary_path: options[:'stats-secondary'],
         suppress: options[:'suppress-dump-stat'], interval: options[:'dump-stat-interval'],
+      }
+
+      ### shut off mode
+      conf[:shutoff] = {
+        enabled: options[:shutoff],
+        threshold: options[:'shutoff-threshold'],
+        interval: options[:'shutoff-check-interval'],
       }
 
       ### threads

@@ -18,6 +18,9 @@ module Norikra
   class Server
     attr_accessor :running
 
+    DEFAULT_SHUT_OFF_THRESHOLD = 90
+    DEFAULT_SHUT_OFF_CHECK_INTERVAL = 10
+
     MICRO_PREDEFINED = {
       engine: { inbound:    { threads: 0, capacity: 0 }, outbound:   { threads: 0, capacity: 0 },
                 route_exec: { threads: 0, capacity: 0 }, timer_exec: { threads: 0, capacity: 0 }, },
@@ -79,6 +82,10 @@ module Norikra
         STDERR.reopen(outfile)
         puts "working on #{$PID}"
       end
+
+      @shutoff = conf[:shutoff][:enabled] || false
+      @shutoff_threshold = conf[:shutoff][:threshold] || DEFAULT_SHUT_OFF_THRESHOLD
+      @shutoff_check_interval = conf[:shutoff][:interval] || DEFAULT_SHUT_OFF_CHECK_INTERVAL
 
       @stats_path = conf[:stats][:path]
       @stats_secondary_path = conf[:stats][:secondary_path]
@@ -170,6 +177,9 @@ module Norikra
 
       #TODO: SIGHUP?(dynamic plugin loading?)
 
+      memory_stat_next = Time.now
+      shut_off_mode = false
+
       while @running
         sleep 0.3
 
@@ -179,6 +189,20 @@ module Norikra
             @dump_stats = false
             @dump_next_time = Time.now + @stats_dump_interval if @dump_next_time
           end
+        end
+
+        if @shutoff && memory_stat_next < Time.now
+          used = @engine.memory_statistics[:heap][:used_percent]
+          if !shut_off_mode && used >= @shutoff_threshold
+            warn "Entering SHUT OFF mode, heap used #{used}%."
+            @rpcserver.shut_off(true)
+            @webserver.shut_off(true)
+          elsif shut_off_mode && used < @shutoff_threshold
+            warn "Recovering from SHUT OFF mode, heap used #{used}%."
+            @rpcserver.shut_off(false)
+            @webserver.shut_off(false)
+          end
+          memory_stat_next = Time.now + @shutoff_check_interval
         end
       end
     end

@@ -46,5 +46,10 @@ module Norikra::WebUI
       @thread.kill
       @thread.join
     end
+
+    def shut_off(mode)
+      Norikra::WebUI::Handler.shut_off = mode
+      Norikra::WebUI::API.shut_off = mode
+    end
   end
 end

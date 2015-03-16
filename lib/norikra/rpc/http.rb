@@ -24,7 +24,7 @@ module Norikra::RPC
       @host = opts[:host] || DEFAULT_LISTEN_HOST
       @port = opts[:port] || DEFAULT_LISTEN_PORT
       @threads = opts[:threads] || DEFAULT_THREADS
-      handler = Norikra::RPC::Handler.new(@engine)
+      @handler = handler = Norikra::RPC::Handler.new(@engine)
       @app = Rack::Builder.new {
         use Norikra::RPC::Gatekeeper
         run MessagePack::RPCOverHTTP::Server.app(handler)
@@ -43,6 +43,10 @@ module Norikra::RPC
       @mizuno.stop
       @thread.kill
       @thread.join
+    end
+
+    def shut_off(mode)
+      @handler.shut_off(mode)
     end
   end
 end
