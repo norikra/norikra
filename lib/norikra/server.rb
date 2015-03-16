@@ -181,8 +181,6 @@ module Norikra
       shut_off_mode = false
 
       while @running
-        sleep 0.3
-
         if @stats_path && !@stats_suppress_dump
           if @dump_stats || (@dump_next_time && Time.now > @dump_next_time)
             dump_stats
@@ -204,6 +202,8 @@ module Norikra
           end
           memory_stat_next = Time.now + @shutoff_check_interval
         end
+
+        sleep 0.3
       end
     end
 
