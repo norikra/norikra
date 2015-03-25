@@ -55,6 +55,7 @@ module Norikra
         started: s[:started].rfc2822,
         uptime: self.uptime,
         memory: self.memory_statistics,
+        garbage_collector: self.gc_statistics,
         input_events: s[:events][:input],
         processed_events: s[:events][:processed],
         output_events: s[:events][:output],
@@ -94,6 +95,21 @@ module Norikra
       non_heap = { max: total, committed: committed, committed_percent: committed_percent, used: used, used_percent: used_percent }
 
       { heap: heap, nonheap: non_heap }
+    end
+
+    def gc_statistics
+      gcBeans = Java::JavaLangManagement::ManagementFactory.getGarbageCollectorMXBeans()
+
+      gc = {}
+      gcBeans.each do |bean|
+        name = bean.getName()
+        gc[name] = {
+          total_count: bean.getCollectionCount(),
+          total_time: bean.getCollectionTime(),
+        }
+      end
+
+      gc
     end
 
     def camelize(sym)
