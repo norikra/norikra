@@ -10,7 +10,7 @@ require 'norikra/suspended_query'
 require 'norikra/logger'
 include Norikra::Log
 
-require 'esper-5.0.0.jar'
+require 'esper-5.2.0.jar'
 require 'esper/lib/commons-logging-1.1.3.jar'
 require 'esper/lib/antlr-runtime-4.1.jar'
 require 'esper/lib/cglib-nodep-3.1.jar'
