@@ -239,7 +239,8 @@ module Norikra
         services.getPatternNodeFactory,
         services.getContextManagementService,
         result.getScripts,
-        services.getExprDeclaredService
+        services.getExprDeclaredService,
+        services.getTableService
       )
 
       Java::ComEspertechEsperEplParse::ParseHelper.walk(ast, walker, target, forerrmsg)
