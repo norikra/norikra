@@ -1,6 +1,67 @@
 Esper Changelog
 ===================
 
+Changes in version 5.2.0
+------------------------
+  - Support for aggregation functions to specify the level of grouping in the parameter list, removing the need for separate subqueries for many use cases
+  - Support for aggregation rollup in conjunction with tables
+  - Support for a new pattern observer "timer:schedule" that supports the ISO8601 standard for scheduling
+  - Support for match-recognize to have patterns that specify repetition (exact, N-or-more, between-N-and-M, between-0-and-M)
+  - Support for match-recognize to have patterns that specify permutation, i.e. for A and B to become "A B" or "B A"
+  - Support for the "new" expression to instantiate a given class
+  - Support for substitution parameter to be given names so that they are available by name and not just by numeric position
+  - Support for filter expressions that use "or" and "typeof" to optimize filter tree use for reverse index sharing
+  - Support for "create schema" to specify "null" as a property type
+  - Many smaller enhancements, optimizations, documentation updates
+
+Bug fixes and other improvements
+  - Fixed issue ESPER-802 EsperIO CSV and CurrentTimeEvent issue
+  - Fixed issue ESPER-803 outer join with historical stream and on-clause in addition to where-clause causes incorrect result
+  - Fixed issue ESPER-804 Allow Subscriber methods other than "update"
+  - Fixed issue ESPER-805 toEPL() generates badly formatted EPL for contained event selections
+  - Fixed issue ESPER-806 The type checking rejects the child types for non-bean types and insert
+  - Fixed issue ESPER-807 Outer join with context partitions thread safety issue
+  - Fixed issue ESPER-808 Accessing Data via Method Invocation on injected Objects
+  - Fixed issue ESPER-809 ExprBetweenCompBigDecimal.isLowIncluded/isHighIncluded shouldn't use equals
+  - Fixed issue ESPER-810 Context partitioned by key throws NPE with partition key property in pattern filter expression
+  - Fixed issue QQY-321-19355 non-overlapping context started by filter for same event as statements can miss an event under threading
+  - Fixed issue AHK-632-44071 ArrayIndexOutOfBoundsEx on non-fully-aggregated query with stream select
+
+Changes in version 5.1.0
+------------------------
+  - Support for tables. Tables introduce a number of new capabilities, allowing for more expressive EPL.
+    - Tables allow multiple statements to aggregate into the same state (we call this co-aggregation) 
+    - Tables allow statements to co-locate aggregation state, update-in-place data and event data conveniently
+    - Tables can be accessed using a convenient key-based expression, as well as in joins, subqueries etc. comparably to named windows
+  - Support for the Count–min sketch (or CM sketch) probabilistic sub-linear space streaming algorithm and approximate streaming Top-K
+  - Support for the new "countever" aggregation function that returns a count of events ever regardless of data windows
+  - Additional API to query context partition instance count
+  - Audit logging for context partitions
+  - The match-recognize "define" clause is now optional
+  - Support for loosely-scoped expressions using expression alias
+  - CSV adapter now uses time-spans to advance time
+  - Socket adapter CSV format now supports a property-ordered string without field names
+  - Many smaller enhancements and bug fixes, with the most important ones listed here
+
+Bug fixes and other improvements
+  - Fixed issue ESPER-782 "interval" keyword in match-recognize does not allow uppercase
+  - Fixed issue ESPER-783 ArithmeticException big decimal divide
+  - Fixed issue ESPER-784 EsperIO Socket Adapter causes configuration loss when calling "initialize"
+  - Fixed issue ESPER-788 Exception on uppercase MIN/MAX
+  - Fixed issue ESPER-791 "Route" API call with outbound threading enabled does not work
+  - Fixed issue ESPER-792 Dataflow is not initializing in correct order with ~16+ operators
+  - Fixed issue ESPER-793 QualityOfService example main uses wrong provider URI
+  - Fixed issue ESPER-794 OSGi Manifest does not contain com.espertech.esper.epl.agg.aggregator package
+  - Fixed issue ESPER-795 Multidrectional join between two unique-window named windows join throws errors and returns spurious results.
+  - Fixed issue ESPER-796 EventType Configuration Exception compiling Pojo with Collections
+  - Fixed issue ESPER-799 Escaping comma character error while using socket adapter
+  - Fixed issue ESPER-800 Custom aggregation function with multiple parameters receives WildcardParameter instead of event
+  - Fixed issue ESPER-801 Json renderer escape in a wrong way    
+  - Fixed issue ADQ-943-19260 context-partitioned named window with create index causes NPE  
+  - Fixed issue HXB-611-44301 get method called needlessly when using output snapshot
+  - Fixed issue UJI-364-58495 CPE repeatedly stopping and starting statement with aggregation and grouped window
+  - Fixed issue TJJ-530-49640 Transpose function causes type incompatibility message when transposing into an existing type
+
 Changes in version 5.0.0
 ------------------------
   - The following dependent jar files are upgraded:
