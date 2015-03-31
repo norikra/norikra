@@ -1254,11 +1254,20 @@ module Norikra
       #     ")"]]
 
       def function_name
-        f = self.find("funcIdentTop")
-        if e = f.find("escapableIdent")
-          e.child.name
+        if f = self.find("funcIdentTop")
+          if e = f.find("escapableIdent")
+            e.child.name
+          else
+            f.child.name
+          end
+        elsif f = self.find("funcIdentInner")
+          if e = f.find("escapableIdent")
+            e.child.name
+          else
+            f.child.name
+          end
         else
-          f.child.name
+          raise "BUG: unknown function AST"
         end
       end
 
@@ -1302,15 +1311,16 @@ module Norikra
     class ASTLibFunctionArgItemNode < ASTNode
       # ["libFunctionArgs",
       #   ["libFunctionArgItem",
-      #     ["expressionWithTime",
-      #       ["expressionQualifyable",
-      #         ["expression", ... ]]]]
+      #     ["expressionWithNamed",
+      #       ["expressionWithTime",
+      #         ["expressionQualifyable",
+      #           ["expression", ... ]]]]]
       def nodetype?(*sym)
         sym.include?(:libarg)
       end
 
       def expression
-        self.chain("expressionWithTime", "expressionQualifyable", "expression")
+        self.chain("expressionWithNamed", "expressionWithTime", "expressionQualifyable", "expression")
       end
     end
 
