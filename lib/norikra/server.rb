@@ -101,6 +101,8 @@ module Norikra
       @port = server_options[:port] || Norikra::RPC::HTTP::DEFAULT_LISTEN_PORT
       @ui_port = server_options[:ui_port] || Norikra::WebUI::HTTP::DEFAULT_LISTEN_PORT
 
+      @ui_context_path = server_options[:ui_context_path] || "/"
+
       @thread_conf = self.class.threading_configuration(conf[:thread])
       @log_conf = self.class.log_configuration(conf[:log])
       @log4j_properties_path = conf[:log4j_properties_path]
@@ -134,7 +136,8 @@ module Norikra
       @webserver = Norikra::WebUI::HTTP.new(
         engine: @engine,
         host: @host, port: @ui_port,
-        threads: @thread_conf[:web][:threads]
+        threads: @thread_conf[:web][:threads],
+        context_path: @ui_context_path
       )
     end
 
