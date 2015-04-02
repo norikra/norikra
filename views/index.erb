@@ -75,12 +75,12 @@
     <td><%= query.targets.join(", ") %></td>
     <td><%= query.suspended? ? "suspended" : "" %></td>
     <td>
-      <button class="btn btn-default btn-xs show-query-expression" data-load="/json/query/<%= query.name %>">show query</button>
+      <button class="btn btn-default btn-xs show-query-expression" data-load="<%= url_for("/json/query/#{query.name}") %>">show query</button>
     </td>
     <td style="text-align: right;"><%= pool[query.name] %></td>
     <td>
       <% if pool[query.name].to_i > 0 %>
-      <button class="btn btn-info btn-xs show-query-events-sample" data-load="/json/events_sample/<%= query.name %>">
+      <button class="btn btn-info btn-xs show-query-events-sample" data-load="<%= url_for("/json/events_sample/#{query.name}") %>">
         <span class="glyphicon glyphicon-search"></span>
       </button>
       <% end %>
@@ -104,7 +104,7 @@
               <pre><%= query.expression %></pre>
               </div>
               <div class="modal-footer">
-                <form class="form-inline" action="/resume" method="POST">
+                <form class="form-inline" action="<%= url_for("/resume") %>" method="POST">
                   <input type="hidden" name="query_name" value="<%= query.name %>" />
                   <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                   <button type="submit" class="btn btn-primary">Resume</button>
@@ -131,7 +131,7 @@
               <pre><%= query.expression %></pre>
               </div>
               <div class="modal-footer">
-                <form class="form-inline" action="/suspend" method="POST">
+                <form class="form-inline" action="<%= url_for("/suspend") %>" method="POST">
                   <input type="hidden" name="query_name" value="<%= query.name %>" />
                   <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                   <button type="submit" class="btn btn-danger">Suspend</button>
@@ -160,7 +160,7 @@
               <pre><%= query.expression %></pre>
             </div>
             <div class="modal-footer">
-              <form class="form-inline" action="/deregister" method="POST">
+              <form class="form-inline" action="<%= url_for("/deregister") %>" method="POST">
                 <input type="hidden" name="query_name" value="<%= query.name %>" />
                 <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-danger">Remove</button>
@@ -183,7 +183,7 @@
   <% if input_data[:query_add][:error] %>
     <div class="alert alert-danger"><%= input_data[:query_add][:error] %></div>
   <% end %>
-  <form action="/register", method="POST">
+  <form action="<%= url_for("/register") %>", method="POST">
     <div class="row">
       <div class="col-sm-8 form-group">
         <label for="addQueryExpression">Query</label>
@@ -242,7 +242,7 @@
               <p>name: <%= target[:name] %></p>
             </div>
             <div class="modal-footer">
-              <form class="form-inline" action="/close" method="POST">
+              <form class="form-inline" action="<%= url_for("/close") %>" method="POST">
                 <input type="hidden" name="target" value="<%= target[:name] %>" />
                 <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-danger">Remove</button>
@@ -263,13 +263,13 @@
   <h1 id="stats">Target/Query stat dump</h1>
 </div>
 
-<a href="/stat/dump" class="btn btn-info btn-lg" role="button">Download JSON</a>
+<a href="<%= url_for("/stat/dump") %>" class="btn btn-info btn-lg" role="button">Download JSON</a>
 
 <div class="page-header">
   <h1 id="logs">Server logs</h1>
 </div>
 
-<button id="show_server_logs" class="btn btn-info btn-lg" data-url="/logs">Show server logs</button>
+<button id="show_server_logs" class="btn btn-info btn-lg" data-url="<%= url_for("/logs") %>">Show server logs</button>
 
 <div id="logsection" style="display: none;">
   <table id="logtable" class="table logs">
