@@ -26,10 +26,12 @@ module Norikra::WebUI
       Norikra::WebUI::Handler.engine = @engine
       Norikra::WebUI::API.engine = @engine
       @app = Rack::Builder.new {
-        map '/api' do
-          run Norikra::WebUI::API
+        map opts[:context_path] do
+          map '/api' do
+            run Norikra::WebUI::API
+          end
+          run Norikra::WebUI::Handler
         end
-        run Norikra::WebUI::Handler
       }
     end
 

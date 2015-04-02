@@ -28,6 +28,8 @@ module Norikra
         option :'shutoff-threshold', type: :numeric, default: 90, desc: 'threshold percent of heap memory usage to turn "shutoff mode" on'
         option :'shutoff-check-interval', type: :numeric, default: 10, desc: 'interval seconds to turn "shutoff mode" on/off'
 
+        option :'ui-context-path', type: :string, default: nil, desc: 'Web UI context path'
+
         ### Daemonize options
         option :daemonize, type: :boolean, default: false, aliases: "-d", \
                            desc: 'daemonize Norikra server [false (foreground)]'
@@ -251,6 +253,7 @@ module Norikra
         host: options[:host],
         port: options[:port],
         ui_port: options[:'ui-port'],
+        ui_context_path: options[:'ui-context-path'],
       }
 
       server = Norikra::Server.new( server_options, conf )
