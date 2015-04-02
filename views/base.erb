@@ -12,12 +12,12 @@
     <!-- TODO: logo favicon <link rel="shortcut icon" href="../../assets/ico/favicon.png"> -->
 
     <!-- Bootstrap core CSS -->
-    <link href="/css/bootstrap.css" rel="stylesheet">
+    <link href="<%= url_for("/css/bootstrap.css") %>" rel="stylesheet">
     <!-- Bootstrap theme -->
-    <link href="/css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="<%= url_for("/css/bootstrap-theme.min.css") %>" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="/css/norikra.css" rel="stylesheet">
+    <link href="<%= url_for("/css/norikra.css") %>" rel="stylesheet">
 
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -60,9 +60,8 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <!-- <script src="//code.jquery.com/jquery.js"></script> -->
-    <script src="/js/jquery.min.js"></script>
-    <script src="/js/bootstrap.min.js"></script>
-    <script src="/js/norikra.webui.js"></script>
+    <script src="<%= url_for("/js/jquery.min.js") %>"></script>
+    <script src="<%= url_for("/js/bootstrap.min.js") %>"></script>
+    <script src="<%= url_for("/js/norikra.webui.js") %>"></script>
   </body>
 </html>
-

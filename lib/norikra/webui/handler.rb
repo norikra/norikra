@@ -15,6 +15,8 @@ class Norikra::WebUI::Handler < Sinatra::Base
   set :views, File.absolute_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'views'))
   set :erb, escape_html: true
 
+  helpers Norikra::WebUI::Helpers
+
   enable :sessions
 
   def norikra_version; Norikra::VERSION ; end
