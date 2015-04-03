@@ -18,6 +18,12 @@ class Norikra::WebUI::API < Sinatra::Base
     @@engine = engine
   end
 
+  @@shut_off_mode = false
+
+  def self.shut_off=(mode)
+    @@shut_off_mode = mode
+  end
+
   before do
     content_type :json
     headers 'Access-Control-Allow-Origin' => '*',
@@ -58,6 +64,8 @@ class Norikra::WebUI::API < Sinatra::Base
   end
 
   def engine; @@engine; end
+
+  def shut_off_mode; @@shut_off_mode; end
 
   def parse_args(param_names, request)
     body = request.body.read
@@ -140,6 +148,10 @@ class Norikra::WebUI::API < Sinatra::Base
   end
 
   post '/send' do
+    if shut_off_mode
+      halt 503, "SHUT OFF mode"
+    end
+
     target, events = args = parse_args(['target', 'events'], request)
     logging(:data, :send, args){
       r = engine.send(target, events)

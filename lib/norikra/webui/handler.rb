@@ -25,6 +25,12 @@ class Norikra::WebUI::Handler < Sinatra::Base
     @@engine = engine
   end
 
+  @@shut_off_mode = false
+
+  def self.shut_off=(mode)
+    @@shut_off_mode = mode
+  end
+
   def logging(type, handler, args=[], opts={})
     if type == :manage
       debug("WebUI"){ { handler: handler.to_s, args: args } }
@@ -56,6 +62,8 @@ class Norikra::WebUI::Handler < Sinatra::Base
 
   def engine; @@engine; end
 
+  def shut_off_mode; @@shut_off_mode; end
+
   def targets
     engine.targets.map(&:name)
   end
@@ -80,6 +88,7 @@ class Norikra::WebUI::Handler < Sinatra::Base
 
       erb :index, layout: :base, locals: {
         input_data: input_data,
+        shut_off_mode: shut_off_mode,
         stat: engine.statistics,
         queries: queries,
         pool: pooled_events,

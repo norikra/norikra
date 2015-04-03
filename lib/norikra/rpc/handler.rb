@@ -9,6 +9,11 @@ require 'norikra/query'
 class Norikra::RPC::Handler
   def initialize(engine)
     @engine = engine
+    @shut_off_mode = false
+  end
+
+  def shut_off(mode)
+    @shut_off_mode = true
   end
 
   def logging(type, handler, args=[])
@@ -107,6 +112,8 @@ class Norikra::RPC::Handler
   end
 
   def send(target, events)
+    raise Norikra::RPC::ServiceUnavailableError if @shut_off_mode
+
     logging(:data, :send, [target, events]){
       r = @engine.send(target, events)
       !!r

@@ -24,6 +24,10 @@ module Norikra
         option :'dump-stat-interval', type: :numeric, default: nil, \
                        desc: 'interval(seconds) of status file dumps on runtime [none (on shutdown only)]'
 
+        option :shutoff, type: :boolean, default: false, desc: '[EXPERIMENTAL] enable "shutoff" mode, to reject input data under high memory usage'
+        option :'shutoff-threshold', type: :numeric, default: 90, desc: 'threshold percent of heap memory usage to turn "shutoff mode" on'
+        option :'shutoff-check-interval', type: :numeric, default: 10, desc: 'interval seconds to turn "shutoff mode" on/off'
+
         ### Daemonize options
         option :daemonize, type: :boolean, default: false, aliases: "-d", \
                            desc: 'daemonize Norikra server [false (foreground)]'
@@ -39,13 +43,13 @@ module Norikra
         ### Performance options
         # performance predefined configuration sets
         option :micro, type: :boolean, default: false, \
-               desc: 'development or testing (inbound:0, outbound:0, route:0, timer:0, rpc:2)'
+               desc: 'development or testing (inbound:0, outbound:0, route:0, timer:0, rpc:2, web:2)'
         option :small, type: :boolean, default: false, \
-               desc: 'virtual or small scale servers (inbound:1, outbount:1, route:1, timer:1, rpc:2)'
+               desc: 'virtual or small scale servers (inbound:2, outbount:2, route:2, timer:2, rpc:9, web:9)'
         option :middle, type: :boolean, default: false, \
-               desc: 'rackmount servers (inbound:4, outbound:2, route:2, timer:2, rpc:4)'
+               desc: 'rackmount servers (inbound:4, outbound:4, route:4, timer:4, rpc:17, web:17)'
         option :large, type: :boolean, default: false, \
-               desc: 'high performance servers (inbound: 6, outbound: 6, route:4, timer:4, rpc: 8)'
+               desc: 'high performance servers (inbound: 8, outbound: 8, route:8, timer:8, rpc:49, web:49)'
         # Esper
         option :'inbound-threads',  type: :numeric, default: nil, desc: 'number of threads for inbound data'
         option :'outbound-threads', type: :numeric, default: nil, desc: 'number of threads for outbound data'
@@ -195,6 +199,13 @@ module Norikra
       conf[:stats] = {
         path: options[:stats], secondary_path: options[:'stats-secondary'],
         suppress: options[:'suppress-dump-stat'], interval: options[:'dump-stat-interval'],
+      }
+
+      ### shut off mode
+      conf[:shutoff] = {
+        enabled: options[:shutoff],
+        threshold: options[:'shutoff-threshold'],
+        interval: options[:'shutoff-check-interval'],
       }
 
       ### threads

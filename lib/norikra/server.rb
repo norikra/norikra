@@ -18,6 +18,9 @@ module Norikra
   class Server
     attr_accessor :running
 
+    DEFAULT_SHUT_OFF_THRESHOLD = 90
+    DEFAULT_SHUT_OFF_CHECK_INTERVAL = 10
+
     MICRO_PREDEFINED = {
       engine: { inbound:    { threads: 0, capacity: 0 }, outbound:   { threads: 0, capacity: 0 },
                 route_exec: { threads: 0, capacity: 0 }, timer_exec: { threads: 0, capacity: 0 }, },
@@ -80,6 +83,10 @@ module Norikra
         puts "working on #{$PID}"
       end
 
+      @shutoff = conf[:shutoff][:enabled] || false
+      @shutoff_threshold = conf[:shutoff][:threshold] || DEFAULT_SHUT_OFF_THRESHOLD
+      @shutoff_check_interval = conf[:shutoff][:interval] || DEFAULT_SHUT_OFF_CHECK_INTERVAL
+
       @stats_path = conf[:stats][:path]
       @stats_secondary_path = conf[:stats][:secondary_path]
       @stats_suppress_dump = conf[:stats][:suppress]
@@ -116,6 +123,8 @@ module Norikra
       @output_pool = Norikra::OutputPool.new
 
       @engine = Norikra::Engine.new(@output_pool, @typedef_manager, {thread: @thread_conf[:engine]})
+      @udf_plugins = []
+      @listener_plugins = []
 
       @rpcserver = Norikra::RPC::HTTP.new(
         engine: @engine,
@@ -168,11 +177,13 @@ module Norikra
                         end
       Signal.trap(:USR2, ->{ @dump_stats = true })
 
-      #TODO: SIGHUP?(dynamic plugin loading?)
+      @reload_plugins = false
+      Signal.trap(:HUP, ->{ @reload_plugins = true })
+
+      memory_stat_next = Time.now
+      shut_off_mode = false
 
       while @running
-        sleep 0.3
-
         if @stats_path && !@stats_suppress_dump
           if @dump_stats || (@dump_next_time && Time.now > @dump_next_time)
             dump_stats
@@ -180,6 +191,31 @@ module Norikra
             @dump_next_time = Time.now + @stats_dump_interval if @dump_next_time
           end
         end
+
+        if @reload_plugins
+          begin
+            load_plugins(true) # reload
+          rescue => e
+            warn "Error in plugin reloading", type: e.class, error: e
+          end
+          @reload_plugins = false
+        end
+
+        if @shutoff && memory_stat_next < Time.now
+          used = @engine.memory_statistics[:heap][:used_percent]
+          if !shut_off_mode && used >= @shutoff_threshold
+            warn "Entering SHUT OFF mode, heap used #{used}%."
+            @rpcserver.shut_off(true)
+            @webserver.shut_off(true)
+          elsif shut_off_mode && used < @shutoff_threshold
+            warn "Recovering from SHUT OFF mode, heap used #{used}%."
+            @rpcserver.shut_off(false)
+            @webserver.shut_off(false)
+          end
+          memory_stat_next = Time.now + @shutoff_check_interval
+        end
+
+        sleep 0.3
       end
     end
 
@@ -197,16 +233,26 @@ module Norikra
       info "Norikra server shutdown complete."
     end
 
-    def load_plugins
+    def load_plugins(reload=false)
+      if reload
+        info "Reloading plugins by user action."
+        require 'rubygems/specification'
+        Gem::Specification.reset # Reset the list of known specs to find newly installed gems
+      end
+
       info "Loading UDF plugins"
       Norikra::UDF.listup.each do |mojule|
         if mojule.is_a?(Class)
+          next if @udf_plugins.include?(mojule)
           name = @engine.load(:udf, mojule)
+          @udf_plugins.push(mojule)
           info "UDF loaded", name: name
         elsif mojule.is_a?(Module) && mojule.respond_to?(:plugins)
           mojule.init if mojule.respond_to?(:init)
           mojule.plugins.each do |klass|
+            next if @udf_plugins.include?(klass)
             name = @engine.load(:udf, klass)
+            @udf_plugins.push(klass)
             info "UDF loaded", name: name
           end
         end
@@ -214,7 +260,9 @@ module Norikra
 
       info "Loading Listener plugins"
       Norikra::Listener.listup.each do |klass|
+        next if @listener_plugins.include?(klass)
         @engine.load(:listener, klass)
+        @listener_plugins.push(klass)
         info "Listener loaded", name: klass
       end
     end
