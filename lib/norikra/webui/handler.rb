@@ -103,7 +103,7 @@ class Norikra::WebUI::Handler < Sinatra::Base
     target_name = params[:target]
     logging(:manage, :close, [target_name]) do
       engine.close(target_name)
-      redirect '/'
+      redirect url_for('/')
     end
   end
 
@@ -117,7 +117,7 @@ class Norikra::WebUI::Handler < Sinatra::Base
           error: error_message,
         },
       }
-      redirect '/#query_add'
+      redirect url_for("/#query_add")
     }
 
     logging(:manage, :register, [query_name, query_group, expression], on_error_hook: error_hook) do
@@ -128,7 +128,7 @@ class Norikra::WebUI::Handler < Sinatra::Base
         query_group = nil
       end
       engine.register(Norikra::Query.new(name: query_name, group: query_group, expression: expression))
-      redirect '/#queries'
+      redirect url_for("/#queries")
     end
   end
 
@@ -136,7 +136,7 @@ class Norikra::WebUI::Handler < Sinatra::Base
     query_name = params[:query_name]
     logging(:manage, :deregister, [query_name]) do
       engine.deregister(query_name)
-      redirect '/#queries'
+      redirect url_for("/#queries")
     end
   end
 
@@ -144,7 +144,7 @@ class Norikra::WebUI::Handler < Sinatra::Base
     query_name = params[:query_name]
     logging(:manage, :suspend, [query_name]) do
       engine.suspend(query_name)
-      redirect '/#queries'
+      redirect url_for("/#queries")
     end
   end
 
@@ -152,7 +152,7 @@ class Norikra::WebUI::Handler < Sinatra::Base
     query_name = params[:query_name]
     logging(:manage, :resume, [query_name]) do
       engine.resume(query_name)
-      redirect '/#queries'
+      redirect url_for("/#queries")
     end
   end
 
