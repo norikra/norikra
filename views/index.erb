@@ -218,7 +218,7 @@
     <td><%= target[:auto_field] %></td>
     <td>
       <% if target[:fields].size > 0 %>
-        <button class="btn btn-default btn-xs show-target-fields" data-load="/json/target/<%= target[:name] %>">show fields</button>
+        <button class="btn btn-default btn-xs show-target-fields" data-load="<%= url_for("/json/target/#{target[:name]}") %>">show fields</button>
       <% else %>
         (lazy target)
       <% end %>
