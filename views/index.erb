@@ -183,7 +183,7 @@
   <% if input_data[:query_add][:error] %>
     <div class="alert alert-danger"><%= input_data[:query_add][:error] %></div>
   <% end %>
-  <form action="<%= url_for("/register") %>", method="POST">
+  <form action="<%= url_for("/register") %>" method="POST">
     <div class="row">
       <div class="col-sm-8 form-group">
         <label for="addQueryExpression">Query</label>
