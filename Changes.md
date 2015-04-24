@@ -3,6 +3,18 @@
 Changes of norikra.
 
 ## v1
+* v1.3.0
+  * Esper-5.2 bundle
+  * Dependency update for msgpack.gem
+  * Dynamic plugin reloading
+  * Add experimental `shutoff` mode to reject input data under high memory pressure
+  * Fix number of Jetty threads while running to reduce GC troubles under high memory pressure
+  * Add `/engine_statistics` API endpoint
+  * Add GC statistics in Engine statistics
+  * Add `--ui-context-path` option to mount Norikra WebUI atop of path user specified on reverse proxy servers
+  * Fix Bug:
+    * not to rewrite field names in subqueries (issue #64)
+    * not to load stats files containing multibyte characters
 * v1.2.2
   * Change API for custom listner plugins (incompatible with 1.2.0, 1.2.1)
 * v1.2.1

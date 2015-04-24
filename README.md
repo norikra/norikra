@@ -64,6 +64,10 @@ See: http://norikra.github.io/
 
 ## Changes
 
+* v1.3
+  * Dynamic plugin reloading by SIGHUP
+  * Esper-5.2 bundle
+  * Dependency update for msgpack.gem
 * v1.2
   * `NULLABLE()` fields
   * Pluggable listeners
