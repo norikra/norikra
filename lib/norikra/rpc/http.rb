@@ -1,6 +1,6 @@
 require 'mizuno/server'
 require 'rack/builder'
-require 'msgpack-rpc-over-http-jruby'
+require 'msgpack-rpc-over-http'
 
 require_relative 'handler'
 require_relative 'gatekeeper'

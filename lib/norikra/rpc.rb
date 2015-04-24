@@ -1,4 +1,4 @@
-require 'msgpack-rpc-over-http-jruby'
+require 'msgpack-rpc-over-http'
 
 module Norikra::RPC
   class ClientError < MessagePack::RPCOverHTTP::RemoteError; end
