@@ -186,5 +186,11 @@ class Norikra::WebUI::API < Sinatra::Base
     }
   end
 
+  get '/engine_statistics' do
+    logging(:show, :json_engine_statistics) do
+      json engine.statistics
+    end
+  end
+
   # post('/listen') # get all events as stream, during connection keepaliving
 end
