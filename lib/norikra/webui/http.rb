@@ -39,7 +39,12 @@ module Norikra::WebUI
       info "WebUI server #{@host}:#{@port}, #{@threads} threads"
       @thread = Thread.new do
         @mizuno = Mizuno::Server.new
-        @mizuno.run(@app, embedded: true, threads: @threads, min_threads: @threads, port: @port, host: @host)
+        options = {
+          embedded: true, reuse_address: true,
+          threads: @threads, min_threads: @threads,
+          port: @port, host: @host
+        }
+        @mizuno.run(@app, options)
       end
     end
 
