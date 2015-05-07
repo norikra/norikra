@@ -3,6 +3,8 @@
 Changes of norikra.
 
 ## v1
+* v1.3.1
+  * Fix to enable SO_REUSEPORT for listening ports to help "address already in use" exception in restarts
 * v1.3.0
   * Esper-5.2 bundle
   * Dependency update for msgpack.gem
