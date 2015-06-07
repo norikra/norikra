@@ -96,6 +96,61 @@ describe Norikra::Listener::Base do
     end
   end
 
+  describe '#apply_type_convert_to_events' do
+    statistics = {output: 0}
+    listener = DummySyncListener.new('', 'name', 'group')
+    listener.events_statistics = statistics
+
+    it 'returns value itself for nil' do
+      val = nil
+      expect(listener.apply_type_convert_to_events(val)).to eq(val)
+    end
+
+    it 'returns type_convert-ed events for non-nil events' do
+      s1 = "乗鞍".force_encoding("ASCII-8BIT")
+      events = [
+          [100, 100.01, false, true, nil, s1],
+          {
+            "100" => 100,
+            "100_01" => 100.01,
+            "bool$false" => false,
+            "bool$true" => true,
+            "object$$0" => nil,
+            "string" => s1,
+            "list" => [0, 1, 2],
+            "percentiles" => {
+                "10" => 0.1,
+                "50" => 0.5,
+                "99" => 0.99
+            }
+          }
+      ]
+      revents = listener.apply_type_convert_to_events(events)
+      expect(revents).to be_a(Array)
+      expect(revents.size).to eql(2)
+
+      expect(revents[0]).to be_a(Array)
+      expect(revents[0][0]).to eql(100)
+      expect(revents[0][1]).to eql(100.01)
+      expect(revents[0][2]).to eq(false)
+      expect(revents[0][3]).to eq(true)
+      expect(revents[0][4]).to be_nil
+      expect(revents[0][5].encoding.to_s).to eql("UTF-8")
+      expect(revents[0][5]).to eql("乗鞍")
+
+      expect(revents[1]).to be_a(Hash)
+      expect(revents[1]["100"]).to eql(100)
+      expect(revents[1]["100_01"]).to eql(100.01)
+      expect(revents[1]["bool.false"]).to eq(false)
+      expect(revents[1]["bool.true"]).to eq(true)
+      expect(revents[1]["object.$0"]).to be_nil
+      expect(revents[1]["string"].encoding.to_s).to eql("UTF-8")
+      expect(revents[1]["string"]).to eql("乗鞍")
+      expect(revents[1]["list"]).to eql([0,1,2])
+      expect(revents[1]["percentiles"]).to eql({"10" => 0.1, "50" => 0.5, "99" => 0.99})
+    end
+  end
+
   ### TODO: add specs of .parse, #start, #shutdown, #push and #update
 end
 
@@ -108,9 +163,9 @@ describe Norikra::Listener::MemoryPool do
 
   describe '#process_sync' do
     listener = Norikra::Listener::MemoryPool.new(nil, 'name', 'group')
-    listener.output_pool = dummy_pool = Norikra::ListenerSpecHelper::DummyOutputPool.new
 
     it 'pushs events into pool, with current time' do
+      listener.output_pool = dummy_pool = Norikra::ListenerSpecHelper::DummyOutputPool.new
       listener.process_sync([{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}], [])
       expect(dummy_pool.pool['group']['name'].size).to eql(2)
       expect(dummy_pool.pool['group']['name'][0][0]).to be_a(Fixnum)
@@ -119,6 +174,12 @@ describe Norikra::Listener::MemoryPool do
 
       listener.process_sync([{"n1" => 102, "s" => "string three"}], [])
       expect(dummy_pool.pool['group']['name'].size).to eql(3)
+    end
+
+    it 'sends nil events into pool with current time' do
+      listener.output_pool = dummy_pool = Norikra::ListenerSpecHelper::DummyOutputPool.new
+      listener.process_sync(nil, nil)
+      expect(dummy_pool.pool['group']).to be_nil
     end
   end
 end
@@ -138,9 +199,9 @@ describe Norikra::Listener::Loopback do
 
   describe '#process_sync' do
     listener = Norikra::Listener::Loopback.new('target1', 'name', 'LOOPBACK(target1)')
-    listener.engine = dummy_engine = Norikra::ListenerSpecHelper::DummyEngine.new
 
     it 'sends events into engine with target name' do
+      listener.engine = dummy_engine = Norikra::ListenerSpecHelper::DummyEngine.new
       listener.process_sync([{"n1" => 100, "s" => "string one"}, {"n1" => 101, "s" => "string two"}], [])
       expect(dummy_engine.events['target1'].size).to eql(2)
       expect(dummy_engine.events['target1'][0]).to eql({"n1" => 100, "s" => "string one"})
@@ -148,6 +209,12 @@ describe Norikra::Listener::Loopback do
 
       listener.process_sync([{"n1" => 102, "s" => "string three"}], [])
       expect(dummy_engine.events['target1'].size).to eql(3)
+    end
+
+    it 'sends nil events into engine with target name' do
+      listener.engine = dummy_engine = Norikra::ListenerSpecHelper::DummyEngine.new
+      listener.process_sync(nil, nil)
+      expect(dummy_engine.events).to be_empty
     end
   end
 end
@@ -186,6 +253,12 @@ describe Norikra::Listener::Stdout do
         results << JSON.parse(json) if json && json != ''
       end
       expect(results).to eql(events1 + events2)
+    end
+
+    it 'sends nil events into engine with target name' do
+      dummyio.truncate(0)
+      listener.process_sync(nil, nil)
+      expect(dummyio.string).to eql('')
     end
   end
 end

@@ -158,18 +158,24 @@ module Norikra
         end
       end
 
+      def apply_type_convert_to_events(events)
+        if events.respond_to?(:map)
+          events.map{|e| type_convert(e) }
+        else
+          type_convert(events)
+        end
+      end
+
       def update(new_events, old_events)
         t = Time.now.to_i
         if @mode == :sync
-          news = new_events.map{|e| type_convert(e) }
-          olds = if old_events.respond_to?(:map)
-                   old_events.map{|e| type_convert(e) }
-                 else
-                   type_convert(old_events)
-                 end
+          news = apply_type_convert_to_events(new_events)
+          olds = apply_type_convert_to_events(old_events)
           trace("produced events"){ { listener: self.class, query: @query_name, group: @query_group, news: news, olds: olds } }
           process_sync(news, olds)
-          @events_statistics[:output] += news.size
+          if news.respond_to?(:size)
+            @events_statistics[:output] += news.size
+          end
         else # async
           events = new_events.map{|e| [t, type_convert(e)]}
           trace("pushed events"){ { listener: self.class, query: @query_name, group: @query_group, event: events } }
@@ -188,8 +194,10 @@ module Norikra
 
       def process_sync(news, olds)
         t = Time.now.to_i
-        events = news.map{|e| [t, e]}
-        @output_pool.push(@query_name, @query_group, events)
+        if news.respond_to?(:map)
+          events = news.map{|e| [t, e]}
+          @output_pool.push(@query_name, @query_group, events)
+        end
       end
     end
 
@@ -224,7 +232,9 @@ module Norikra
         # We does NOT convert 'container.$0' into container['field'].
         # Use escaped names like 'container__0'. That is NOT so confused.
         trace("loopback event"){ { query: @query_name, group: @query_group, event: news } }
-        @engine.send(@argument, news)
+        if news.respond_to?(:each)
+          @engine.send(@argument, news)
+        end
       end
     end
 
@@ -241,8 +251,10 @@ module Norikra
       end
 
       def process_sync(news, olds)
-        news.each do |e|
-          @stdout.puts @query_name + "\t" + JSON.dump(e)
+        if news.respond_to?(:each)
+          news.each do |e|
+            @stdout.puts @query_name + "\t" + JSON.dump(e)
+          end
         end
       end
     end
