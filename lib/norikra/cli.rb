@@ -152,6 +152,8 @@ module Norikra
           jruby_options.push('-J-verbose:gc')
         elsif arg =~ /^-javaagent:(.+)$/
           jruby_options.push('-J-javaagent:' + $1)
+        elsif arg =~ /^-agentlib:(.+)$/
+          jruby_options.push('-J-agentlib:' + $1)
         elsif arg =~ /^-D(.+)$/
           jruby_options.push('-J-D' + $1)
         else
