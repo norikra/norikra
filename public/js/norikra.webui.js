@@ -60,6 +60,7 @@ $(function(){
           button.popover({
             placement: 'top',
             html: true,
+            template: '<div class="popover" role="tooltip" style="height: 50%; overflow-y: scroll;"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>',
             content: table_html
           }).popover('toggle');
           $('table.target-fields').closest('div').css('padding', '0');
