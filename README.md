@@ -64,6 +64,8 @@ See: http://norikra.github.io/
 
 ## Changes
 
+* v1.4
+  * Dependency update for msgpack.gem
 * v1.3
   * Dynamic plugin reloading by SIGHUP
   * Esper-5.2 bundle

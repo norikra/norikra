@@ -3,6 +3,11 @@
 Changes of norikra.
 
 ## v1
+* v1.4.0
+  * Add `-D` option handling to pass JVM system properties
+  * Add `-agentlib` option handling to pass it to JVM
+  * Dependency update for msgpack.gem
+  * Fix Bug to raise error for queries using irstream
 * v1.3.1
   * Fix to enable SO_REUSEPORT for listening ports to help "address already in use" exception in restarts
 * v1.3.0
