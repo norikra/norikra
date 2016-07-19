@@ -65,6 +65,7 @@ See: http://norikra.github.io/
 ## Changes
 
 * v1.4
+  * Add option handling about `-D` and `-agentlib` for JVM
   * Dependency update for msgpack.gem
 * v1.3
   * Dynamic plugin reloading by SIGHUP
