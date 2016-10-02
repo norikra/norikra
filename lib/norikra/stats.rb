@@ -31,16 +31,19 @@ module Norikra
     end
 
     def dump(path, secondary_path)
-      tmp_path = path + '.tmp'
-      File.open(tmp_path, 'w') do |file|
-        file.write(self.to_json)
-      end
-      File.rename(tmp_path, path)
-
-      if secondary_path
-        require 'fileutils'
-        secondary_actual_path = Time.now.strftime(secondary_path)
-        FileUtils.copy(path, secondary_actual_path)
+      require 'tempfile'
+      tmp = Tempfile.open(path)
+      begin
+        tmp.write(self.to_json)
+        tmp.flush
+        if secondary_path
+          require 'fileutils'
+          secondary_actual_path = Time.now.strftime(secondary_path)
+          FileUtils.copy(tmp.path, secondary_actual_path)
+        end
+        File.rename(tmp.path, path)
+      ensure
+        tmp.close!
       end
     end
 
