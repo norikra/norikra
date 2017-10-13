@@ -78,17 +78,18 @@ module Norikra
         else
           # DailyRollingFileAppender ?
           # http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/DailyRollingFileAppender.html
+          max_backup_index = opts[:backups] || LOGFILE_DEFAULT_MAX_BACKUP_INDEX
           norikra_log = File.join(logdir, 'norikra.log')
           p.setProperty('log4j.appender.default', 'org.apache.log4j.RollingFileAppender')
           p.setProperty('log4j.appender.default.File', norikra_log)
           p.setProperty('log4j.appender.default.MaxFileSize', opts[:filesize] || LOGFILE_DEFAULT_MAX_SIZE)
-          p.setProperty('log4j.appender.default.MaxBackupIndex', opts[:backups].to_s || LOGFILE_DEFAULT_MAX_BACKUP_INDEX.to_s)
+          p.setProperty('log4j.appender.default.MaxBackupIndex', max_backup_index.to_s)
 
           builtin_log = File.join(logdir, 'builtin.log')
           p.setProperty('log4j.appender.builtin', 'org.apache.log4j.RollingFileAppender')
           p.setProperty('log4j.appender.builtin.File', builtin_log)
           p.setProperty('log4j.appender.builtin.MaxFileSize', opts[:filesize] || LOGFILE_DEFAULT_MAX_SIZE)
-          p.setProperty('log4j.appender.builtin.MaxBackupIndex', opts[:backups].to_s || LOGFILE_DEFAULT_MAX_BACKUP_INDEX.to_s)
+          p.setProperty('log4j.appender.builtin.MaxBackupIndex', max_backup_index.to_s)
         end
         p.setProperty('log4j.rootLogger', "#{level},default")
         org.apache.log4j.PropertyConfigurator.configure(p)
