@@ -64,6 +64,9 @@ See: http://norikra.github.io/
 
 ## Changes
 
+* v1.5
+  * Fix a bug not to shutdown correctly
+  * Fix a bug to handle paths in logging incorrectly
 * v1.4
   * Add option handling about `-D` and `-agentlib` for JVM
   * Dependency update for msgpack.gem
