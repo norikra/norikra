@@ -81,6 +81,7 @@ module Norikra
         STDOUT.reopen(outfile)
         STDERR.reopen(outfile)
         puts "working on #{$PID}"
+        STDOUT.flush
       end
 
       @shutoff = conf[:shutoff][:enabled] || false
