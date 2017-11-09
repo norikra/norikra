@@ -132,6 +132,14 @@ class Norikra::WebUI::API < Sinatra::Base
     }
   end
 
+  post '/replace' do
+    query_name, query_group, expression = args = parse_args(['query_name', 'query_group', 'expression'], request)
+    logging(:manage, :replace, args){
+      r = engine.replace(Norikra::Query.new(name: query_name, group: query_group, expression: expression))
+      json result: (!!r)
+    }
+  end
+
   get '/fields' do
     target, = args = parse_args(['target'], request)
     logging(:show, :fields, args){

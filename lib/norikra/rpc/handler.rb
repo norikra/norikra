@@ -84,6 +84,13 @@ class Norikra::RPC::Handler
     }
   end
 
+  def replace(query_name, query_group, expression)
+    logging(:manage, :replace, [query_name, query_group, expression]){
+      r = @engine.replace(Norikra::Query.new(name: query_name, group: query_group, expression: expression))
+      !!r
+    }
+  end
+
   def suspend(query_name)
     logging(:manage, :suspend, [query_name]){
       r = @engine.suspend(query_name)

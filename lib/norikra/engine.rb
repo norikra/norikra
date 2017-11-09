@@ -218,6 +218,53 @@ module Norikra
       end
     end
 
+    def replace(query)
+      info "replacing query", name: query.name, targets: query.targets, expression: query.expression
+
+      queries = @queries.select{|q| q.name == query.name }
+      s_queries = @suspended_queries.select{|q| q.name == query.name }
+
+      if reason = query.invalid?
+        raise Norikra::ClientError, "invalid query '#{query.name}': #{reason}"
+      end
+
+      if queries.size == 1
+        @mutex.synchronize do
+          deregister_query_helper(queries.first)
+          query.targets.each do |target_name|
+            unless @targets.any?{|t| t.name == target_name}
+              info "opening target", target: target_name, fields: fields, auto_field: auto_field
+              raise Norikra::ArgumentError, "invalid target name" unless Norikra::Target.valid?(target_name)
+              target = Norikra::Target.new(target_name, fields, auto_field)
+              return false if @targets.include?(target)
+              open_target_helper(target)
+            end
+          end
+
+          if lo_target_name = Norikra::Listener::Loopback.target(query.group)
+            raise "Invalid loopback target name should be checked before. THIS IS BUG." unless Norikra::Target.valid?(lo_target_name)
+
+            target = Norikra::Target.new(lo_target_name)
+            unless @targets.include?(target)
+              info "opening loopback target", target: lo_target_name
+              open_target_helper(target)
+            end
+          end
+
+          register_query_helper(query)
+          true
+        end
+      elsif s_queries.size == 1
+        @suspended_queries.delete(s_queries.first)
+        suspended_query = Norikra::SuspendedQuery.new(query)
+        @suspended_queries << suspended_query
+        true
+      else
+        raise Norikra::ClientError, "query name '#{query.name}' does not exists"
+      end
+
+    end
+
     def suspend(query_name)
       info "suspending query", name: query_name
       queries = @queries.select{|q| q.name == query_name }
@@ -336,21 +383,25 @@ module Norikra
 
     def open_target(target)
       @mutex.synchronize do
-        return false if @targets.include?(target)
-
-        @typedef_manager.add_target(target.name, target.fields)
-        @registered_fieldsets[target.name] = {base: {}, query: {}, data: {}}
-
-        unless @typedef_manager.lazy?(target.name)
-          base_fieldset = @typedef_manager.base_fieldset(target.name)
-
-          @typedef_manager.bind_fieldset(target.name, :base, base_fieldset)
-          register_fieldset_actually(target.name, base_fieldset, :base)
-        end
-
-        @targets.push(target)
+        open_target_helper(target)
       end
       true
+    end
+
+    def open_target_helper(target)
+      return false if @targets.include?(target)
+
+      @typedef_manager.add_target(target.name, target.fields)
+      @registered_fieldsets[target.name] = {base: {}, query: {}, data: {}}
+
+      unless @typedef_manager.lazy?(target.name)
+        base_fieldset = @typedef_manager.base_fieldset(target.name)
+
+        @typedef_manager.bind_fieldset(target.name, :base, base_fieldset)
+        register_fieldset_actually(target.name, base_fieldset, :base)
+      end
+
+      @targets.push(target)
     end
 
     def close_target(target)
@@ -400,58 +451,66 @@ module Norikra
       end
 
       @mutex.synchronize do
-        raise Norikra::ClientError, "query '#{query.name}' already exists" unless @queries.select{|q| q.name == query.name }.empty?
-        if reason = query.invalid?
-          raise Norikra::ClientError, "invalid query '#{query.name}': #{reason}"
-        end
-        if lo_target_name = Norikra::Listener::Loopback.target(query.group)
-          raise Norikra::ClientError, "loopback target '#{lo_target_name}'" unless Norikra::Target.valid?(lo_target_name)
-        end
-
-        unless @typedef_manager.ready?(query)
-          @waiting_queries.push(query)
-          trace("waiting query fields"){ { targets: query.targets, fields: query.targets.map{|t| query.fields(t)} } }
-          @typedef_manager.register_waiting_fields(query)
-          @queries.push(query)
-          return
-        end
-
-        mapping = @typedef_manager.generate_fieldset_mapping(query)
-        mapping.each do |target_name, query_fieldset|
-          trace "binding query fieldset", fieldset: query_fieldset
-          @typedef_manager.bind_fieldset(target_name, :query, query_fieldset)
-          trace "registering query fieldset", fieldset: query_fieldset
-          register_fieldset_actually(target_name, query_fieldset, :query)
-          update_inherits_graph(target_name, query_fieldset)
-          query.fieldsets[target_name] = query_fieldset
-        end
-
-        register_query_actually(query, mapping)
-        @queries.push(query)
+        register_query_helper(query)
       end
       true
     end
 
+    def register_query_helper(query)
+      raise Norikra::ClientError, "query '#{query.name}' already exists" unless @queries.select{|q| q.name == query.name }.empty?
+      if reason = query.invalid?
+        raise Norikra::ClientError, "invalid query '#{query.name}': #{reason}"
+      end
+      if lo_target_name = Norikra::Listener::Loopback.target(query.group)
+        raise Norikra::ClientError, "loopback target '#{lo_target_name}'" unless Norikra::Target.valid?(lo_target_name)
+      end
+
+      unless @typedef_manager.ready?(query)
+        @waiting_queries.push(query)
+        trace("waiting query fields"){ { targets: query.targets, fields: query.targets.map{|t| query.fields(t)} } }
+        @typedef_manager.register_waiting_fields(query)
+        @queries.push(query)
+        return
+      end
+
+      mapping = @typedef_manager.generate_fieldset_mapping(query)
+      mapping.each do |target_name, query_fieldset|
+        trace "binding query fieldset", fieldset: query_fieldset
+        @typedef_manager.bind_fieldset(target_name, :query, query_fieldset)
+        trace "registering query fieldset", fieldset: query_fieldset
+        register_fieldset_actually(target_name, query_fieldset, :query)
+        update_inherits_graph(target_name, query_fieldset)
+        query.fieldsets[target_name] = query_fieldset
+      end
+
+      register_query_actually(query, mapping)
+      @queries.push(query)
+    end
+
     def deregister_query(query)
       @mutex.synchronize do
-        return nil unless @queries.include?(query)
-
-        deregister_query_actually(query)
-        @queries.delete(query)
-
-        if @waiting_queries.include?(query)
-          @waiting_queries.delete(query)
-        else
-          query.fieldsets.each do |target_name, query_fieldset|
-            removed_event_type_name = query_fieldset.event_type_name
-
-            @typedef_manager.unbind_fieldset(target_name, :query, query_fieldset)
-            update_inherits_graph(target_name, query_fieldset)
-            deregister_fieldset_actually(target_name, removed_event_type_name, :query)
-          end
-        end
+        deregister_query_helper(query)
       end
       true
+    end
+
+    def deregister_query_helper(query)
+      return nil unless @queries.include?(query)
+
+      deregister_query_actually(query)
+      @queries.delete(query)
+
+      if @waiting_queries.include?(query)
+        @waiting_queries.delete(query)
+      else
+        query.fieldsets.each do |target_name, query_fieldset|
+          removed_event_type_name = query_fieldset.event_type_name
+
+          @typedef_manager.unbind_fieldset(target_name, :query, query_fieldset)
+          update_inherits_graph(target_name, query_fieldset)
+          deregister_fieldset_actually(target_name, removed_event_type_name, :query)
+        end
+      end
     end
 
     def add_suspended_query(query)

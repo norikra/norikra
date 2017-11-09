@@ -75,7 +75,33 @@
     <td><%= query.targets.join(", ") %></td>
     <td><%= query.suspended? ? "suspended" : "" %></td>
     <td>
-      <button class="btn btn-default btn-xs show-query-expression" data-load="<%= url_for("/json/query/#{query.name}") %>">show query</button>
+      <a class="btn btn-info btn-xs" data-toggle="modal" href="#editQuery<%= index %>">
+        <span class="glyphicon glyphicon-edit"></span>
+      </a>
+      <div class="modal fade"
+           id="editQuery<%= index %>"
+           tabindex="-1" role="dialog" aria-labelledby="editQueryLabel<%= index %>" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title">Edit Query <%= query.name %></h4>
+            </div>
+            <form action="<%= url_for("/replace") %>" method="POST">
+              <div class="modal-body">
+                <p>name: <%= query.name %>, group: <%= query.group || "(default)" %></p>
+                <input type="hidden" name="query_name" value="<%= query.name %>"/>
+                <input type="hidden" name="query_group" value="<%= query.group %>"/>
+                <textarea name="expression" class="form-control" rows="5"><%= query.expression %></textarea>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning">Submit</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </td>
     <td style="text-align: right;"><%= pool[query.name] %></td>
     <td>
@@ -175,6 +201,11 @@
 </table>
 <% else %>
 <p>No queries found.</p>
+<% end %>
+
+<% input_data ||= {}; input_data[:query_replace] ||= {} %>
+<% if input_data[:query_replace][:error] %>
+  <div class="alert alert-danger"><%= input_data[:query_replace][:error] %></div>
 <% end %>
 
 <h3 id="query_add">Add Query <button class="btn btn-warning btn-xs" id="query_add_editor_toggle">editor</button></h3>

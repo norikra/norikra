@@ -1,24 +1,5 @@
 $(function(){
 
-  $('.show-query-expression').each(function(i,e){
-    $(this).bind('click', function(e){
-      var button = $(this);
-      if (! button.data('loaded')) {
-        $.get(button.data('load'), function(data){
-          button.attr('data-loaded', 'true');
-          button.popover({
-            placement: 'left',
-            html: true,
-            title: 'name:' + data.name + ', group:' + data.group,
-            content: '<pre class="query-expression" style="border: none; width: 100%;">' + data.expression + '</pre>'
-          }).popover('toggle');
-          $('pre.query-expression').closest('div').css('padding', '0');
-        });
-        e.preventDefault();
-      }
-    });
-  });
-
   $('.show-query-events-sample').each(function(i,e){
     $(this).bind('click', function(e){
       var button = $(this);
