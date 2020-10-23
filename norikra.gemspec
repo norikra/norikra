@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ["TAGOMORI Satoshi"]
   spec.email         = ["tagomoris@gmail.com"]
   spec.summary       = %q{Schema-less stream processing server with SQL}
-  spec.description   = %q{Norikra is a open source server software provides "Schema-les Stream Processing" with SQL, written in JRuby, runs on JVM, licensed under GPLv2.}
+  spec.description   = %q{Norikra is a open source server software provides "Schema-less Stream Processing" with SQL, written in JRuby, runs on JVM, licensed under GPLv2.}
   spec.homepage      = "http://norikra.github.io/"
   spec.license       = "GPLv2"
   spec.platform      = "java"
