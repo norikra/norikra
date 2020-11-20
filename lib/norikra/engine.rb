@@ -26,7 +26,7 @@ module Norikra
         started: Time.now,
         events: { input: 0, processed: 0, output: 0, },
       }
-
+      @stats_per_target = Hash.new
       @output_pool = output_pool
       @typedef_manager = typedef_manager
 
@@ -51,6 +51,8 @@ module Norikra
 
     def statistics
       s = @statistics
+      s[:stats_per_target] = Hash.new
+      @stats_per_target.map{|x,y| s[:stats_per_target][x] = y}
       {
         started: s[:started].rfc2822,
         uptime: self.uptime,
@@ -61,6 +63,7 @@ module Norikra
         output_events: s[:events][:output],
         queries: @queries.size,
         targets: @targets.size,
+	stats_per_target: s[:stats_per_target],
       }
     end
 
@@ -157,6 +160,7 @@ module Norikra
     def open(target_name, fields=nil, auto_field=true)
       # fields nil || [] => lazy
       # fields {'fieldname' => 'type'} : type 'string', 'boolean', 'int', 'long', 'float', 'double'
+      @stats_per_target[target_name] = 0
       info "opening target", target: target_name, fields: fields, auto_field: auto_field
       raise Norikra::ArgumentError, "invalid target name" unless Norikra::Target.valid?(target_name)
       target = Norikra::Target.new(target_name, fields, auto_field)
@@ -266,6 +270,7 @@ module Norikra
       trace "send messages", target: target_name, events: events
 
       @statistics[:events][:input] += events.size
+      @stats_per_target[target_name] += events.size
 
       unless @targets.any?{|t| t.name == target_name} # discard events for target not registered
         trace "messages skipped for non-opened target", target: target_name
